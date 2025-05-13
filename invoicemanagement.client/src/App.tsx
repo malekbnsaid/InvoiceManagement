@@ -1,56 +1,78 @@
-import { useEffect, useState } from 'react';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import MainLayout from './components/layout/MainLayout';
+import Dashboard from './pages/Dashboard';
+import InvoiceDetails from './components/invoices/InvoiceDetails';
+import InvoiceUploadForm from './components/invoices/InvoiceUploadForm';
+import InvoiceList from './components/invoices/InvoiceList';
+import SectionsAndUnits from './components/departments/SectionsAndUnits';
+import ProjectsList from './components/projects/ProjectsList';
+import LPOsList from './components/lpos/LPOsList';
 
-interface Forecast {
-    date: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
-}
+// Create a client
+const queryClient = new QueryClient();
 
 function App() {
-    const [forecasts, setForecasts] = useState<Forecast[]>();
-
-    useEffect(() => {
-        populateWeatherData();
-    }, []);
-
-    const contents = forecasts === undefined
-        ? <p><em>Loading... Please refresh once the ASP.NET backend has started. See <a href="https://aka.ms/jspsintegrationreact">https://aka.ms/jspsintegrationreact</a> for more details.</em></p>
-        : <table className="table table-striped" aria-labelledby="tabelLabel">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                {forecasts.map(forecast =>
-                    <tr key={forecast.date}>
-                        <td>{forecast.date}</td>
-                        <td>{forecast.temperatureC}</td>
-                        <td>{forecast.temperatureF}</td>
-                        <td>{forecast.summary}</td>
-                    </tr>
-                )}
-            </tbody>
-        </table>;
-
-    return (
-        <div>
-            <h1 id="tabelLabel">Weather forecast</h1>
-            <p>This component demonstrates fetching data from the server.</p>
-            {contents}
-        </div>
-    );
-
-    async function populateWeatherData() {
-        const response = await fetch('weatherforecast');
-        const data = await response.json();
-        setForecasts(data);
-    }
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Routes>
+          <Route 
+            path="/" 
+            element={<MainLayout children={<Dashboard />} />} 
+          />
+          <Route 
+            path="/invoices" 
+            element={<MainLayout children={<InvoiceList />} />} 
+          />
+          <Route 
+            path="/invoices/upload" 
+            element={<MainLayout children={<InvoiceUploadForm />} />} 
+          />
+          <Route 
+            path="/invoices/:id" 
+            element={<MainLayout children={<InvoiceDetails />} />} 
+          />
+          <Route 
+            path="/projects" 
+            element={<MainLayout children={<ProjectsList />} />} 
+          />
+          <Route
+            path="/lpos"
+            element={<MainLayout children={<LPOsList />} />}
+          />
+          <Route
+            path="/departments"
+            element={<MainLayout children={<SectionsAndUnits />} />}
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <MainLayout children={
+                <div className="h-full flex items-center justify-center">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Reports Page (Coming Soon)
+                  </h1>
+                </div>
+              } />
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <MainLayout children={
+                <div className="h-full flex items-center justify-center">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Settings Page (Coming Soon)
+                  </h1>
+                </div>
+              } />
+            } 
+          />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
