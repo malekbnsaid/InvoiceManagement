@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { Button } from '../ui/button';
-import { DocumentArrowUpIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
+import { Button } from '../ui/Button';
+import { 
+  FileUp as DocumentArrowUpIcon, 
+  X as XMarkIcon, 
+  CheckCircle as CheckCircleIcon 
+} from 'lucide-react';
+
+// Import our type-safe hooks
+import { useArrayState } from '../../utils/hooks';
 
 const InvoiceUploadForm = () => {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useArrayState<File>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
 
@@ -106,7 +113,7 @@ const InvoiceUploadForm = () => {
                       Selected Files ({files.length})
                     </h3>
                     <ul className="divide-y dark:divide-gray-700">
-                      {files.map((file, index) => (
+                      {files.map((file: File, index: number) => (
                         <motion.li 
                           key={`${file.name}-${index}`}
                           initial={{ opacity: 0, x: -20 }}

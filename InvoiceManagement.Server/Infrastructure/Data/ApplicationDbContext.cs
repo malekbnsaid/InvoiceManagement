@@ -25,6 +25,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<DocumentAttachment> DocumentAttachments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Vendor> Vendors { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,6 +80,20 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .HasForeignKey(pr => pr.UnitId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
+            // Configure Vendor relationships
+            modelBuilder.Entity<Vendor>()
+                .HasMany(v => v.Invoices)
+                .WithOne(i => i.Vendor)
+                .HasForeignKey(i => i.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            modelBuilder.Entity<Vendor>()
+                .HasMany(v => v.LPOs)
+                .WithOne(l => l.Vendor)
+                .HasForeignKey(l => l.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            // Missing Project-ProjectNumberRequest relationship fix
             modelBuilder.Entity<Project>()
                 .HasMany<ProjectNumberRequest>()
                 .WithOne(pr => pr.Project)

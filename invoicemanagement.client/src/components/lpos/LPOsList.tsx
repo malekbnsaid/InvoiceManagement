@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 import { 
   DocumentDuplicateIcon, 
   MagnifyingGlassIcon, 

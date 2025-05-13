@@ -16,6 +16,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register services
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -28,13 +29,20 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         builder =>
         {
-            builder.WithOrigins("https://localhost:5173")
+            builder.WithOrigins("https://localhost:5173", "http://localhost:5173")
                    .AllowAnyMethod()
                    .AllowAnyHeader();
         });
 });
 
 var app = builder.Build();
+
+// Initialize database and seed data
+if (app.Environment.IsDevelopment())
+{
+    // Run database initialization and seeding
+    await DbInitializer.InitializeAsync(app.Services);
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

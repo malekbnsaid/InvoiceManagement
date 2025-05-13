@@ -2,16 +2,21 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  PlusIcon, 
-  FunnelIcon, 
-  MagnifyingGlassIcon, 
-  ChevronUpIcon, 
-  ChevronDownIcon,
-  EyeIcon,
-  PencilSquareIcon,
-  DocumentTextIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline';
+  Plus as PlusIcon, 
+  Filter as FilterIcon, 
+  Search as SearchIcon, 
+  ChevronUp, 
+  ChevronDown,
+  Eye as EyeIcon,
+  Pencil as PencilIcon,
+  FileText as DocumentIcon,
+  RotateCw as RefreshIcon,
+  Building,
+  Cpu,
+  Shield,
+  Server as ServerIcon,
+  Terminal
+} from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -35,87 +40,117 @@ import {
   SelectValue 
 } from '../ui/select';
 
-// Mock data for invoices
-const mockInvoices = [
+// Define Invoice interface
+interface Invoice {
+  id: string;
+  vendor: string;
+  amount: number;
+  date: string;
+  dueDate: string;
+  status: string;
+  section: string;
+  unit: string;
+  vendorLogo: string;
+  projectId: string;
+}
+
+// Mock data for IT department invoices
+const mockInvoices: Invoice[] = [
   {
-    id: 'INV-001',
-    vendor: 'ABC Corp',
-    amount: 1250.00,
-    date: '2023-11-15',
-    dueDate: '2023-12-15',
-    status: 'paid',
-    department: 'IT',
-    vendorLogo: ''
-  },
-  {
-    id: 'INV-002',
-    vendor: 'XYZ Services',
-    amount: 3450.75,
-    date: '2023-11-20',
-    dueDate: '2023-12-20',
-    status: 'pending',
-    department: 'Marketing',
-    vendorLogo: ''
-  },
-  {
-    id: 'INV-003',
-    vendor: 'Tech Solutions',
-    amount: 875.50,
-    date: '2023-11-25',
-    dueDate: '2023-12-25',
+    id: 'INV-2023-156',
+    vendor: 'Cyber Security Solutions',
+    amount: 28500.00,
+    date: '2023-05-11',
+    dueDate: '2023-06-11',
     status: 'approved',
-    department: 'Engineering',
-    vendorLogo: ''
+    section: 'ISO',
+    unit: 'Security Operations',
+    vendorLogo: '',
+    projectId: 'ISO/5/2023-01'
   },
   {
-    id: 'INV-004',
-    vendor: 'Global Supplies',
-    amount: 2150.25,
-    date: '2023-11-28',
-    dueDate: '2023-12-28',
-    status: 'overdue',
-    department: 'Operations',
-    vendorLogo: ''
-  },
-  {
-    id: 'INV-005',
-    vendor: 'Office Essentials',
-    amount: 495.00,
-    date: '2023-12-01',
-    dueDate: '2024-01-01',
+    id: 'INV-2023-142',
+    vendor: 'Dell Technologies',
+    amount: 12340.75,
+    date: '2023-05-09',
+    dueDate: '2023-06-09',
     status: 'pending',
-    department: 'HR',
-    vendorLogo: ''
+    section: 'TSS',
+    unit: 'Hardware Support',
+    vendorLogo: '',
+    projectId: 'TSS/4/2023-04'
   },
   {
-    id: 'INV-006',
-    vendor: 'Data Systems Inc',
-    amount: 5785.50,
-    date: '2023-12-05',
-    dueDate: '2024-01-05',
+    id: 'INV-2023-138',
+    vendor: 'AWS Cloud Services',
+    amount: 8790.50,
+    date: '2023-05-08',
+    dueDate: '2023-06-08',
+    status: 'processing',
+    section: 'ISS',
+    unit: 'Cloud Services',
+    vendorLogo: '',
+    projectId: 'ISS/5/2023-02'
+  },
+  {
+    id: 'INV-2023-127',
+    vendor: 'Microsoft Corporation',
+    amount: 15400.25,
+    date: '2023-05-05',
+    dueDate: '2023-06-05',
+    status: 'approved',
+    section: 'APP',
+    unit: 'Custom Development',
+    vendorLogo: '',
+    projectId: 'APP/4/2023-05'
+  },
+  {
+    id: 'INV-2023-119',
+    vendor: 'Oracle Database Systems',
+    amount: 22350.00,
+    date: '2023-05-03',
+    dueDate: '2023-06-03',
+    status: 'pending',
+    section: 'ISS',
+    unit: 'Database Administration',
+    vendorLogo: '',
+    projectId: 'ISS/4/2023-09'
+  },
+  {
+    id: 'INV-2023-112',
+    vendor: 'Cisco Networks',
+    amount: 31780.50,
+    date: '2023-04-28',
+    dueDate: '2023-05-28',
     status: 'paid',
-    department: 'IT',
-    vendorLogo: ''
+    section: 'ISS',
+    unit: 'Network Infrastructure',
+    vendorLogo: '',
+    projectId: 'ISS/4/2023-07'
   },
   {
-    id: 'INV-007',
-    vendor: 'Marketing Experts',
-    amount: 3250.00,
-    date: '2023-12-10',
-    dueDate: '2024-01-10',
-    status: 'pending',
-    department: 'Marketing',
-    vendorLogo: ''
+    id: 'INV-2023-108',
+    vendor: 'SAP Enterprise Solutions',
+    amount: 45250.00,
+    date: '2023-04-25',
+    dueDate: '2023-05-25',
+    status: 'overdue',
+    section: 'APP',
+    unit: 'Enterprise Applications',
+    vendorLogo: '',
+    projectId: 'APP/3/2023-02'
   },
   {
-    id: 'INV-008',
-    vendor: 'Cloud Services Co',
-    amount: 9520.75,
-    date: '2023-12-15',
-    dueDate: '2024-01-15',
-    status: 'draft',
-    department: 'Engineering',
-    vendorLogo: ''
+    id: 'INV-2023-103',
+    vendor: 'Symantec Security',
+    amount: 18720.75,
+    date: '2023-04-20',
+    dueDate: '2023-05-20',
+    status: 'paid',
+    section: 'ISO',
+    unit: 'Risk Management',
+    vendorLogo: '',
+    projectId: 'ISO/3/2023-08'
   }
 ];
 
@@ -131,28 +166,46 @@ const formatCurrency = (amount: number) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'paid':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400';
     case 'pending':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400';
     case 'approved':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400';
+    case 'processing':
+      return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400';
     case 'overdue':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400';
     case 'draft':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400';
+  }
+};
+
+// Section icon mapping
+const getSectionIcon = (section: string) => {
+  switch (section) {
+    case 'ISO':
+      return <Shield className="h-4 w-4 text-red-500" />;
+    case 'TSS':
+      return <Terminal className="h-4 w-4 text-blue-500" />;
+    case 'ISS':
+      return <ServerIcon className="h-4 w-4 text-green-500" />;
+    case 'APP':
+      return <Cpu className="h-4 w-4 text-purple-500" />;
+    default:
+      return <Building className="h-4 w-4 text-gray-500" />;
   }
 };
 
 const InvoiceList = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<string>('date');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc' as 'asc' | 'desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [selectedInvoices, setSelectedInvoices] = useState([] as string[]);
   const [isLoading, setIsLoading] = useState(false);
   
   const itemsPerPage = 5;
@@ -167,17 +220,18 @@ const InvoiceList = () => {
     }
   };
 
-  // Filter invoices based on search term, status, and department
+  // Filter invoices based on search term, status, and section
   const filteredInvoices = mockInvoices.filter(invoice => {
     const matchesSearch = searchTerm === '' || 
       invoice.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.id.toLowerCase().includes(searchTerm.toLowerCase());
+      invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.projectId.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = selectedStatus === null || invoice.status === selectedStatus;
     
-    const matchesDepartment = selectedDepartment === null || invoice.department === selectedDepartment;
+    const matchesSection = selectedSection === null || invoice.section === selectedSection;
     
-    return matchesSearch && matchesStatus && matchesDepartment;
+    return matchesSearch && matchesStatus && matchesSection;
   });
 
   // Sort invoices
@@ -209,9 +263,9 @@ const InvoiceList = () => {
   );
 
   // Handle invoice selection
-  const toggleInvoiceSelection = (id: string) => {
+  const toggleInvoiceSelection = (id: string): void => {
     if (selectedInvoices.includes(id)) {
-      setSelectedInvoices(selectedInvoices.filter(invId => invId !== id));
+      setSelectedInvoices(selectedInvoices.filter((invId: string) => invId !== id));
     } else {
       setSelectedInvoices([...selectedInvoices, id]);
     }
@@ -235,22 +289,43 @@ const InvoiceList = () => {
     }, 1000);
   };
 
-  const departmentOptions = [...new Set(mockInvoices.map(invoice => invoice.department))];
-  const statusOptions = [...new Set(mockInvoices.map(invoice => invoice.status))];
+  const sectionOptions = Array.from(new Set(mockInvoices.map(invoice => invoice.section)));
+  const statusOptions = Array.from(new Set(mockInvoices.map(invoice => invoice.status)));
+
+  // Move event handlers to separate functions
+  const handleSearchChange = (e: any) => {
+    setSearchTerm(e.target.value);
+  };
+  
+  const handleStatusChange = (value: any) => {
+    setSelectedStatus(value || null);
+  };
+  
+  const handleSectionChange = (value: any) => {
+    setSelectedSection(value || null);
+  };
+  
+  const handlePrevPage = () => {
+    setCurrentPage((prev: number) => Math.max(prev - 1, 1));
+  };
+  
+  const handleNextPage = () => {
+    setCurrentPage((prev: number) => Math.min(prev + 1, totalPages));
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto p-4"
+      className="max-w-7xl mx-auto"
     >
       <Card className="w-full shadow-md">
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 pb-4">
           <div>
-            <CardTitle className="text-2xl font-bold">Invoices</CardTitle>
+            <CardTitle className="text-2xl font-bold">IT Department Invoices</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Manage and track your invoices
+              Manage and track invoices across IT sections
             </p>
           </div>
           <div className="flex space-x-2">
@@ -259,7 +334,7 @@ const InvoiceList = () => {
               onClick={refreshData}
               disabled={isLoading}
             >
-              <ArrowPathIcon className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshIcon className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button 
@@ -277,19 +352,19 @@ const InvoiceList = () => {
         <CardContent>
           <div className="flex flex-col md:flex-row justify-between mb-4 space-y-2 md:space-y-0">
             <div className="relative w-full md:w-1/3">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search invoices..."
+                placeholder="Search invoices or projects..."
                 className="pl-9"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
             <div className="flex space-x-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="flex space-x-1">
-                    <FunnelIcon className="h-4 w-4" />
+                    <FilterIcon className="h-4 w-4" />
                     <span>Filter</span>
                   </Button>
                 </PopoverTrigger>
@@ -299,7 +374,7 @@ const InvoiceList = () => {
                       <h4 className="font-medium">Status</h4>
                       <Select 
                         value={selectedStatus || ""} 
-                        onValueChange={(value) => setSelectedStatus(value || null)}
+                        onValueChange={handleStatusChange}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All Statuses" />
@@ -315,18 +390,20 @@ const InvoiceList = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-medium">Department</h4>
+                      <h4 className="font-medium">IT Section</h4>
                       <Select 
-                        value={selectedDepartment || ""} 
-                        onValueChange={(value) => setSelectedDepartment(value || null)}
+                        value={selectedSection || ""} 
+                        onValueChange={handleSectionChange}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="All Departments" />
+                          <SelectValue placeholder="All Sections" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Departments</SelectItem>
-                          {departmentOptions.map(dept => (
-                            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                          <SelectItem value="">All Sections</SelectItem>
+                          {sectionOptions.map(section => (
+                            <SelectItem key={section} value={section}>
+                              {section}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -336,7 +413,7 @@ const InvoiceList = () => {
                         variant="outline" 
                         onClick={() => {
                           setSelectedStatus(null);
-                          setSelectedDepartment(null);
+                          setSelectedSection(null);
                         }}
                       >
                         Reset
@@ -377,8 +454,8 @@ const InvoiceList = () => {
                       <span>Invoice #</span>
                       {sortField === 'id' && (
                         sortDirection === 'asc' ? 
-                          <ChevronUpIcon className="h-4 w-4" /> : 
-                          <ChevronDownIcon className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" /> : 
+                          <ChevronDown className="h-4 w-4" />
                       )}
                     </div>
                   </TableHead>
@@ -390,8 +467,8 @@ const InvoiceList = () => {
                       <span>Vendor</span>
                       {sortField === 'vendor' && (
                         sortDirection === 'asc' ? 
-                          <ChevronUpIcon className="h-4 w-4" /> : 
-                          <ChevronDownIcon className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" /> : 
+                          <ChevronDown className="h-4 w-4" />
                       )}
                     </div>
                   </TableHead>
@@ -403,8 +480,8 @@ const InvoiceList = () => {
                       <span>Amount</span>
                       {sortField === 'amount' && (
                         sortDirection === 'asc' ? 
-                          <ChevronUpIcon className="h-4 w-4" /> : 
-                          <ChevronDownIcon className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" /> : 
+                          <ChevronDown className="h-4 w-4" />
                       )}
                     </div>
                   </TableHead>
@@ -416,8 +493,8 @@ const InvoiceList = () => {
                       <span>Date</span>
                       {sortField === 'date' && (
                         sortDirection === 'asc' ? 
-                          <ChevronUpIcon className="h-4 w-4" /> : 
-                          <ChevronDownIcon className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" /> : 
+                          <ChevronDown className="h-4 w-4" />
                       )}
                     </div>
                   </TableHead>
@@ -429,20 +506,21 @@ const InvoiceList = () => {
                       <span>Due Date</span>
                       {sortField === 'dueDate' && (
                         sortDirection === 'asc' ? 
-                          <ChevronUpIcon className="h-4 w-4" /> : 
-                          <ChevronDownIcon className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" /> : 
+                          <ChevronDown className="h-4 w-4" />
                       )}
                     </div>
                   </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Department</TableHead>
+                  <TableHead>Section</TableHead>
+                  <TableHead>Project ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       No invoices found.
                     </TableCell>
                   </TableRow>
@@ -478,7 +556,17 @@ const InvoiceList = () => {
                           {invoice.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{invoice.department}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {getSectionIcon(invoice.section)}
+                          <span>{invoice.section}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/projects/${invoice.projectId}`} className="text-primary-600 hover:underline">
+                          {invoice.projectId}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" asChild>
@@ -488,11 +576,11 @@ const InvoiceList = () => {
                             </Link>
                           </Button>
                           <Button variant="ghost" size="icon">
-                            <PencilSquareIcon className="h-4 w-4" />
+                            <PencilIcon className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
                           <Button variant="ghost" size="icon">
-                            <DocumentTextIcon className="h-4 w-4" />
+                            <DocumentIcon className="h-4 w-4" />
                             <span className="sr-only">Download</span>
                           </Button>
                         </div>
@@ -515,7 +603,7 @@ const InvoiceList = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={handlePrevPage}
                 disabled={currentPage === 1}
               >
                 Previous
@@ -523,7 +611,7 @@ const InvoiceList = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={handleNextPage}
                 disabled={currentPage === totalPages || totalPages === 0}
               >
                 Next

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { 
   UserGroupIcon, 
   ChevronDownIcon, 
@@ -8,7 +8,7 @@ import {
   UserIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 
 // Mock data for IT Department structure
 const mockITDepartment = {

@@ -7,6 +7,7 @@ import InvoiceUploadForm from './components/invoices/InvoiceUploadForm';
 import InvoiceList from './components/invoices/InvoiceList';
 import SectionsAndUnits from './components/departments/SectionsAndUnits';
 import ProjectsList from './components/projects/ProjectsList';
+import ProjectFormPage from './pages/ProjectFormPage';
 import LPOsList from './components/lpos/LPOsList';
 
 // Create a client
@@ -36,6 +37,10 @@ function App() {
           <Route 
             path="/projects" 
             element={<MainLayout children={<ProjectsList />} />} 
+          />
+          <Route 
+            path="/projects/new" 
+            element={<ProjectFormPage />} 
           />
           <Route
             path="/lpos"

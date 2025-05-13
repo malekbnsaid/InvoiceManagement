@@ -28,6 +28,12 @@ namespace InvoiceManagement.Server.Domain.Entities
         public string ApprovedBy { get; set; }
         public DateTime? ApprovalDate { get; set; }
         
+        // Procurement Details
+        public string PONumber { get; set; } // Purchase Order number
+        public DateTime? PurchaseDate { get; set; } // Date of purchase
+        public string PaymentPlan { get; set; } // For upcoming years
+        public int? CompletionPercentage { get; set; } // Status tracking
+        
         // Foreign keys
         public int UnitId { get; set; }
         

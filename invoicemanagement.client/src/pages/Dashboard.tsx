@@ -1,53 +1,76 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
-  DocumentTextIcon, 
-  ClipboardDocumentListIcon, 
-  BanknotesIcon, 
-  ChartBarIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronRightIcon
-} from '@heroicons/react/24/outline';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '../components/ui/card';
+  FileText, 
+  FolderKanban, 
+  BadgeDollarSign, 
+  BarChart3,
+  ArrowUp,
+  ArrowDown,
+  ChevronRight,
+  PlusCircle,
+  Clock,
+  Building,
+  User,
+  CircleDollarSign,
+  AlertTriangle,
+  CheckCircle2
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
-// Mock data
+// Mock data for IT department
 const stats = [
   {
-    title: 'Total Invoices',
-    value: '2,458',
-    change: '+14.2%',
+    title: 'Active IT Projects',
+    value: '24',
+    change: '+3',
     changeType: 'positive',
-    icon: <DocumentTextIcon className="h-8 w-8 text-primary-500" />,
+    icon: <FolderKanban className="h-8 w-8 text-primary-500" />,
   },
   {
-    title: 'Pending Approval',
-    value: '36',
-    change: '-4.5%',
+    title: 'Pending Invoices',
+    value: '18',
+    change: '-4',
     changeType: 'negative',
-    icon: <ClipboardDocumentListIcon className="h-8 w-8 text-yellow-500" />,
+    icon: <FileText className="h-8 w-8 text-amber-500" />,
   },
   {
-    title: 'Paid Amount',
-    value: '$435,298',
-    change: '+8.7%',
+    title: 'Total Budget',
+    value: '$1.2M',
+    change: '+12.7%',
     changeType: 'positive',
-    icon: <BanknotesIcon className="h-8 w-8 text-green-500" />,
+    icon: <BadgeDollarSign className="h-8 w-8 text-green-500" />,
   },
   {
-    title: 'Open Projects',
-    value: '12',
-    change: '+2',
+    title: 'IT Systems Coverage',
+    value: '94%',
+    change: '+2.3%',
     changeType: 'positive',
-    icon: <ChartBarIcon className="h-8 w-8 text-purple-500" />,
+    icon: <BarChart3 className="h-8 w-8 text-blue-500" />,
   },
 ];
 
+const recentProjects = [
+  { id: 'ISO/5/2023-01', name: 'Security Compliance Framework', section: 'ISO', department: 'Security Operations', status: 'In Progress', completion: 65 },
+  { id: 'TSS/4/2023-04', name: 'IT Help Desk Modernization', section: 'TSS', department: 'Service Desk', status: 'On Hold', completion: 30 },
+  { id: 'ISS/5/2023-02', name: 'Cloud Infrastructure Migration', section: 'ISS', department: 'Cloud Services', status: 'In Progress', completion: 45 },
+  { id: 'APP/4/2023-05', name: 'Invoice Management System', section: 'APP', department: 'Custom Development', status: 'Active', completion: 80 },
+  { id: 'ISO/3/2023-08', name: 'Data Protection Implementation', section: 'ISO', department: 'Risk Management', status: 'Completed', completion: 100 },
+];
+
 const recentInvoices = [
-  { id: 'INV-001', date: '2023-05-11', vendor: 'Tech Solutions LLC', amount: '$12,500', status: 'Paid' },
-  { id: 'INV-002', date: '2023-05-09', vendor: 'Office Supplies Inc', amount: '$2,340', status: 'Pending' },
-  { id: 'INV-003', date: '2023-05-08', vendor: 'Global Software Corp', amount: '$8,790', status: 'Processing' },
-  { id: 'INV-004', date: '2023-05-05', vendor: 'Network Services Co', amount: '$5,400', status: 'Paid' },
-  { id: 'INV-005', date: '2023-05-03', vendor: 'Hardware Systems', amount: '$3,220', status: 'Rejected' },
+  { id: 'INV-2023-156', date: '2023-05-11', vendor: 'Cyber Security Solutions', amount: '$28,500', section: 'ISO', status: 'Approved' },
+  { id: 'INV-2023-142', date: '2023-05-09', vendor: 'Dell Technologies', amount: '$12,340', section: 'TSS', status: 'Pending' },
+  { id: 'INV-2023-138', date: '2023-05-08', vendor: 'AWS Cloud Services', amount: '$8,790', section: 'ISS', status: 'Processing' },
+  { id: 'INV-2023-127', date: '2023-05-05', vendor: 'Microsoft Corporation', amount: '$15,400', section: 'APP', status: 'Approved' },
+];
+
+const itDepartmentBreakdown = [
+  { name: 'Information Security Office (ISO)', budget: '$320,000', projects: 8, color: 'from-red-500 to-orange-500' },
+  { name: 'Technical Support Services (TSS)', budget: '$280,000', projects: 6, color: 'from-blue-500 to-cyan-500' },
+  { name: 'Infrastructure & Systems Support (ISS)', budget: '$420,000', projects: 5, color: 'from-emerald-500 to-green-500' },
+  { name: 'Applications (APP)', budget: '$180,000', projects: 5, color: 'from-violet-500 to-purple-500' },
 ];
 
 const container = {
@@ -66,16 +89,37 @@ const item = {
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+      >
         <div>
-          <span className="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-primary-900 dark:text-primary-300">
-            Last updated: Today at 10:30 AM
-          </span>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">IT Department Dashboard</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">Overview of IT projects, invoices, and department metrics</p>
         </div>
-      </div>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700"
+            onClick={() => navigate('/projects/new')}
+          >
+            <PlusCircle className="h-4 w-4" />
+            New Project
+          </Button>
+          <Button 
+            className="flex items-center gap-2" 
+            variant="outline"
+            onClick={() => navigate('/invoices/upload')}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Upload Invoice
+          </Button>
+        </div>
+      </motion.div>
 
       <motion.div 
         variants={container}
@@ -83,30 +127,33 @@ const Dashboard = () => {
         animate="show"
         className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
       >
-        {stats.map((stat, index) => (
+        {stats.map((stat) => (
           <motion.div key={stat.title} variants={item}>
-            <Card>
-              <CardContent className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</h3>
-                  <div className="flex items-center mt-1">
-                    {stat.changeType === 'positive' ? (
-                      <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                    )}
-                    <span 
-                      className={`text-sm font-medium ml-1 ${
-                        stat.changeType === 'positive' ? 'text-green-500' : 'text-red-500'
-                      }`}
-                    >
-                      {stat.change}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last month</span>
+            <Card className="border-t-4 border-t-primary-500 hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</h3>
+                    <div className="flex items-center mt-1">
+                      {stat.changeType === 'positive' ? (
+                        <ArrowUp className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4 text-rose-500" />
+                      )}
+                      <span 
+                        className={`text-sm font-medium ml-1 ${
+                          stat.changeType === 'positive' ? 'text-emerald-500' : 'text-rose-500'
+                        }`}
+                      >
+                        {stat.change}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-full bg-primary-50 dark:bg-gray-800">
+                    {stat.icon}
                   </div>
                 </div>
-                {stat.icon}
               </CardContent>
             </Card>
           </motion.div>
@@ -114,50 +161,87 @@ const Dashboard = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Invoices</CardTitle>
-              <CardDescription>Last 5 invoices processed in the system</CardDescription>
+        <motion.div 
+          className="lg:col-span-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <FolderKanban className="h-5 w-5 text-primary-500" />
+                    Recent IT Projects
+                  </CardTitle>
+                  <CardDescription>Active projects across IT departments</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate('/projects')}>
+                  View All
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:text-gray-400 dark:bg-gray-800">
                     <tr>
-                      <th className="px-4 py-3">Invoice ID</th>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Vendor</th>
-                      <th className="px-4 py-3">Amount</th>
+                      <th className="px-4 py-3 rounded-tl-lg">Project</th>
+                      <th className="px-4 py-3">Section</th>
                       <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 rounded-tr-lg">Progress</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {recentInvoices.map((invoice) => (
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {recentProjects.map((project) => (
                       <tr 
-                        key={invoice.id} 
-                        className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        key={project.id} 
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                        onClick={() => navigate(`/projects/${project.id}`)}
                       >
-                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                          {invoice.id}
+                        <td className="px-4 py-3">
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">{project.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{project.id}</div>
+                          </div>
                         </td>
-                        <td className="px-4 py-3">{invoice.date}</td>
-                        <td className="px-4 py-3">{invoice.vendor}</td>
-                        <td className="px-4 py-3">{invoice.amount}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <div className="h-6 w-6 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-700 dark:text-primary-300 text-xs font-semibold mr-2">
+                              {project.section}
+                            </div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs">{project.department}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <span 
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              invoice.status === 'Paid' 
-                                ? 'bg-green-100 text-green-800' 
-                                : invoice.status === 'Pending' 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : invoice.status === 'Processing' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-red-100 text-red-800'
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              project.status === 'Active' || project.status === 'In Progress'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                : project.status === 'On Hold' 
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' 
+                                : project.status === 'Completed'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
                             }`}
                           >
-                            {invoice.status}
+                            {project.status}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                project.completion >= 80 ? 'bg-emerald-500' : 
+                                project.completion >= 40 ? 'bg-blue-500' : 'bg-amber-500'
+                              }`} 
+                              style={{ width: `${project.completion}%` }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-right mt-1 text-gray-500 dark:text-gray-400">
+                            {project.completion}%
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -165,100 +249,231 @@ const Dashboard = () => {
                 </table>
               </div>
             </CardContent>
-            <CardFooter className="justify-center">
-              <button className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 flex items-center">
-                View all invoices
-                <ChevronRightIcon className="ml-1 h-4 w-4" />
-              </button>
-            </CardFooter>
           </Card>
-        </div>
-        <div>
-          <Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="h-full">
             <CardHeader>
-              <CardTitle>Invoice Status</CardTitle>
-              <CardDescription>Overview of invoice statuses</CardDescription>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Building className="h-5 w-5 text-primary-500" />
+                IT Department Breakdown
+              </CardTitle>
+              <CardDescription>Budget and project allocation</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Paid</span>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">65%</span>
+              <div className="space-y-6">
+                {itDepartmentBreakdown.map((dept) => (
+                  <div key={dept.name} className="space-y-2">
+                    <div className="flex justify-between">
+                      <div>
+                        <div className="font-medium text-gray-800 dark:text-gray-200">{dept.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{dept.projects} projects • {dept.budget}</div>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full bg-gradient-to-r ${dept.color}`}
+                        style={{ width: `${(parseInt(dept.budget.replace(/\$|,/g, '')) / 1200000) * 100}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '65%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Pending</span>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">15%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                    <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: '15%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Processing</span>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">12%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                    <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: '12%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rejected</span>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">8%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                    <div className="bg-red-500 h-2.5 rounded-full" style={{ width: '8%' }}></div>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-          
-          <div className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Vendors</CardTitle>
-                <CardDescription>By invoice count</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold">TS</div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Tech Solutions LLC</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">32 invoices</p>
-                    </div>
-                    <div className="ml-auto text-base font-semibold text-gray-900 dark:text-white">$145,230</div>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-secondary-100 dark:bg-secondary-900 flex items-center justify-center text-secondary-700 dark:text-secondary-300 font-semibold">GS</div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Global Software Corp</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">28 invoices</p>
-                    </div>
-                    <div className="ml-auto text-base font-semibold text-gray-900 dark:text-white">$98,450</div>
-                  </li>
-                  <li className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center text-yellow-700 dark:text-yellow-300 font-semibold">NS</div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Network Services Co</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">21 invoices</p>
-                    </div>
-                    <div className="ml-auto text-base font-semibold text-gray-900 dark:text-white">$76,320</div>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        </motion.div>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary-500" />
+                  Recent Invoices
+                </CardTitle>
+                <CardDescription>Latest IT department invoices</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate('/invoices')}>
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:text-gray-400 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Invoice ID</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Vendor</th>
+                    <th className="px-4 py-3">Section</th>
+                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3 rounded-tr-lg">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {recentInvoices.map((invoice) => (
+                    <tr 
+                      key={invoice.id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                      onClick={() => navigate(`/invoices/${invoice.id}`)}
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                        {invoice.id}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{invoice.date}</td>
+                      <td className="px-4 py-3">{invoice.vendor}</td>
+                      <td className="px-4 py-3">
+                        <div className="inline-flex items-center justify-center h-6 w-10 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 text-xs font-medium">
+                          {invoice.section}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium">{invoice.amount}</td>
+                      <td className="px-4 py-3">
+                        <span 
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            invoice.status === 'Approved' 
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                              : invoice.status === 'Pending' 
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' 
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                          }`}
+                        >
+                          {invoice.status === 'Approved' && <CheckCircle2 className="mr-1 h-3 w-3" />}
+                          {invoice.status === 'Pending' && <Clock className="mr-1 h-3 w-3" />}
+                          {invoice.status === 'Processing' && <CircleDollarSign className="mr-1 h-3 w-3" />}
+                          {invoice.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="grid grid-cols-1 gap-6 md:grid-cols-3"
+      >
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Pending Approvals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 p-3 border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20 rounded-lg">
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-400">Security Framework Review</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-500">Waiting for CIO approval</p>
+                </div>
+                <Button variant="ghost" size="sm" className="ml-auto text-amber-600">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 p-3 border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20 rounded-lg">
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-400">AWS Cloud Services Invoice</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-500">Needs financial verification</p>
+                </div>
+                <Button variant="ghost" size="sm" className="ml-auto text-amber-600">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-500" />
+              IT Team Leads
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold">JD</div>
+                <div className="ml-3">
+                  <p className="font-medium text-gray-900 dark:text-white">John Doe</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Information Security Lead</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-700 dark:text-green-300 font-semibold">SJ</div>
+                <div className="ml-3">
+                  <p className="font-medium text-gray-900 dark:text-white">Sarah Johnson</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Applications Team Lead</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 font-semibold">RM</div>
+                <div className="ml-3">
+                  <p className="font-medium text-gray-900 dark:text-white">Robert Miller</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Infrastructure Lead</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CircleDollarSign className="h-5 w-5 text-green-500" />
+              Budget Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Spent</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">42%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '42%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Remaining</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">$696,000</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '58%' }}></div>
+                </div>
+              </div>
+              <div className="pt-2">
+                <Button variant="outline" className="w-full" onClick={() => navigate('/reports')}>
+                  View Detailed Report
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

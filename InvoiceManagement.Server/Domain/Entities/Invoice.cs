@@ -12,7 +12,7 @@ namespace InvoiceManagement.Server.Domain.Entities
         public decimal InvoiceValue { get; set; }
         public string Currency { get; set; }
         
-        // OCR-extracted Vendor Info
+        // OCR-extracted Vendor Info (legacy fields)
         public string VendorName { get; set; }
         public string VendorAddress { get; set; }
         public string VendorTaxId { get; set; }
@@ -21,6 +21,15 @@ namespace InvoiceManagement.Server.Domain.Entities
         public DateTime? ReceiveDate { get; set; }
         public string InvoiceReceiver { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Pending;
+        
+        // Status Lifecycle Fields
+        public DateTime? ReceivedByITDate { get; set; }
+        public string ReceivedByITBy { get; set; }
+        public DateTime? SentToProcurementDate { get; set; }
+        public string SentToProcurementBy { get; set; }
+        public string ZajelNumber { get; set; } // Tracking number for procurement
+        public DateTime? ReceivedByProcurementDate { get; set; }
+        public string ReceivedByProcurementBy { get; set; }
         
         // Payment Info
         public decimal? PaidAmount { get; set; }
@@ -56,10 +65,12 @@ namespace InvoiceManagement.Server.Domain.Entities
         // Foreign keys
         public int? ProjectId { get; set; }
         public int? LPOId { get; set; }
+        public int? VendorId { get; set; }
         
         // Navigation properties
         public Project Project { get; set; }
         public LPO LPO { get; set; }
+        public Vendor Vendor { get; set; }
         public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
         public Invoice DuplicateOfInvoice { get; set; }
     }
