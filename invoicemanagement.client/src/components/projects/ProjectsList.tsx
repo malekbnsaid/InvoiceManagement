@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -129,7 +130,7 @@ type Project = typeof mockProjects[0];
 
 const ProjectsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState(null as string | null);
 
   // Filter projects based on search query and status filter
   const filteredProjects = mockProjects.filter((project) => {

@@ -23,7 +23,7 @@ type FormFieldContextValue<
 }
 
 // Use any to satisfy the TS compiler temporarily
-const FormFieldContext = React.createContext<any>(null)
+const FormFieldContext = React.createContext(null as any)
 
 const FormField = <
   TFieldValues extends FieldValues = FieldValues,
@@ -66,7 +66,7 @@ type FormItemContextValue = {
 }
 
 // Use any to satisfy the TS compiler temporarily
-const FormItemContext = React.createContext<any>(null)
+const FormItemContext = React.createContext(null as any)
 
 // Simplify type annotations to avoid React 19 specific issues
 const FormItem = React.forwardRef(({ className, ...props }: any, ref: any) => {

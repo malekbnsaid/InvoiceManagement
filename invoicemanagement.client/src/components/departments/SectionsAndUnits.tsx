@@ -9,6 +9,7 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { Button } from '../ui/Button';
+import React from 'react';
 
 // Mock data for IT Department structure
 const mockITDepartment = {

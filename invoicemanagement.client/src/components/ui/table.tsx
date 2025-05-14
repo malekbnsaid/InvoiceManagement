@@ -1,5 +1,6 @@
 import { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes, forwardRef } from 'react';
 import { cn } from '../../utils/cn';
+import React from 'react';
 
 const Table = forwardRef<
   HTMLTableElement,

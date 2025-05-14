@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';

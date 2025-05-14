@@ -1,0 +1,15 @@
+/*import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useToast } from "./ui/use-toast"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Textarea } from "./ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { useAuth } from "../contexts/AuthContext"
+import { Project } from "../types/project"
+import { Client } from "../types/client"
+import { api } from "../lib/api"
+*/
+// ... existing code ... 

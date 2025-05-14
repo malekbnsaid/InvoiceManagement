@@ -9,6 +9,7 @@ import SectionsAndUnits from './components/departments/SectionsAndUnits';
 import ProjectsList from './components/projects/ProjectsList';
 import ProjectFormPage from './pages/ProjectFormPage';
 import LPOsList from './components/lpos/LPOsList';
+import React from 'react';
 
 // Create a client
 const queryClient = new QueryClient();

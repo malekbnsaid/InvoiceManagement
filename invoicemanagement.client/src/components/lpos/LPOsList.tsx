@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -105,15 +106,19 @@ const mockLPOs = [
 ];
 
 type LPO = typeof mockLPOs[0];
+interface Project {
+  id: number;
+  name: string;
+}
 
 const LPOsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProject, setSelectedProject] = useState<number | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [lpos, setLpos] = useState<LPO[]>(mockLPOs);
+  const [selectedProject, setSelectedProject] = useState(null as number | null);
+  const [selectedStatus, setSelectedStatus] = useState(null as string | null);
+  const [lpos, setLpos] = useState(mockLPOs as LPO[]);
 
   // Filter LPOs based on search and filters
-  const filteredLPOs = lpos.filter(lpo => {
+  const filteredLPOs = lpos.filter((lpo: LPO) => {
     const matchesSearch = searchTerm === '' || 
       lpo.lpoNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lpo.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -127,8 +132,8 @@ const LPOsList = () => {
   });
 
   // Extract unique projects and statuses for filters
-  const projects = [...new Set(lpos.map(lpo => ({ id: lpo.projectId, name: lpo.projectName })))];
-  const statuses = [...new Set(lpos.map(lpo => lpo.status))];
+  const projects = [...new Set(lpos.map((lpo: LPO) => ({ id: lpo.projectId, name: lpo.projectName })))] as Project[];
+  const statuses = [...new Set(lpos.map((lpo: LPO) => lpo.status))] as string[];
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -146,7 +151,7 @@ const LPOsList = () => {
       case 'Completed':
         return 'success';
       case 'Cancelled':
-        return 'destructive';
+        return 'danger';
       default:
         return 'secondary';
     }
@@ -225,7 +230,7 @@ const LPOsList = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLPOs.map(lpo => (
+                filteredLPOs.map((lpo: LPO) => (
                   <TableRow key={lpo.id}>
                     <TableCell className="font-medium">{lpo.lpoNumber}</TableCell>
                     <TableCell>{lpo.supplierName}</TableCell>

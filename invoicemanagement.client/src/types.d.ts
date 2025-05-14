@@ -1,7 +1,7 @@
 declare module 'framer-motion';
 declare module '@heroicons/react/*';
 declare module 'react/jsx-runtime';
-declare module 'react';
+//declare module 'react';
 declare module 'react-router-dom';
 declare module '@tanstack/react-query';
 declare module 'react-dropzone';
