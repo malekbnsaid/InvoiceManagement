@@ -6,8 +6,8 @@ namespace InvoiceManagement.Server.Domain.Entities
     {
         public int Id { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
         public DateTime? ModifiedAt { get; set; }
-        public string ModifiedBy { get; set; }
+        public string? ModifiedBy { get; set; }
     }
 } 

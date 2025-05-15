@@ -4,25 +4,27 @@ namespace InvoiceManagement.Server.Domain.Entities
 {
     public class DocumentAttachment : BaseEntity
     {
-        public string FileName { get; set; }
-        public string OriginalFileName { get; set; }
-        public string FilePath { get; set; }
-        public string FileType { get; set; }
+        // File Information
+        public string FileName { get; set; } = string.Empty;
+        public string OriginalFileName { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
+        public string FileType { get; set; } = string.Empty;
         public long FileSize { get; set; }
-        public string ContentType { get; set; }
+        public string ContentType { get; set; } = string.Empty;
+        public string? Description { get; set; }
         
-        public string Description { get; set; }
+        // Upload Information
         public DateTime UploadDate { get; set; } = DateTime.UtcNow;
-        public string UploadedBy { get; set; }
+        public string UploadedBy { get; set; } = string.Empty;
         
-        // Document is related to either an Invoice, Project, or LPO
+        // Related Entity (only one of these should be set)
         public int? InvoiceId { get; set; }
         public int? ProjectId { get; set; }
         public int? LPOId { get; set; }
         
         // Navigation properties
-        public Invoice Invoice { get; set; }
-        public Project Project { get; set; }
-        public LPO LPO { get; set; }
+        public Invoice? Invoice { get; set; }
+        public Project? Project { get; set; }
+        public LPO? LPO { get; set; }
     }
 } 

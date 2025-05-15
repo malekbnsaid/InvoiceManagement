@@ -6,72 +6,52 @@ namespace InvoiceManagement.Server.Domain.Entities
 {
     public class Invoice : BaseEntity
     {
-        // Basic Invoice Info
-        public string InvoiceNumber { get; set; }
+        // Essential Invoice Information
+        public string InvoiceNumber { get; set; } = string.Empty;
         public DateTime InvoiceDate { get; set; }
         public decimal InvoiceValue { get; set; }
-        public string Currency { get; set; }
+        public string Currency { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
+        public string? Subject { get; set; }
+        public string? ReferenceNumber { get; set; }
         
-        // OCR-extracted Vendor Info (legacy fields)
-        public string VendorName { get; set; }
-        public string VendorAddress { get; set; }
-        public string VendorTaxId { get; set; }
-        
-        // Invoice Processing
-        public DateTime? ReceiveDate { get; set; }
-        public string InvoiceReceiver { get; set; }
+        // Processing Information
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Pending;
-        
-        // Status Lifecycle Fields
-        public DateTime? ReceivedByITDate { get; set; }
-        public string ReceivedByITBy { get; set; }
-        public DateTime? SentToProcurementDate { get; set; }
-        public string SentToProcurementBy { get; set; }
-        public string ZajelNumber { get; set; } // Tracking number for procurement
-        public DateTime? ReceivedByProcurementDate { get; set; }
-        public string ReceivedByProcurementBy { get; set; }
-        
-        // Payment Info
-        public decimal? PaidAmount { get; set; }
+        public DateTime? ReceiveDate { get; set; }
+        public string? ProcessedBy { get; set; }
+        public DateTime? ProcessedDate { get; set; }
         public DateTime? PaymentDate { get; set; }
-        public string PaymentReference { get; set; }
+        public decimal? PaidAmount { get; set; }
         
-        // Period Info (Optional)
-        public DateTime? PeriodStart { get; set; }
-        public DateTime? PeriodEnd { get; set; }
+        // Vendor Information
+        public string? VendorName { get; set; }
         
-        // Additional References
-        public string Remark { get; set; }
-        public string ReceiptNumber { get; set; }
-        public string ReferenceNumber { get; set; }
-        public int? CCAcountNumber { get; set; }
+        // Project Information
+        public string? ProjectReference { get; set; }
         
-        // File Storage
-        public string FilePath { get; set; }
-        public string FileName { get; set; }
-        public string FileType { get; set; }
+        // Document Information
+        public string FilePath { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string FileType { get; set; } = string.Empty;
         public long? FileSize { get; set; }
         
-        // OCR Processing
-        public float? OcrConfidence { get; set; }
-        public bool IsOcrVerified { get; set; }
-        public DateTime? OcrProcessedDate { get; set; }
-        public string OcrRawData { get; set; }
+        // Additional Information
+        public string? Remark { get; set; }
         
         // Duplicate Detection
         public bool IsPotentialDuplicate { get; set; }
         public int? DuplicateOfInvoiceId { get; set; }
         
-        // Foreign keys
+        // Foreign Keys - Relationships
         public int? ProjectId { get; set; }
         public int? LPOId { get; set; }
         public int? VendorId { get; set; }
         
-        // Navigation properties
-        public Project Project { get; set; }
-        public LPO LPO { get; set; }
-        public Vendor Vendor { get; set; }
+        // Navigation Properties
+        public Project? Project { get; set; }
+        public LPO? LPO { get; set; }
+        public Vendor? Vendor { get; set; }
         public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
-        public Invoice DuplicateOfInvoice { get; set; }
+        public Invoice? DuplicateOfInvoice { get; set; }
     }
 } 

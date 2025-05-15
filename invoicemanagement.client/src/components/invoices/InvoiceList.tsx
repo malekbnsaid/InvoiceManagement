@@ -382,7 +382,7 @@ const InvoiceList = () => {
                           <SelectValue placeholder="All Statuses" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Statuses</SelectItem>
+                          <SelectItem value="all">All Statuses</SelectItem>
                           {statusOptions.map(status => (
                             <SelectItem key={status} value={status}>
                               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -401,7 +401,7 @@ const InvoiceList = () => {
                           <SelectValue placeholder="All Sections" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Sections</SelectItem>
+                          <SelectItem value="all">All Sections</SelectItem>
                           {sectionOptions.map(section => (
                             <SelectItem key={section} value={section}>
                               {section}
@@ -444,7 +444,7 @@ const InvoiceList = () => {
                         paginatedInvoices.length > 0 &&
                         selectedInvoices.length === paginatedInvoices.length
                       }
-                      onCheckedChange={toggleSelectAll}
+                      onChange={toggleSelectAll}
                       aria-label="Select all"
                     />
                   </TableHead>
@@ -532,7 +532,7 @@ const InvoiceList = () => {
                       <TableCell>
                         <Checkbox 
                           checked={selectedInvoices.includes(invoice.id)}
-                          onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                          onChange={() => toggleInvoiceSelection(invoice.id)}
                           aria-label={`Select invoice ${invoice.id}`}
                         />
                       </TableCell>

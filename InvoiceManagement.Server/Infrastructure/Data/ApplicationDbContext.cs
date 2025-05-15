@@ -13,55 +13,65 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         {
         }
 
-        public DbSet<Department> Departments { get; set; }
-        public DbSet<Section> Sections { get; set; }
-        public DbSet<Unit> Units { get; set; }
-        public DbSet<Employee> Employees { get; set; }
-        public DbSet<Project> Projects { get; set; }
-        public DbSet<LPO> LPOs { get; set; }
-        public DbSet<Invoice> Invoices { get; set; }
-        public DbSet<StatusHistory> StatusHistories { get; set; }
-        public DbSet<ProjectNumberRequest> ProjectNumberRequests { get; set; }
-        public DbSet<DocumentAttachment> DocumentAttachments { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<AuditLog> AuditLogs { get; set; }
-        public DbSet<Vendor> Vendors { get; set; }
+        public DbSet<Project> Projects { get; set; } = null!;
+        public DbSet<LPO> LPOs { get; set; } = null!;
+        public DbSet<Invoice> Invoices { get; set; } = null!;
+        public DbSet<StatusHistory> StatusHistories { get; set; } = null!;
+        public DbSet<ProjectNumberRequest> ProjectNumberRequests { get; set; } = null!;
+        public DbSet<DocumentAttachment> DocumentAttachments { get; set; } = null!;
+        public DbSet<Notification> Notifications { get; set; } = null!;
+        public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+        public DbSet<Vendor> Vendors { get; set; } = null!;
+        public DbSet<DepartmentHierarchy> DepartmentHierarchies { get; set; } = null!;
+        public DbSet<ERPEmployee> ERPEmployees { get; set; } = null!;
+        public DbSet<AppUser> AppUsers { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure relationships
-            modelBuilder.Entity<Department>()
-                .HasMany(d => d.Sections)
-                .WithOne(s => s.Department)
-                .HasForeignKey(s => s.DepartmentId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // DepartmentHierarchy configuration
+            modelBuilder.Entity<DepartmentHierarchy>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DepartmentName).IsRequired();
+                entity.Property(e => e.SectionName).IsRequired();
+                entity.Property(e => e.SectionAbbreviation).IsRequired();
+                entity.Property(e => e.UnitName).IsRequired();
+            });
 
-            modelBuilder.Entity<Section>()
-                .HasMany(s => s.Units)
-                .WithOne(u => u.Section)
-                .HasForeignKey(u => u.SectionId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // Project configuration
+            modelBuilder.Entity<Project>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProjectNumber).IsRequired();
+                entity.Property(e => e.Name).IsRequired();
+                
+                // Relationship with DepartmentHierarchy for Section
+                entity.HasOne(p => p.Section)
+                    .WithMany()
+                    .HasForeignKey(p => p.SectionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Relationship with ERPEmployee for ProjectManager
+                entity.HasOne(p => p.ProjectManager)
+                    .WithMany()
+                    .HasForeignKey(p => p.ProjectManagerId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Unit>()
-                .HasMany(u => u.Projects)
-                .WithOne(p => p.Unit)
-                .HasForeignKey(p => p.UnitId)
-                .OnDelete(DeleteBehavior.Restrict);
+                // Existing relationships
+                entity.HasMany(p => p.LPOs)
+                    .WithOne(l => l.Project)
+                    .HasForeignKey(l => l.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Project>()
-                .HasMany(p => p.LPOs)
-                .WithOne(l => l.Project)
-                .HasForeignKey(l => l.ProjectId)
-                .OnDelete(DeleteBehavior.Restrict);
+                entity.HasMany(p => p.Invoices)
+                    .WithOne(i => i.Project)
+                    .HasForeignKey(i => i.ProjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 
-            modelBuilder.Entity<Project>()
-                .HasMany(p => p.Invoices)
-                .WithOne(i => i.Project)
-                .HasForeignKey(i => i.ProjectId)
-                .OnDelete(DeleteBehavior.Restrict);
-
+            // Configure other relationships
             modelBuilder.Entity<LPO>()
                 .HasMany(l => l.Invoices)
                 .WithOne(i => i.LPO)
@@ -74,10 +84,10 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .HasForeignKey(sh => sh.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
                 
-            modelBuilder.Entity<Unit>()
-                .HasMany<ProjectNumberRequest>()
-                .WithOne(pr => pr.Unit)
-                .HasForeignKey(pr => pr.UnitId)
+            modelBuilder.Entity<ProjectNumberRequest>()
+                .HasOne(pr => pr.DepartmentHierarchy)
+                .WithMany()
+                .HasForeignKey(pr => pr.DepartmentHierarchyId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
             // Configure Vendor relationships
@@ -91,19 +101,6 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .HasMany(v => v.LPOs)
                 .WithOne(l => l.Vendor)
                 .HasForeignKey(l => l.VendorId)
-                .OnDelete(DeleteBehavior.Restrict);
-                
-            // Missing Project-ProjectNumberRequest relationship fix
-            modelBuilder.Entity<Project>()
-                .HasMany<ProjectNumberRequest>()
-                .WithOne(pr => pr.Project)
-                .HasForeignKey(pr => pr.ProjectId)
-                .OnDelete(DeleteBehavior.SetNull);
-                
-            modelBuilder.Entity<Invoice>()
-                .HasOne(i => i.DuplicateOfInvoice)
-                .WithMany()
-                .HasForeignKey(i => i.DuplicateOfInvoiceId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
             // Document attachments
@@ -129,13 +126,44 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.Employee)
                 .WithMany()
-                .HasForeignKey(n => n.EmployeeId)
+                .HasForeignKey(n => n.ERPEmployeeId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ERPEmployee configuration
+            modelBuilder.Entity<ERPEmployee>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.EmployeeNumber).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.EmployeeNumber).IsUnique();
+                
+                entity.Property(e => e.EmployeeName).HasMaxLength(256);
+                entity.Property(e => e.EmployeeNameAr).HasMaxLength(256);
+                entity.Property(e => e.Email).HasMaxLength(50);
+                entity.Property(e => e.Department).HasMaxLength(256);
+                entity.Property(e => e.JobTitle).HasMaxLength(256);
+            });
+
+            // AppUser configuration
+            modelBuilder.Entity<AppUser>(entity =>
+            {
+                entity.HasKey(e => e.User_Seq);
+                entity.Property(e => e.User_Seq).ValueGeneratedOnAdd();
+                
+                entity.Property(e => e.EMPLOYEE_NUMBER).HasMaxLength(50);
+                entity.Property(e => e.User_Name).IsRequired().HasMaxLength(240);
+                entity.Property(e => e.EMAIL).HasMaxLength(240);
+                
+                // Relationship with ERPEmployee
+                entity.HasOne(u => u.Employee)
+                    .WithMany()
+                    .HasForeignKey(u => u.EMPLOYEE_NUMBER)
+                    .HasPrincipalKey(e => e.EmployeeNumber)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            // This will be used to implement the audit logging
             var entries = ChangeTracker.Entries()
                 .Where(e => e.Entity is BaseEntity && (
                     e.State == EntityState.Added ||
@@ -148,12 +176,10 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 if (entry.State == EntityState.Added)
                 {
                     entity.CreatedAt = DateTime.UtcNow;
-                    // CreatedBy would be set from the service layer using the current user
                 }
                 else if (entry.State == EntityState.Modified)
                 {
                     entity.ModifiedAt = DateTime.UtcNow;
-                    // ModifiedBy would be set from the service layer using the current user
                 }
             }
 

@@ -21,11 +21,9 @@ namespace InvoiceManagement.Server.Domain.Entities
         public DateTime? LastLoginDate { get; set; }
         
         // Foreign keys
-        public int? DepartmentId { get; set; }
-        public int? UnitId { get; set; }
+        public int DepartmentId { get; set; }
         
         // Navigation properties
-        public Department Department { get; set; }
-        public Unit Unit { get; set; }
+        public DepartmentHierarchy Department { get; set; }
     }
 } 

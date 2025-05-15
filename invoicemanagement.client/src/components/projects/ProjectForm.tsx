@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { z } from 'zod';
@@ -9,6 +8,7 @@ import { CalendarIcon, Briefcase, Building2, User, DollarSign, Clock, FileText, 
 
 import { Button } from '../ui/Button';
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,
@@ -43,7 +43,7 @@ const formSchema = z.object({
   unitId: z.string().min(1, 'Unit is required'),
   section: z.string().min(1, 'Section is required'),
   budget: z.string().min(1, 'Budget is required'),
-  projectManager: z.string().min(1, 'Project manager is required'),
+  projectManagerId: z.string().min(1, 'Project manager is required'),
   expectedStart: z.date({
     required_error: "Start date is required",
     invalid_type_error: "Start date is required",
@@ -83,14 +83,22 @@ const units = [
   { id: 12, name: 'Application Integration', sectionId: 4 },
 ];
 
+// Mock employees data
+const employees = [
+  { id: 'EMP001', name: 'John Smith', department: 'IT' },
+  { id: 'EMP002', name: 'Sarah Johnson', department: 'IT' },
+  { id: 'EMP003', name: 'Michael Brown', department: 'IT' },
+  { id: 'EMP004', name: 'Emily Davis', department: 'IT' },
+];
+
 interface ProjectFormProps {
   onSubmit: (data: any) => void;
   isLoading?: boolean;
 }
 
 export default function ProjectForm({ onSubmit, isLoading = false }: ProjectFormProps) {
-  const [selectedSection, setSelectedSection] = useState(null as string | null);
-  const [generatedProjectNumber, setGeneratedProjectNumber] = useState('' as string);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [generatedProjectNumber, setGeneratedProjectNumber] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -103,7 +111,7 @@ export default function ProjectForm({ onSubmit, isLoading = false }: ProjectForm
       unitId: '',
       section: '',
       budget: '',
-      projectManager: '',
+      projectManagerId: '',
       paymentPlan: '',
       projectNumber: '',
       initialNotes: '',
@@ -194,111 +202,110 @@ export default function ProjectForm({ onSubmit, isLoading = false }: ProjectForm
         </CardHeader>
 
         <CardContent className="p-6">
-          <FormProvider
-            {...form}
-            children={
-              <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-                {/* Step 1: Project Information */}
-                {currentStep === 1 && (
-                  <motion.div
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="space-y-6"
-                  >
-                    {/* Project Name */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+              {/* Step 1: Project Information */}
+              {currentStep === 1 && (
+                <motion.div
+                  variants={stepVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-6"
+                >
+                  {/* Project Name */}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-primary" />
+                          Project Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter project name" 
+                            className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Section Selection */}
                     <FormField
                       control={form.control}
-                      name="name"
+                      name="section"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
-                            <Briefcase className="h-4 w-4 text-primary" />
-                            Project Name
+                            <Building2 className="h-4 w-4 text-primary" />
+                            Section
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Enter project name" 
-                              className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                              {...field} 
-                            />
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                form.setValue('unitId', '');
+                              }}
+                              value={field.value}
+                            >
+                              <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                                <SelectValue placeholder="Select section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {sections.map((section) => (
+                                  <SelectItem key={section.id} value={section.id.toString()}>
+                                    {section.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage className={formMessageStyles} />
                         </FormItem>
                       )}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Section Selection */}
-                      <FormField
-                        control={form.control}
-                        name="section"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-primary" />
-                              Section
-                            </FormLabel>
-                            <FormControl>
-                              <Select
-                                onValueChange={(value: string) => {
-                                  field.onChange(value);
-                                  form.setValue('unitId', '');
-                                }}
-                                value={field.value}
-                              >
-                                <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
-                                  <SelectValue placeholder="Select section" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {sections.map((section) => (
-                                    <SelectItem key={section.id} value={section.id.toString()}>
-                                      {section.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Project Number (Generated) */}
-                      <FormField
-                        control={form.control}
-                        name="projectNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-primary" />
-                              Project Number
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                disabled 
-                                value={generatedProjectNumber || 'Select a section first'} 
-                                className="bg-gray-50 dark:bg-gray-800"
-                              />
-                            </FormControl>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Unit Selection */}
+                    {/* Project Number (Generated) */}
                     <FormField
                       control={form.control}
-                      name="unitId"
+                      name="projectNumber"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary" />
-                            Unit
+                            <FileText className="h-4 w-4 text-primary" />
+                            Project Number
                           </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              disabled 
+                              value={generatedProjectNumber || 'Select a section first'} 
+                              className="bg-gray-50 dark:bg-gray-800"
+                            />
+                          </FormControl>
+                          <FormMessage className={formMessageStyles} />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Unit Selection */}
+                  <FormField
+                    control={form.control}
+                    name="unitId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          Unit
+                        </FormLabel>
+                        <FormControl>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
@@ -315,46 +322,278 @@ export default function ProjectForm({ onSubmit, isLoading = false }: ProjectForm
                               ))}
                             </SelectContent>
                           </Select>
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Project Manager */}
+                  <FormField
+                    control={form.control}
+                    name="projectManagerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" />
+                          Project Manager
+                        </FormLabel>
+                        <FormControl>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                              <SelectValue placeholder="Select project manager" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {employees.map((employee) => (
+                                <SelectItem key={employee.id} value={employee.id}>
+                                  {employee.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Description */}
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          Description
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter project description" 
+                            className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+              )}
+
+              {/* Step 2: Timeline & Budget */}
+              {currentStep === 2 && (
+                <motion.div
+                  variants={stepVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-6"
+                >
+                  {/* Budget */}
+                  <FormField
+                    control={form.control}
+                    name="budget"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Budget
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter budget amount" 
+                            className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Expected Start Date */}
+                    <FormField
+                      control={form.control}
+                      name="expectedStart"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Expected Start Date
+                          </FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage className={formMessageStyles} />
                         </FormItem>
                       )}
                     />
 
-                    {/* Project Manager */}
+                    {/* Expected End Date */}
                     <FormField
                       control={form.control}
-                      name="projectManager"
+                      name="expectedEnd"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-primary" />
+                            Expected End Date
+                          </FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage className={formMessageStyles} />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Payment Plan */}
+                  <FormField
+                    control={form.control}
+                    name="paymentPlan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Payment Plan
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter payment plan details for upcoming years" 
+                            className="min-h-[80px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className={formMessageStyles} />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+              )}
+
+              {/* Step 3: Additional Information */}
+              {currentStep === 3 && (
+                <motion.div
+                  variants={stepVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* Purchase Date */}
+                    <FormField
+                      control={form.control}
+                      name="purchaseDate"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-primary" />
-                            Project Manager
+                            <CalendarIcon className="h-4 w-4 text-primary" />
+                            Initial Purchase Date
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Enter project manager name" 
-                              className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                              {...field} 
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </FormControl>
                           <FormMessage className={formMessageStyles} />
                         </FormItem>
                       )}
                     />
 
-                    {/* Description */}
+                    {/* Additional Notes */}
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="initialNotes"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-primary" />
-                            Description
+                            Additional Notes
                           </FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Enter project description" 
+                              placeholder="Enter any additional project notes or documentation requirements" 
                               className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                               {...field} 
                             />
@@ -363,316 +602,96 @@ export default function ProjectForm({ onSubmit, isLoading = false }: ProjectForm
                         </FormItem>
                       )}
                     />
-                  </motion.div>
-                )}
+                  </div>
 
-                {/* Step 2: Timeline & Budget */}
-                {currentStep === 2 && (
-                  <motion.div
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="space-y-6"
-                  >
-                    {/* Budget */}
-                    <FormField
-                      control={form.control}
-                      name="budget"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-primary" />
-                            Budget
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Enter budget amount" 
-                              className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage className={formMessageStyles} />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Expected Start Date */}
-                      <FormField
-                        control={form.control}
-                        name="expectedStart"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              Expected Start Date
-                            </FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Expected End Date */}
-                      <FormField
-                        control={form.control}
-                        name="expectedEnd"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              Expected End Date
-                            </FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Payment Plan */}
-                    <FormField
-                      control={form.control}
-                      name="paymentPlan"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-primary" />
-                            Payment Plan
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Enter payment plan details for upcoming years" 
-                              className="min-h-[80px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage className={formMessageStyles} />
-                        </FormItem>
-                      )}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Step 3: Documentation & Details */}
-                {currentStep === 3 && (
-                  <motion.div
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="space-y-6"
-                  >
-                    <div className="grid grid-cols-1 gap-6">
-                      {/* Purchase Date */}
-                      <FormField
-                        control={form.control}
-                        name="purchaseDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-primary" />
-                              Initial Purchase Date
-                            </FormLabel>
-                            <FormControl>
-                              <div>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      className={cn(
-                                        "w-full pl-3 text-left font-normal focus:ring-2 focus:ring-primary focus:border-primary transition-all",
-                                        !field.value && "text-muted-foreground"
-                                      )}
-                                    >
-                                      {field.value ? (
-                                        format(field.value, "PPP")
-                                      ) : (
-                                        <span>Pick a date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={field.value}
-                                      onSelect={field.onChange}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              </div>
-                            </FormControl>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Additional Notes */}
-                      <FormField
-                        control={form.control}
-                        name="initialNotes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-primary" />
-                              Additional Notes
-                            </FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Enter any additional project notes or documentation requirements" 
-                                className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage className={formMessageStyles} />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* LPO Relationship Note */}
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <FileText className="h-5 w-5 text-blue-500 mt-0.5" />
-                        <div>
-                          <h3 className="font-medium text-blue-800 dark:text-blue-300">LPO Management</h3>
-                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                            You'll be able to add multiple LPOs to this project after it's created. Each LPO can then have multiple invoices associated with it.
-                          </p>
-                        </div>
+                  {/* LPO Relationship Note */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <h3 className="font-medium text-blue-800 dark:text-blue-300">LPO Management</h3>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                          You'll be able to add multiple LPOs to this project after it's created. Each LPO can then have multiple invoices associated with it.
+                        </p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Summary Section */}
-                    <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                        Project Summary
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500 dark:text-gray-400">Project Number:</p>
-                          <p className="font-medium">{generatedProjectNumber || 'Not generated yet'}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500 dark:text-gray-400">Project Name:</p>
-                          <p className="font-medium">{form.watch('name') || 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500 dark:text-gray-400">Budget:</p>
-                          <p className="font-medium">{form.watch('budget') ? `$${form.watch('budget')}` : 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500 dark:text-gray-400">Project Manager:</p>
-                          <p className="font-medium">{form.watch('projectManager') || 'Not specified'}</p>
-                        </div>
+                  {/* Summary Section */}
+                  <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      Project Summary
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Project Number:</p>
+                        <p className="font-medium">{generatedProjectNumber || 'Not generated yet'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Project Name:</p>
+                        <p className="font-medium">{form.watch('name') || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Budget:</p>
+                        <p className="font-medium">{form.watch('budget') ? `$${form.watch('budget')}` : 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Project Manager:</p>
+                        <p className="font-medium">{
+                          form.watch('projectManagerId') 
+                            ? employees.find(e => e.id === form.watch('projectManagerId'))?.name || 'Not specified'
+                            : 'Not specified'
+                        }</p>
                       </div>
                     </div>
-                  </motion.div>
-                )}
+                  </div>
+                </motion.div>
+              )}
 
-                {/* Navigation buttons */}
-                <div className="flex justify-between mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+              {/* Navigation buttons */}
+              <div className="flex justify-between mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={prevStep}
+                  disabled={currentStep === 1 || isLoading}
+                  className="transition-all"
+                >
+                  Back
+                </Button>
+                
+                {currentStep < totalSteps ? (
                   <Button 
                     type="button" 
-                    variant="outline" 
-                    onClick={prevStep}
-                    disabled={currentStep === 1 || isLoading}
-                    className="transition-all"
+                    onClick={nextStep}
+                    className="bg-primary hover:bg-primary/90 transition-all"
                   >
-                    Back
+                    Continue
                   </Button>
-                  
-                  {currentStep < totalSteps ? (
-                    <Button 
-                      type="button" 
-                      onClick={nextStep}
-                      className="bg-primary hover:bg-primary/90 transition-all"
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <Button 
-                      type="submit"
-                      disabled={isLoading}
-                      className="bg-primary hover:bg-primary/90 transition-all"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Submitting...
-                        </div>
-                      ) : (
-                        'Submit Project Request'
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </form>
-            }
-          />
+                ) : (
+                  <Button 
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-primary hover:bg-primary/90 transition-all"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                      </div>
+                    ) : (
+                      'Submit Project Request'
+                    )}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </motion.div>

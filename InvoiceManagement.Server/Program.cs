@@ -16,7 +16,8 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register services
 builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
+//builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
+builder.Services.AddScoped<IDepartmentHierarchyService, DepartmentHierarchyService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -5,6 +5,7 @@ using InvoiceManagement.Server.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace InvoiceManagement.Server.Infrastructure.Data
 {
@@ -21,8 +22,8 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 // Apply pending migrations
                 await context.Database.MigrateAsync();
                 
-                // Seed IT Department data if it doesn't exist
-                await SeedItDepartmentAsync(context);
+                // Seed department hierarchy data
+                await SeedDepartmentHierarchyAsync(context);
                 
                 logger.LogInformation("Database initialization completed successfully");
             }
@@ -33,91 +34,144 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             }
         }
 
-        private static async Task SeedItDepartmentAsync(ApplicationDbContext context)
+        private static async Task SeedDepartmentHierarchyAsync(ApplicationDbContext context)
         {
-            // Check if we already have data
-            if (await context.Departments.AnyAsync())
-                return;
+            if (!await context.DepartmentHierarchies.AnyAsync())
+            {
+                var departmentHierarchies = new List<DepartmentHierarchy>
+                {
+                    // IT Department - Information Security Office (ISO)
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 1,
+                        SectionName = "Information Security Office",
+                        SectionAbbreviation = "ISO",
+                        UnitId = 1,
+                        UnitName = "Security Operations"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 1,
+                        SectionName = "Information Security Office",
+                        SectionAbbreviation = "ISO",
+                        UnitId = 2,
+                        UnitName = "Governance & Compliance"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 1,
+                        SectionName = "Information Security Office",
+                        SectionAbbreviation = "ISO",
+                        UnitId = 3,
+                        UnitName = "Risk Management"
+                    },
+                    
+                    // IT Department - Technical Support Services (TSS)
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 2,
+                        SectionName = "Technical Support Services",
+                        SectionAbbreviation = "TSS",
+                        UnitId = 4,
+                        UnitName = "Desktop Support"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 2,
+                        SectionName = "Technical Support Services",
+                        SectionAbbreviation = "TSS",
+                        UnitId = 5,
+                        UnitName = "Service Desk"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 2,
+                        SectionName = "Technical Support Services",
+                        SectionAbbreviation = "TSS",
+                        UnitId = 6,
+                        UnitName = "Device Management"
+                    },
+                    
+                    // IT Department - Infrastructure & Systems Support (ISS)
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 3,
+                        SectionName = "Infrastructure & Systems Support",
+                        SectionAbbreviation = "ISS",
+                        UnitId = 7,
+                        UnitName = "Network Infrastructure"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 3,
+                        SectionName = "Infrastructure & Systems Support",
+                        SectionAbbreviation = "ISS",
+                        UnitId = 8,
+                        UnitName = "Server Management"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 3,
+                        SectionName = "Infrastructure & Systems Support",
+                        SectionAbbreviation = "ISS",
+                        UnitId = 9,
+                        UnitName = "Cloud Services"
+                    },
+                    
+                    // IT Department - Applications (APP)
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 4,
+                        SectionName = "Applications",
+                        SectionAbbreviation = "APP",
+                        UnitId = 10,
+                        UnitName = "Business Applications"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 4,
+                        SectionName = "Applications",
+                        SectionAbbreviation = "APP",
+                        UnitId = 11,
+                        UnitName = "Custom Development"
+                    },
+                    new DepartmentHierarchy
+                    {
+                        DepartmentId = 1,
+                        DepartmentName = "Information Technology",
+                        SectionId = 4,
+                        SectionName = "Applications",
+                        SectionAbbreviation = "APP",
+                        UnitId = 12,
+                        UnitName = "Application Integration"
+                    }
+                };
 
-            // Create IT Department
-            var itDepartment = new Department
-            {
-                Name = "Information Technology"
-            };
-            
-            context.Departments.Add(itDepartment);
-            await context.SaveChangesAsync();
-
-            // Create sections
-            var iso = new Section 
-            { 
-                Name = "Information Security Office", 
-                Abbreviation = "ISO",
-                DepartmentId = itDepartment.Id
-            };
-            
-            var tss = new Section 
-            { 
-                Name = "Technical Support Services", 
-                Abbreviation = "TSS",
-                DepartmentId = itDepartment.Id
-            };
-            
-            var iss = new Section 
-            { 
-                Name = "Infrastructure & Systems Support", 
-                Abbreviation = "ISS",
-                DepartmentId = itDepartment.Id
-            };
-            
-            var app = new Section 
-            { 
-                Name = "Applications", 
-                Abbreviation = "APP",
-                DepartmentId = itDepartment.Id
-            };
-            
-            context.Sections.AddRange(iso, tss, iss, app);
-            await context.SaveChangesAsync();
-
-            // Create units for ISO section
-            var isoUnits = new[]
-            {
-                new Unit { Name = "Security Operations", SectionId = iso.Id },
-                new Unit { Name = "Governance & Compliance", SectionId = iso.Id },
-                new Unit { Name = "Risk Management", SectionId = iso.Id }
-            };
-            
-            // Create units for TSS section
-            var tssUnits = new[]
-            {
-                new Unit { Name = "Desktop Support", SectionId = tss.Id },
-                new Unit { Name = "Service Desk", SectionId = tss.Id },
-                new Unit { Name = "Device Management", SectionId = tss.Id }
-            };
-            
-            // Create units for ISS section
-            var issUnits = new[]
-            {
-                new Unit { Name = "Network Infrastructure", SectionId = iss.Id },
-                new Unit { Name = "Server Management", SectionId = iss.Id },
-                new Unit { Name = "Cloud Services", SectionId = iss.Id }
-            };
-            
-            // Create units for APP section
-            var appUnits = new[]
-            {
-                new Unit { Name = "Business Applications", SectionId = app.Id },
-                new Unit { Name = "Custom Development", SectionId = app.Id },
-                new Unit { Name = "Application Integration", SectionId = app.Id }
-            };
-            
-            context.Units.AddRange(isoUnits);
-            context.Units.AddRange(tssUnits);
-            context.Units.AddRange(issUnits);
-            context.Units.AddRange(appUnits);
-            
-            await context.SaveChangesAsync();
+                await context.DepartmentHierarchies.AddRangeAsync(departmentHierarchies);
+                await context.SaveChangesAsync();
+            }
         }
     }
 } 

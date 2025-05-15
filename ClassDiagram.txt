@@ -1,0 +1,268 @@
+```mermaid
+classDiagram
+    class BaseEntity {
+        +int Id
+        +DateTime CreatedAt
+        +string CreatedBy
+        +DateTime? ModifiedAt
+        +string ModifiedBy
+    }
+    
+    class Invoice {
+        +string InvoiceNumber
+        +DateTime InvoiceDate
+        +decimal InvoiceValue
+        +string Currency
+        +DateTime? DueDate
+        +InvoiceStatus Status
+        +DateTime? ReceiveDate
+        +string InvoiceReceiver
+        +DateTime? ProcessedDate
+        +string ProcessedBy
+        +DateTime? PaymentDate
+        +string PaymentReference
+        +decimal? PaidAmount
+        +string ReferenceNumber
+        +string ZajelNumber
+        +DateTime? PeriodStart
+        +DateTime? PeriodEnd
+        +string FilePath
+        +string FileName
+        +string FileType
+        +long? FileSize
+        +float? OcrConfidence
+        +bool IsOcrVerified
+        +DateTime? OcrProcessedDate
+        +string Remark
+        +bool IsPotentialDuplicate
+        +int? DuplicateOfInvoiceId
+        +int? ProjectId
+        +int? LPOId
+        +int? VendorId
+    }
+    
+    class Project {
+        +string ProjectNumber
+        +string Name
+        +string Description
+        +int ProjectManagerId
+        +decimal? Budget
+        +decimal? Cost
+        +DateTime? ExpectedStart
+        +DateTime? ExpectedEnd
+        +DateTime? ActualStart
+        +DateTime? ActualEnd
+        +string RequestedBy
+        +DateTime? RequestDate
+        +bool IsApproved
+        +string ApprovedBy
+        +DateTime? ApprovalDate
+        +string PONumber
+        +DateTime? PurchaseDate
+        +string PaymentPlan
+        +int? CompletionPercentage
+        +int SectionId
+    }
+    
+    class Vendor {
+        +string Name
+        +string ContactPerson
+        +string Email
+        +string Phone
+        +string Mobile
+        +string Website
+        +string Address
+        +string City
+        +string State
+        +string PostalCode
+        +string Country
+        +string TaxId
+        +string BankName
+        +string BankAccountNumber
+        +string IBAN
+        +string SwiftCode
+        +string Category
+        +string VendorCode
+        +string Specialty
+        +string ServiceType
+        +string IndustryType
+        +string ContractType
+        +DateTime? ContractStartDate
+        +DateTime? ContractEndDate
+        +string PreferredPaymentMethod
+        +bool IsActive
+        +string Notes
+    }
+    
+    class LPO {
+        +string LPONumber
+        +DateTime IssueDate
+        +string SupplierName
+        +string SupplierEmail
+        +string SupplierPhone
+        +string Description
+        +decimal TotalAmount
+        +string Currency
+        +DateTime StartDate
+        +DateTime CompletionDate
+        +string Status
+        +decimal? RemainingAmount
+        +string PredictionData
+        +bool HasActuals
+        +int ProjectId
+        +int? VendorId
+    }
+    
+    class Department {
+        +string Name
+    }
+    
+    class Section {
+        +string Name
+        +string Abbreviation
+        +int? DepartmentId
+    }
+    
+    class Unit {
+        +string Name
+        +int SectionId
+    }
+    
+    class DepartmentHierarchy {
+        +int DepartmentId
+        +string DepartmentName
+        +int SectionId
+        +string SectionName
+        +string SectionAbbreviation
+        +int UnitId
+        +string UnitName
+    }
+    
+    class ERPEmployee {
+        +string EmployeeNumber
+        +string EmployeeName
+        +string EmployeeNameAr
+        +string QID
+        +string Email
+        +string Department
+        +string DepartmentAr
+        +int DepartmentID
+        +string JobNumber
+        +string JobTitle
+        +string JobTitleAr
+        +string JobGrade
+        +string JobGradeAr
+        +string BasicSalary
+        +int NationalityId
+        +string Nationality
+        +string NationalityAr
+        +DateTime DateOfEmployment
+        +string ContractType
+        +string Status
+        +string Manager_Id
+        +string Remark
+        +DateTime Rec_DateTime
+        +string Rec_UserId
+        +string Rec_IPAddress
+        +bool Rec_IsActive
+    }
+    
+    class Employee {
+        +string FullName
+        +string Email
+        +string Mobile
+        +string Username
+        +string PasswordHash
+        +Role Role
+        +bool IsActive
+        +string RefreshToken
+        +DateTime? RefreshTokenExpiryTime
+        +DateTime? LastLoginDate
+        +int DepartmentId
+    }
+    
+    class DocumentAttachment {
+        +string FileName
+        +string OriginalFileName
+        +string FilePath
+        +string FileType
+        +long FileSize
+        +string ContentType
+        +string Description
+        +DateTime UploadDate
+        +string UploadedBy
+        +int? InvoiceId
+        +int? ProjectId
+        +int? LPOId
+    }
+    
+    class StatusHistory {
+        +int InvoiceId
+        +InvoiceStatus PreviousStatus
+        +InvoiceStatus NewStatus
+        +DateTime ChangeDate
+        +string ChangedBy
+        +string Comments
+        +int DaysInPreviousStatus
+    }
+    
+    class Notification {
+        +string Title
+        +string Message
+        +DateTime CreatedAt
+        +bool IsRead
+        +DateTime? ReadAt
+        +int EmployeeId
+        +string EntityType
+        +int? EntityId
+        +string ActionUrl
+    }
+    
+    BaseEntity <|-- Invoice
+    BaseEntity <|-- Project
+    BaseEntity <|-- Vendor
+    BaseEntity <|-- LPO
+    BaseEntity <|-- Department
+    BaseEntity <|-- Section
+    BaseEntity <|-- Unit
+    BaseEntity <|-- DepartmentHierarchy
+    BaseEntity <|-- ERPEmployee
+    BaseEntity <|-- Employee
+    BaseEntity <|-- DocumentAttachment
+    BaseEntity <|-- StatusHistory
+    BaseEntity <|-- Notification
+    
+    Invoice "*" --> "1" Project : belongs to
+    Invoice "*" --> "1" LPO : belongs to
+    Invoice "*" --> "1" Vendor : belongs to
+    Invoice "1" --> "1" Invoice : duplicate of
+    Invoice "1" --> "*" StatusHistory : has
+    
+    Project "1" --> "*" LPO : has
+    Project "1" --> "*" Invoice : has
+    Project "*" --> "1" DepartmentHierarchy : belongs to
+    Project "*" --> "1" ERPEmployee : managed by
+    
+    LPO "1" --> "*" Invoice : has
+    LPO "*" --> "1" Project : belongs to
+    LPO "*" --> "1" Vendor : belongs to
+    
+    Department "1" --> "*" Section : has
+    Department "1" --> "*" Employee : has
+    
+    Section "1" --> "*" Unit : has
+    Section "*" --> "1" Department : belongs to
+    
+    Unit "1" --> "*" Project : has
+    Unit "*" --> "1" Section : belongs to
+    
+    Employee "*" --> "1" DepartmentHierarchy : belongs to
+    
+    DocumentAttachment "*" --> "0..1" Invoice : attached to
+    DocumentAttachment "*" --> "0..1" Project : attached to
+    DocumentAttachment "*" --> "0..1" LPO : attached to
+    
+    StatusHistory "*" --> "1" Invoice : belongs to
+    
+    Notification "*" --> "1" Employee : for
+``` 
