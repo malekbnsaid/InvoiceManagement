@@ -5,10 +5,20 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InvoiceManagement.Server.Domain.Entities
 {
+    public enum ApprovalStatus
+    {
+        Pending,
+        SectionHeadApproved,
+        DepartmentHeadApproved,
+        FinanceApproved,
+        Rejected
+    }
+
     public class Project : BaseEntity
     {
         // Basic Information
         public string ProjectNumber { get; set; } = string.Empty;
+        public string? PONumber { get; set; }
         
         [Required(ErrorMessage = "Project name is required")]
         public string Name { get; set; } = string.Empty;
@@ -23,8 +33,11 @@ namespace InvoiceManagement.Server.Domain.Entities
         public decimal? Budget { get; set; }
         public decimal? Cost { get; set; }
         
-        // Status
+        // PMO Approval
         public bool IsApproved { get; set; }
+        public DateTime? ApprovalDate { get; set; }
+        public string? ApprovedBy { get; set; }
+        public string? RejectionReason { get; set; }
         
         // Timeline
         public DateTime? ExpectedStart { get; set; }

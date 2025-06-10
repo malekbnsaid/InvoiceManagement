@@ -200,6 +200,28 @@ export const projectApi = {
     const response = await api.put(`/Projects/${id}/status`, { status });
     return response.data;
   },
+
+  updateApprovalStatus: async (projectId: number, data: {
+    isApproved: boolean;
+    poNumber?: string;
+    rejectionReason?: string;
+    approvedBy?: string;
+    approvalDate?: string;
+  }) => {
+    if (data.isApproved) {
+      const response = await api.post(`/Projects/${projectId}/approve`, {
+        poNumber: data.poNumber,
+        approvedBy: data.approvedBy
+      });
+      return response.data;
+    } else {
+      const response = await api.post(`/Projects/${projectId}/reject`, {
+        reason: data.rejectionReason,
+        rejectedBy: data.approvedBy
+      });
+      return response.data;
+    }
+  },
 };
 
 // Department API calls

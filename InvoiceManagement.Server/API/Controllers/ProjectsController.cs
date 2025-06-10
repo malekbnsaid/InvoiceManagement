@@ -187,13 +187,52 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // POST: api/Projects/5/approve
         [HttpPost("{id}/approve")]
-        public async Task<IActionResult> ApproveProject(int id, [FromBody] string approvedBy)
+        public async Task<IActionResult> ApproveProject(int id, [FromBody] ApprovalRequest request)
         {
-            var result = await _projectService.ApproveProjectAsync(id, approvedBy);
-            if (!result)
-                return NotFound();
+            try
+            {
+                if (string.IsNullOrEmpty(request.PONumber))
+                {
+                    return BadRequest(new { error = "PO Number is required for approval" });
+                }
 
-            return NoContent();
+                var approvalResult = await _projectService.ApproveProjectAsync(id, request.ApprovedBy ?? User.Identity?.Name ?? "System");
+                if (!approvalResult)
+                    return NotFound();
+
+                var poUpdateResult = await _projectService.UpdatePONumberAsync(id, request.PONumber, request.ApprovedBy ?? User.Identity?.Name ?? "System");
+                if (!poUpdateResult)
+                    return BadRequest(new { error = "Failed to update PO number" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // POST: api/Projects/5/reject
+        [HttpPost("{id}/reject")]
+        public async Task<IActionResult> RejectProject(int id, [FromBody] RejectionRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Reason))
+                {
+                    return BadRequest(new { error = "Rejection reason is required" });
+                }
+
+                var result = await _projectService.RejectProjectAsync(id, request.RejectedBy ?? User.Identity?.Name ?? "System", request.Reason);
+                if (!result)
+                    return NotFound();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         // GET: api/Projects/section/5
@@ -242,6 +281,18 @@ namespace InvoiceManagement.Server.API.Controllers
         public class ProjectWrapper
         {
             public Project project { get; set; }
+        }
+
+        public class ApprovalRequest
+        {
+            public string? PONumber { get; set; }
+            public string? ApprovedBy { get; set; }
+        }
+
+        public class RejectionRequest
+        {
+            public string? Reason { get; set; }
+            public string? RejectedBy { get; set; }
         }
     }
 } 

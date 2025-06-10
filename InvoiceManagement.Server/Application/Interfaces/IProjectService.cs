@@ -16,6 +16,8 @@ namespace InvoiceManagement.Server.Application.Interfaces
         
         // Additional business operations
         Task<bool> ApproveProjectAsync(int id, string approvedBy);
+        Task<bool> RejectProjectAsync(int id, string rejectedBy, string reason);
+        Task<bool> UpdatePONumberAsync(int id, string poNumber, string updatedBy);
         Task<IEnumerable<Project>> GetProjectsBySectionAsync(int sectionId);
         Task<IEnumerable<Project>> GetProjectsByManagerAsync(int projectManagerId);
         Task<decimal> GetTotalProjectBudgetAsync(int id);

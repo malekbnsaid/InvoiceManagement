@@ -1,10 +1,16 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Label } from '../ui/label';
 import { projectApi } from '../../services/api';
+import { useToast } from '../ui/use-toast';
 import {
   CalendarIcon,
   BanknotesIcon,
@@ -12,13 +18,15 @@ import {
   FolderIcon,
   UserIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { CurrencyType } from '../../types/enums';
 
 interface Project {
   id: number;
   projectNumber: string;
+  poNumber?: string;
   name: string;
   description: string;
   section: {
@@ -37,6 +45,9 @@ interface Project {
   actualEnd: string | null;
   status: string;
   isApproved: boolean;
+  approvalDate?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
   paymentPlanLines: Array<{
     year: number;
     amount: number;
@@ -64,6 +75,15 @@ interface APIResponse<T> {
 
 export default function ProjectDetailsPage() {
   const { id } = useParams();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  // State for approval dialog
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [poNumber, setPoNumber] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],
@@ -82,8 +102,7 @@ export default function ProjectDetailsPage() {
       // Transform the response to match our interface
       const transformedData = {
         ...response,
-        // Transform arrays
-        paymentPlanLines: getArrayData(response.paymentPlanLines).map((line: PaymentPlanLine) => ({
+        paymentPlanLines: getArrayData(response.paymentPlanLines).map((line: any) => ({
           year: Number(line.year),
           amount: Number(line.amount),
           currency: line.currency,
@@ -92,7 +111,6 @@ export default function ProjectDetailsPage() {
         })),
         invoices: getArrayData(response.invoices),
         lpOs: getArrayData(response.lpOs),
-        // Transform nested objects (only if they need transformation)
         section: response.section.departmentNameEnglish 
           ? {
               sectionName: response.section.departmentNameEnglish,
@@ -111,6 +129,76 @@ export default function ProjectDetailsPage() {
       return transformedData;
     }
   });
+
+  // Mutation for approving/rejecting project
+  const approvalMutation = useMutation({
+    mutationFn: async ({ projectId, isApproved, poNumber, rejectionReason }: { 
+      projectId: number; 
+      isApproved: boolean; 
+      poNumber?: string;
+      rejectionReason?: string;
+    }) => {
+      const response = await projectApi.updateApprovalStatus(projectId, {
+        isApproved,
+        poNumber,
+        rejectionReason,
+        approvedBy: "PMO User", // TODO: Get from auth context
+        approvalDate: new Date().toISOString()
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['project', id]);
+      toast({
+        title: "Success",
+        description: isRejecting 
+          ? "Project has been rejected" 
+          : "Project has been approved and PO number has been assigned",
+        variant: "default",
+      });
+      setIsApprovalDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update project approval status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleApproval = async (approved: boolean) => {
+    if (!project) return;
+
+    if (approved && !poNumber.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a PO number before approving the project",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!approved && !rejectionReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for rejection",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await approvalMutation.mutateAsync({
+        projectId: project.id,
+        isApproved: approved,
+        poNumber: approved ? poNumber : undefined,
+        rejectionReason: approved ? undefined : rejectionReason
+      });
+    } catch (error) {
+      console.error('Error updating approval status:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -138,26 +226,47 @@ export default function ProjectDetailsPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Header with Approval Status */}
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
-          <p className="text-gray-500">{project.projectNumber}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-gray-500">{project.projectNumber}</span>
+            {project.poNumber && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <DocumentTextIcon className="h-4 w-4" />
+                PO: {project.poNumber}
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4">
-          <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
-            {project.status}
-          </Badge>
           {project.isApproved ? (
             <Badge variant="success" className="flex items-center gap-1">
               <CheckCircleIcon className="h-4 w-4" />
-              Approved
+              Approved by PMO
+            </Badge>
+          ) : project.rejectionReason ? (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <XCircleIcon className="h-4 w-4" />
+              Rejected
             </Badge>
           ) : (
-            <Badge variant="warning" className="flex items-center gap-1">
-              <XCircleIcon className="h-4 w-4" />
-              Pending Approval
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="warning" className="flex items-center gap-1">
+                <ClockIcon className="h-4 w-4" />
+                Pending PMO Approval
+              </Badge>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setIsRejecting(false);
+                  setIsApprovalDialogOpen(true);
+                }}
+              >
+                Review
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -230,6 +339,54 @@ export default function ProjectDetailsPage() {
           </CardContent>
         </Card>
 
+        {/* Approval Information */}
+        {(project.isApproved || project.rejectionReason) && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Approval Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <p className="font-medium">
+                    {project.isApproved ? 'Approved' : 'Rejected'}
+                  </p>
+                </div>
+                {project.approvalDate && (
+                  <div>
+                    <p className="text-sm text-gray-500">Date</p>
+                    <p className="font-medium">
+                      {format(new Date(project.approvalDate), 'PPP')}
+                    </p>
+                  </div>
+                )}
+                {project.approvedBy && (
+                  <div>
+                    <p className="text-sm text-gray-500">Approved By</p>
+                    <p className="font-medium">{project.approvedBy}</p>
+                  </div>
+                )}
+                {project.poNumber && (
+                  <div>
+                    <p className="text-sm text-gray-500">PO Number</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <DocumentTextIcon className="h-4 w-4" />
+                      {project.poNumber}
+                    </p>
+                  </div>
+                )}
+                {project.rejectionReason && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">Rejection Reason</p>
+                    <p className="font-medium">{project.rejectionReason}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Payment Plan */}
         <Card className="md:col-span-2">
           <CardHeader>
@@ -249,7 +406,7 @@ export default function ProjectDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {project.paymentPlanLines.map((line: PaymentPlanLine, index: number) => (
+                    {project.paymentPlanLines.map((line, index) => (
                       <tr key={index} className="border-b">
                         <td className="py-2">{line.year}</td>
                         <td className="py-2">{line.amount.toLocaleString()}</td>
@@ -269,6 +426,85 @@ export default function ProjectDetailsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isRejecting ? 'Reject Project' : 'Approve Project'}
+            </DialogTitle>
+            <DialogDescription>
+              {isRejecting 
+                ? 'Please provide a reason for rejecting this project.'
+                : 'Please enter the PO number to approve this project.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {!isRejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="poNumber">PO Number</Label>
+                <Input
+                  id="poNumber"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="Enter PO number"
+                />
+              </div>
+            )}
+            
+            {isRejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Rejection Reason</Label>
+                <Textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection"
+                  rows={4}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (isRejecting) {
+                  setIsRejecting(false);
+                } else {
+                  setIsApprovalDialogOpen(false);
+                }
+              }}
+            >
+              {isRejecting ? 'Back to Approval' : 'Cancel'}
+            </Button>
+            <div className="flex gap-2">
+              {!isRejecting && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsRejecting(true)}
+                >
+                  Reject
+                </Button>
+              )}
+              <Button
+                variant={isRejecting ? "destructive" : "default"}
+                onClick={() => handleApproval(!isRejecting)}
+                disabled={approvalMutation.isLoading}
+              >
+                {approvalMutation.isLoading
+                  ? "Processing..."
+                  : isRejecting
+                  ? "Confirm Rejection"
+                  : "Approve Project"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

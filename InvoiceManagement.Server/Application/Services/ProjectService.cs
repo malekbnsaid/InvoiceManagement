@@ -137,6 +137,8 @@ namespace InvoiceManagement.Server.Application.Services
                 return false;
 
             project.IsApproved = true;
+            project.ApprovalDate = DateTime.UtcNow;
+            project.ApprovedBy = approvedBy;
             project.ModifiedAt = DateTime.UtcNow;
             project.ModifiedBy = approvedBy;
 
@@ -149,6 +151,55 @@ namespace InvoiceManagement.Server.Application.Services
                 "Approve",
                 approvedBy,
                 $"Approved project: {project.Name}"
+            );
+
+            return true;
+        }
+
+        public async Task<bool> RejectProjectAsync(int id, string rejectedBy, string reason)
+        {
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return false;
+
+            project.IsApproved = false;
+            project.RejectionReason = reason;
+            project.ModifiedAt = DateTime.UtcNow;
+            project.ModifiedBy = rejectedBy;
+
+            await _context.SaveChangesAsync();
+
+            // Log the rejection
+            await _auditService.LogAuditAsync(
+                "Project",
+                id.ToString(),
+                "Reject",
+                rejectedBy,
+                $"Rejected project: {project.Name}. Reason: {reason}"
+            );
+
+            return true;
+        }
+
+        public async Task<bool> UpdatePONumberAsync(int id, string poNumber, string updatedBy)
+        {
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return false;
+
+            project.PONumber = poNumber;
+            project.ModifiedAt = DateTime.UtcNow;
+            project.ModifiedBy = updatedBy;
+
+            await _context.SaveChangesAsync();
+
+            // Log the PO number update
+            await _auditService.LogAuditAsync(
+                "Project",
+                id.ToString(),
+                "UpdatePONumber",
+                updatedBy,
+                $"Updated PO number to {poNumber}"
             );
 
             return true;

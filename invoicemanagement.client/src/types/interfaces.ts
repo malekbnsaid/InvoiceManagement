@@ -67,12 +67,16 @@ export interface Vendor {
 export interface Project {
   id: number;
   projectNumber: string;
+  poNumber?: string;
   name: string;
   description: string;
   projectManagerId: number;
   budget?: number;
   cost?: number;
   isApproved: boolean;
+  approvalDate?: Date;
+  approvedBy?: string;
+  rejectionReason?: string;
   expectedStart?: Date;
   expectedEnd?: Date;
   sectionId: number;
