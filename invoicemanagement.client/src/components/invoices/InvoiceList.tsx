@@ -549,6 +549,7 @@ const InvoiceList = () => {
                           </Avatar>
                           <span>{invoice.vendor}</span>
                         </div>
+
                       </TableCell>
                       <TableCell>{formatCurrency(invoice.amount)}</TableCell>
                       <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>

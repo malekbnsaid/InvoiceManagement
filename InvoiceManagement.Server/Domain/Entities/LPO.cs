@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using InvoiceManagement.Server.Domain.Enums;
 
 namespace InvoiceManagement.Server.Domain.Entities
 {
@@ -13,7 +14,7 @@ namespace InvoiceManagement.Server.Domain.Entities
         
         // Financial
         public decimal TotalAmount { get; set; }
-        public string Currency { get; set; } = string.Empty;
+        public CurrencyType Currency { get; set; }
         public decimal? RemainingAmount { get; set; }
         
         // Timeline
@@ -25,8 +26,8 @@ namespace InvoiceManagement.Server.Domain.Entities
         public int? VendorId { get; set; }
         
         // Navigation properties
-        public Project Project { get; set; } = null!;
-        public Vendor? Vendor { get; set; }
-        public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+        public virtual Project Project { get; set; } = null!;
+        public virtual Vendor? Vendor { get; set; }
+        public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     }
 } 

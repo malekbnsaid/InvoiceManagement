@@ -1,7 +1,7 @@
 import React from 'react';
 import { ReactNode, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, 
   FileText, 
@@ -22,10 +22,6 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-
-interface MainLayoutProps {
-  children: React.ReactNode;
-}
 
 interface NavItem {
   name: string;
@@ -94,6 +90,10 @@ const actionItems: NavItem[] = [
     action: true
   }
 ];
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
 
 const MainLayout = ({ children }: MainLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -395,15 +395,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="w-full h-full"
-          >
-            {children}
-          </motion.div>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
         </main>
       </div>
     </div>

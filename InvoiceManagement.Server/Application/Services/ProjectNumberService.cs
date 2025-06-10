@@ -1,4 +1,4 @@
-/*using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using InvoiceManagement.Server.Application.Interfaces;
@@ -11,20 +11,20 @@ namespace InvoiceManagement.Server.Application.Services
     public class ProjectNumberService : IProjectNumberService
     {
         private readonly ApplicationDbContext _context;
-        private readonly IDepartmentHierarchyService _departmentHierarchyService;
+        private readonly IDepartmentService _departmentService;
 
         public ProjectNumberService(
             ApplicationDbContext context,
-            IDepartmentHierarchyService departmentHierarchyService)
+            IDepartmentService departmentService)
         {
             _context = context;
-            _departmentHierarchyService = departmentHierarchyService;
+            _departmentService = departmentService;
         }
 
         public async Task<string> GenerateProjectNumberAsync(int sectionId)
         {
             // Get section abbreviation from the DepartmentHierarchy
-            string sectionAbbreviation = await _departmentHierarchyService.GetSectionAbbreviationAsync(sectionId);
+            string sectionAbbreviation = await _departmentService.GetSectionAbbreviationAsync(sectionId);
             
             if (string.IsNullOrEmpty(sectionAbbreviation))
             {
@@ -49,4 +49,4 @@ namespace InvoiceManagement.Server.Application.Services
             return projectNumber;
         }
     }
-} */
+} 

@@ -116,55 +116,37 @@ namespace InvoiceManagement.Server.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DepartmentHierarchy", b =>
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DepartmentNode", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("DepartmentNumber")
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
+                    b.Property<string>("DepartmentNameArabic")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("DepartmentId")
+                    b.Property<string>("DepartmentNameEnglish")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("ParentId")
                         .HasColumnType("int");
-
-                    b.Property<string>("DepartmentName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SectionAbbreviation")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SectionId")
-                        .HasColumnType("int");
+                    b.HasKey("DepartmentNumber");
 
-                    b.Property<string>("SectionName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasIndex("DepartmentNameEnglish")
+                        .IsUnique()
+                        .HasFilter("[ParentId] IS NULL");
 
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
+                    b.HasIndex("ParentId");
 
-                    b.Property<string>("UnitName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.HasIndex("DepartmentNameEnglish", "ParentId")
+                        .IsUnique()
+                        .HasFilter("[ParentId] IS NOT NULL");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("DepartmentHierarchies");
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DocumentAttachment", b =>
@@ -250,10 +232,12 @@ namespace InvoiceManagement.Server.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BasicSalary")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ContractType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -262,20 +246,23 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("DateOfEmployment")
+                    b.Property<DateTime?>("DateOfEmployment")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Department")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("DepartmentAr")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<int>("DepartmentID")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -294,23 +281,29 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("JobGrade")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("JobGradeAr")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("JobNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("JobTitle")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("JobTitleAr")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Manager_Id")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -319,34 +312,40 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nationality")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NationalityAr")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("NationalityId")
+                    b.Property<int?>("NationalityId")
                         .HasColumnType("int");
 
                     b.Property<string>("QID")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("Rec_DateTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Rec_IPAddress")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("Rec_IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Rec_UserId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Remark")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
@@ -371,9 +370,8 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime2");
@@ -404,6 +402,7 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("InvoiceValue")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsPotentialDuplicate")
@@ -419,6 +418,7 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("PaidAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PaymentDate")
@@ -488,9 +488,8 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -513,6 +512,7 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("RemainingAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartDate")
@@ -523,6 +523,7 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("VendorId")
@@ -593,6 +594,54 @@ namespace InvoiceManagement.Server.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PaymentPlanLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("PaymentPlanLine");
+                });
+
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -602,12 +651,11 @@ namespace InvoiceManagement.Server.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("Budget")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("CompletionPercentage")
-                        .HasColumnType("int");
-
                     b.Property<decimal?>("Cost")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -650,6 +698,9 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<int>("SectionId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("TenderDate")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProjectManagerId");
@@ -683,12 +734,8 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("DepartmentHierarchyId")
+                    b.Property<int>("DepartmentNodeId")
                         .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
@@ -696,28 +743,40 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ProjectDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("ProjectId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RequestTitle")
+                    b.Property<string>("ProjectName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RequestedBy")
-                        .IsRequired()
+                    b.Property<string>("ProjectNumber")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Status")
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RequestStatus")
                         .HasColumnType("int");
+
+                    b.Property<int>("RequestedById")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentHierarchyId");
+                    b.HasIndex("DepartmentNodeId");
 
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("RequestedById");
 
                     b.ToTable("ProjectNumberRequests");
                 });
@@ -877,6 +936,16 @@ namespace InvoiceManagement.Server.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DepartmentNode", b =>
+                {
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.DepartmentNode", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DocumentAttachment", b =>
                 {
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.Invoice", "Invoice")
@@ -951,13 +1020,24 @@ namespace InvoiceManagement.Server.Migrations
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Notification", b =>
                 {
-                    b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", "Employee")
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", "ERPEmployee")
                         .WithMany()
                         .HasForeignKey("ERPEmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Employee");
+                    b.Navigation("ERPEmployee");
+                });
+
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PaymentPlanLine", b =>
+                {
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.Project", "Project")
+                        .WithMany("PaymentPlanLines")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Project", b =>
@@ -968,7 +1048,7 @@ namespace InvoiceManagement.Server.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("InvoiceManagement.Server.Domain.Entities.DepartmentHierarchy", "Section")
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.DepartmentNode", "Section")
                         .WithMany()
                         .HasForeignKey("SectionId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -981,9 +1061,9 @@ namespace InvoiceManagement.Server.Migrations
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.ProjectNumberRequest", b =>
                 {
-                    b.HasOne("InvoiceManagement.Server.Domain.Entities.DepartmentHierarchy", "DepartmentHierarchy")
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.DepartmentNode", "DepartmentNode")
                         .WithMany()
-                        .HasForeignKey("DepartmentHierarchyId")
+                        .HasForeignKey("DepartmentNodeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -991,9 +1071,17 @@ namespace InvoiceManagement.Server.Migrations
                         .WithMany()
                         .HasForeignKey("ProjectId");
 
-                    b.Navigation("DepartmentHierarchy");
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", "RequestedBy")
+                        .WithMany()
+                        .HasForeignKey("RequestedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DepartmentNode");
 
                     b.Navigation("Project");
+
+                    b.Navigation("RequestedBy");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.StatusHistory", b =>
@@ -1005,6 +1093,11 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.DepartmentNode", b =>
+                {
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Invoice", b =>
@@ -1022,6 +1115,8 @@ namespace InvoiceManagement.Server.Migrations
                     b.Navigation("Invoices");
 
                     b.Navigation("LPOs");
+
+                    b.Navigation("PaymentPlanLines");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Vendor", b =>

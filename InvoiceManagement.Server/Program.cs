@@ -4,6 +4,8 @@ using InvoiceManagement.Server.Domain.Interfaces;
 using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,10 +18,16 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Register services
 builder.Services.AddScoped<IAuditService, AuditService>();
-//builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
-builder.Services.AddScoped<IDepartmentHierarchyService, DepartmentHierarchyService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IERPEmployeeService, ERPEmployeeService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -35,6 +43,24 @@ builder.Services.AddCors(options =>
                    .AllowAnyHeader();
         });
 });
+
+// Remove authentication and authorization
+// builder.Services.AddAuthentication("Bearer")
+//     .AddJwtBearer(options =>
+//     {
+//         options.TokenValidationParameters = new TokenValidationParameters
+//         {
+//             ValidateIssuer = true,
+//             ValidateAudience = true,
+//             ValidateLifetime = true,
+//             ValidateIssuerSigningKey = true,
+//             ValidIssuer = builder.Configuration["Jwt:Issuer"],
+//             ValidAudience = builder.Configuration["Jwt:Audience"],
+//             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found")))
+//         };
+//     });
+
+// builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -60,7 +86,9 @@ app.UseHttpsRedirection();
 // Enable CORS
 app.UseCors("AllowReactApp");
 
-app.UseAuthorization();
+// Remove or comment out:
+// app.UseAuthentication();
+// app.UseAuthorization();
 
 app.MapControllers();
 

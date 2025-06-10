@@ -1,11 +1,11 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import {
   FolderIcon,
   MagnifyingGlassIcon,
@@ -16,124 +16,56 @@ import {
   ArrowsPointingOutIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
+import { projectApi } from '../../services/api';
+import type { QueryObserverResult } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
-// Mock data for projects
-const mockProjects = [
-  {
-    id: 1,
-    projectNumber: 'DEV/05/2023/001',
-    name: 'Network Infrastructure Upgrade',
-    description: 'Upgrade of the core network infrastructure to support higher bandwidth and improve security.',
-    unit: 'Network Operations',
-    budget: 145000,
-    cost: 132750,
-    expectedStart: '2023-02-15',
-    expectedEnd: '2023-06-30',
-    actualStart: '2023-02-20',
-    actualEnd: null,
-    status: 'In Progress',
-    lposCount: 5,
-    invoicesCount: 12,
-    projectManager: 'John Smith',
-    completionPercentage: 70,
-    poNumber: 'PO-2023-0156',
-    purchaseDate: '2023-02-10',
-    paymentPlan: '2023: $100,000\n2024: $45,000'
-  },
-  {
-    id: 2,
-    projectNumber: 'EA/03/2023/001',
-    name: 'ERP System Implementation',
-    description: 'Implementation of a new enterprise resource planning system to streamline business processes.',
-    unit: 'Backend Development',
-    budget: 275000,
-    cost: 195000,
-    expectedStart: '2023-03-10',
-    expectedEnd: '2023-12-15',
-    actualStart: '2023-03-15',
-    actualEnd: null,
-    status: 'In Progress',
-    lposCount: 8,
-    invoicesCount: 15,
-    projectManager: 'Sarah Johnson',
-    completionPercentage: 45,
-    poNumber: 'PO-2023-0187',
-    purchaseDate: '2023-03-05',
-    paymentPlan: '2023: $150,000\n2024: $125,000'
-  },
-  {
-    id: 3,
-    projectNumber: 'DEV/01/2023/001',
-    name: 'Company Website Redesign',
-    description: 'Complete redesign of the company website to improve user experience and mobile compatibility.',
-    unit: 'Frontend Development',
-    budget: 85000,
-    cost: 85000,
-    expectedStart: '2023-01-05',
-    expectedEnd: '2023-04-15',
-    actualStart: '2023-01-10',
-    actualEnd: '2023-04-20',
-    status: 'Completed',
-    lposCount: 3,
-    invoicesCount: 6,
-    projectManager: 'Mike Wilson',
-    completionPercentage: 100,
-    poNumber: 'PO-2022-0435',
-    purchaseDate: '2022-12-20',
-    paymentPlan: '2023: $85,000'
-  },
-  {
-    id: 4,
-    projectNumber: 'SEC/04/2023/001',
-    name: 'Cybersecurity Enhancement',
-    description: 'Strengthening the companys cybersecurity posture through implementation of advanced security measures.',
-    unit: 'Security',
-    budget: 120000,
-    cost: 70000,
-    expectedStart: '2023-04-01',
-    expectedEnd: '2023-09-30',
-    actualStart: '2023-04-10',
-    actualEnd: null,
-    status: 'In Progress',
-    lposCount: 4,
-    invoicesCount: 8,
-    projectManager: 'Lisa Chen',
-    completionPercentage: 58,
-    poNumber: 'PO-2023-0201',
-    purchaseDate: '2023-03-25',
-    paymentPlan: '2023: $90,000\n2024: $30,000'
-  },
-  {
-    id: 5,
-    projectNumber: 'INF/02/2023/001',
-    name: 'Server Virtualization',
-    description: 'Migrating physical servers to a virtualized environment to improve resource utilization and reduce costs.',
-    unit: 'System Administration',
-    budget: 95000,
-    cost: 92000,
-    expectedStart: '2023-02-01',
-    expectedEnd: '2023-05-15',
-    actualStart: '2023-02-05',
-    actualEnd: '2023-05-10',
-    status: 'Completed',
-    lposCount: 2,
-    invoicesCount: 5,
-    projectManager: 'Robert Taylor',
-    completionPercentage: 100,
-    poNumber: 'PO-2023-0142',
-    purchaseDate: '2023-01-20',
-    paymentPlan: '2023: $95,000'
-  }
-];
-
-type Project = typeof mockProjects[0];
+interface Project {
+  id: number;
+  projectNumber: string;
+  name: string;
+  description: string;
+  unit: string;
+  budget: number;
+  cost: number;
+  expectedStart: string;
+  expectedEnd: string;
+  actualStart: string | null;
+  actualEnd: string | null;
+  status: string;
+  lposCount: number;
+  invoicesCount: number;
+  projectManager: string;
+  poNumber: string;
+  purchaseDate: string;
+  paymentPlan: string;
+}
 
 const ProjectsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState(null as string | null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  // Fetch projects using React Query
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const response = await projectApi.getAll();
+      // Transform the response to match our interface
+      const projects = Array.isArray(response) 
+        ? response 
+        : response.$values || [];
+      
+      return projects.map((project: any) => ({
+        ...project,
+        paymentPlanLines: Array.isArray(project.paymentPlanLines)
+          ? project.paymentPlanLines
+          : project.paymentPlanLines?.$values || []
+      }));
+    }
+  });
 
   // Filter projects based on search query and status filter
-  const filteredProjects = mockProjects.filter((project) => {
+  const filteredProjects = data?.filter((project: Project) => {
     // Search filter
     const matchesSearch = 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -145,6 +77,22 @@ const ProjectsList = () => {
     
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Error loading projects. Please try again later.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -180,47 +128,26 @@ const ProjectsList = () => {
         />
       </div>
 
-      {/* Status filter buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Badge 
-          className={`cursor-pointer ${!statusFilter ? 'bg-blue-500' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-          onClick={() => setStatusFilter(null)}
-        >
-          All
-        </Badge>
-        <Badge 
-          className={`cursor-pointer ${statusFilter === 'In Progress' ? 'bg-blue-500' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-          onClick={() => setStatusFilter('In Progress')}
-        >
-          In Progress
-        </Badge>
-        <Badge 
-          className={`cursor-pointer ${statusFilter === 'Completed' ? 'bg-blue-500' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-          onClick={() => setStatusFilter('Completed')}
-        >
-          Completed
-        </Badge>
-      </div>
-
       {/* Projects grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProjects.map((project) => (
-          <motion.div 
+        {filteredProjects?.map((project: Project) => (
+          <motion.div
             key={project.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="h-full">
-              <CardHeader className="pb-2">
+            <Card className="h-full hover:shadow-lg transition-shadow">
+              <CardHeader>
                 <div className="flex justify-between items-start">
-                  <Badge variant={project.status === 'Completed' ? 'success' : 'default'}>
+                  <div>
+                    <CardTitle className="text-lg font-semibold">{project.name}</CardTitle>
+                    <CardDescription>{project.projectNumber}</CardDescription>
+                  </div>
+                  <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
                     {project.status}
                   </Badge>
-                  <span className="text-sm font-mono text-gray-500">{project.projectNumber}</span>
                 </div>
-                <CardTitle className="mt-2 text-xl">{project.name}</CardTitle>
-                <CardDescription className="line-clamp-2">{project.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 {/* Project details */}
@@ -250,28 +177,14 @@ const ProjectsList = () => {
                     </div>
                   </div>
                   
-                  {/* Progress bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium">Progress</span>
-                      <span>{project.completionPercentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${project.status === 'Completed' ? 'bg-green-500' : 'bg-blue-500'}`}
-                        style={{ width: `${project.completionPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  {/* Action button */}
-                  <div className="pt-2">
-                    <Link to={`/projects/${project.id}`}>
-                      <Button variant="outline" className="w-full flex items-center justify-center gap-1">
-                        <ArrowsPointingOutIcon className="h-4 w-4" />
-                        View Details
-                      </Button>
-                    </Link>
+                  {/* Action buttons */}
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/projects/${project.id}`}>
+                        <ArrowsPointingOutIcon className="h-4 w-4 mr-1" />
+                        Details
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               </CardContent>

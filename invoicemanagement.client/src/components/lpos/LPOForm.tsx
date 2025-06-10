@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { CurrencyType } from '../../types/enums';
 
 const formSchema = z.object({
   lpoNumber: z.string().min(1, 'LPO number is required'),
@@ -28,7 +29,7 @@ const formSchema = z.object({
   supplierName: z.string().min(1, 'Supplier name is required'),
   projectId: z.string().min(1, 'Project is required'),
   totalAmount: z.string().min(1, 'Total amount is required'),
-  currency: z.string().min(1, 'Currency is required'),
+  currency: z.nativeEnum(CurrencyType),
   description: z.string().optional(),
   status: z.enum(['draft', 'pending', 'approved', 'rejected']),
 });
@@ -49,7 +50,7 @@ export default function LPOForm({ onSubmit, initialData, isLoading = false, proj
       supplierName: '',
       projectId: '',
       totalAmount: '',
-      currency: 'SAR',
+      currency: CurrencyType.SAR,
       description: '',
       status: 'draft',
     },
@@ -158,9 +159,11 @@ export default function LPOForm({ onSubmit, initialData, isLoading = false, proj
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="SAR">SAR</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="EUR">EUR</SelectItem>
+                        {Object.values(CurrencyType).map((currency) => (
+                          <SelectItem key={currency} value={currency}>
+                            {currency}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

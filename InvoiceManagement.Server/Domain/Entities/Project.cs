@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace InvoiceManagement.Server.Domain.Entities
 {
@@ -7,10 +9,14 @@ namespace InvoiceManagement.Server.Domain.Entities
     {
         // Basic Information
         public string ProjectNumber { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Project name is required")]
         public string Name { get; set; } = string.Empty;
+        
         public string Description { get; set; } = string.Empty;
         
         // Management
+        [Required(ErrorMessage = "Project manager is required")]
         public int ProjectManagerId { get; set; }
         
         // Financial
@@ -19,19 +25,27 @@ namespace InvoiceManagement.Server.Domain.Entities
         
         // Status
         public bool IsApproved { get; set; }
-        public int? CompletionPercentage { get; set; }
         
         // Timeline
         public DateTime? ExpectedStart { get; set; }
         public DateTime? ExpectedEnd { get; set; }
+        public DateTime? TenderDate { get; set; }
         
-        // Foreign keys - Important for project number generation
+        // Payment Plan
+        public ICollection<PaymentPlanLine> PaymentPlanLines { get; set; } = new List<PaymentPlanLine>();
+        
+        // Foreign keys
+        [Required(ErrorMessage = "Section is required")]
         public int SectionId { get; set; }
         
         // Navigation properties
-        public DepartmentHierarchy Section { get; set; } = null!;
-        public ERPEmployee ProjectManager { get; set; } = null!;
-        public ICollection<LPO> LPOs { get; set; } = new List<LPO>();
-        public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+        [ForeignKey("SectionId")]
+        public virtual DepartmentNode? Section { get; set; }
+        
+        [ForeignKey("ProjectManagerId")]
+        public virtual ERPEmployee? ProjectManager { get; set; }
+        
+        public virtual ICollection<LPO> LPOs { get; set; } = new List<LPO>();
+        public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     }
 } 

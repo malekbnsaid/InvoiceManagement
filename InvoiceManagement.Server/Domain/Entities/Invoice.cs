@@ -8,9 +8,9 @@ namespace InvoiceManagement.Server.Domain.Entities
     {
         // Essential Invoice Information
         public string InvoiceNumber { get; set; } = string.Empty;
-        public DateTime InvoiceDate { get; set; }
         public decimal InvoiceValue { get; set; }
-        public string Currency { get; set; } = string.Empty;
+        public CurrencyType Currency { get; set; }
+        public DateTime InvoiceDate { get; set; }
         public DateTime? DueDate { get; set; }
         public string? Subject { get; set; }
         public string? ReferenceNumber { get; set; }

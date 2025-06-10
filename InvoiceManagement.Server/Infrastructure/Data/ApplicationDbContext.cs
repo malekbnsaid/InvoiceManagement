@@ -22,7 +22,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<Vendor> Vendors { get; set; } = null!;
-        public DbSet<DepartmentHierarchy> DepartmentHierarchies { get; set; } = null!;
+        public DbSet<DepartmentNode> Departments { get; set; } = null!;
         public DbSet<ERPEmployee> ERPEmployees { get; set; } = null!;
         public DbSet<AppUser> AppUsers { get; set; } = null!;
 
@@ -30,14 +30,52 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // DepartmentHierarchy configuration
-            modelBuilder.Entity<DepartmentHierarchy>(entity =>
+            // Configure decimal precision for all decimal properties
+            modelBuilder.Entity<Invoice>(entity =>
             {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.DepartmentName).IsRequired();
-                entity.Property(e => e.SectionName).IsRequired();
-                entity.Property(e => e.SectionAbbreviation).IsRequired();
-                entity.Property(e => e.UnitName).IsRequired();
+                entity.Property(e => e.InvoiceValue).HasPrecision(18, 2);
+                entity.Property(e => e.PaidAmount).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<LPO>(entity =>
+            {
+                entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
+                entity.Property(e => e.RemainingAmount).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<PaymentPlanLine>(entity =>
+            {
+                entity.Property(e => e.Amount).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<Project>(entity =>
+            {
+                entity.Property(e => e.Budget).HasPrecision(18, 2);
+                entity.Property(e => e.Cost).HasPrecision(18, 2);
+            });
+
+            // DepartmentNode configuration
+            modelBuilder.Entity<DepartmentNode>(entity =>
+            {
+                entity.HasKey(d => d.DepartmentNumber);
+                
+                entity.Property(d => d.DepartmentNumber)
+                    .ValueGeneratedNever();
+
+                entity.HasOne(d => d.Parent)
+                    .WithMany(d => d.Children)
+                    .HasForeignKey(d => d.ParentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Add unique constraint for department name within the same parent
+                entity.HasIndex(d => new { d.DepartmentNameEnglish, d.ParentId })
+                    .IsUnique()
+                    .HasFilter("[ParentId] IS NOT NULL");
+
+                // Add unique constraint for top-level departments
+                entity.HasIndex(d => d.DepartmentNameEnglish)
+                    .HasFilter("[ParentId] IS NULL")
+                    .IsUnique();
             });
 
             // Project configuration
@@ -47,7 +85,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 entity.Property(e => e.ProjectNumber).IsRequired();
                 entity.Property(e => e.Name).IsRequired();
                 
-                // Relationship with DepartmentHierarchy for Section
+                // Relationship with DepartmentNode for Section
                 entity.HasOne(p => p.Section)
                     .WithMany()
                     .HasForeignKey(p => p.SectionId)
@@ -85,9 +123,9 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Cascade);
                 
             modelBuilder.Entity<ProjectNumberRequest>()
-                .HasOne(pr => pr.DepartmentHierarchy)
+                .HasOne(pr => pr.DepartmentNode)
                 .WithMany()
-                .HasForeignKey(pr => pr.DepartmentHierarchyId)
+                .HasForeignKey(pr => pr.DepartmentNodeId)
                 .OnDelete(DeleteBehavior.Restrict);
                 
             // Configure Vendor relationships
@@ -124,7 +162,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 
             // Notifications
             modelBuilder.Entity<Notification>()
-                .HasOne(n => n.Employee)
+                .HasOne(n => n.ERPEmployee)
                 .WithMany()
                 .HasForeignKey(n => n.ERPEmployeeId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -133,14 +171,47 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             modelBuilder.Entity<ERPEmployee>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.EmployeeNumber).IsRequired().HasMaxLength(50);
+                
+                // Required fields
+                entity.Property(e => e.EmployeeNumber)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(e => e.EmployeeName)
+                    .IsRequired()
+                    .HasMaxLength(256);
+                entity.Property(e => e.Email)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(e => e.Department)
+                    .IsRequired()
+                    .HasMaxLength(256);
+                entity.Property(e => e.DepartmentID)
+                    .IsRequired();
+                entity.Property(e => e.JobTitle)
+                    .IsRequired()
+                    .HasMaxLength(256);
+                entity.Property(e => e.CreatedBy)
+                    .IsRequired();
+
+                // Unique constraints
                 entity.HasIndex(e => e.EmployeeNumber).IsUnique();
                 
-                entity.Property(e => e.EmployeeName).HasMaxLength(256);
+                // Optional fields with max lengths
                 entity.Property(e => e.EmployeeNameAr).HasMaxLength(256);
-                entity.Property(e => e.Email).HasMaxLength(50);
-                entity.Property(e => e.Department).HasMaxLength(256);
-                entity.Property(e => e.JobTitle).HasMaxLength(256);
+                entity.Property(e => e.QID).HasMaxLength(50);
+                entity.Property(e => e.DepartmentAr).HasMaxLength(256);
+                entity.Property(e => e.JobNumber).HasMaxLength(50);
+                entity.Property(e => e.JobTitleAr).HasMaxLength(256);
+                entity.Property(e => e.JobGrade).HasMaxLength(50);
+                entity.Property(e => e.JobGradeAr).HasMaxLength(50);
+                entity.Property(e => e.BasicSalary).HasMaxLength(50);
+                entity.Property(e => e.Nationality).HasMaxLength(100);
+                entity.Property(e => e.NationalityAr).HasMaxLength(100);
+                entity.Property(e => e.ContractType).HasMaxLength(50);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Manager_Id).HasMaxLength(50);
+                entity.Property(e => e.Rec_UserId).HasMaxLength(50);
+                entity.Property(e => e.Rec_IPAddress).HasMaxLength(50);
             });
 
             // AppUser configuration
@@ -164,22 +235,17 @@ namespace InvoiceManagement.Server.Infrastructure.Data
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            var entries = ChangeTracker.Entries()
-                .Where(e => e.Entity is BaseEntity && (
-                    e.State == EntityState.Added ||
-                    e.State == EntityState.Modified));
+            var entries = ChangeTracker.Entries<BaseEntity>();
 
             foreach (var entry in entries)
             {
-                var entity = (BaseEntity)entry.Entity;
-
                 if (entry.State == EntityState.Added)
                 {
-                    entity.CreatedAt = DateTime.UtcNow;
+                    entry.Entity.CreatedAt = DateTime.UtcNow;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    entity.ModifiedAt = DateTime.UtcNow;
+                    entry.Entity.ModifiedAt = DateTime.UtcNow;
                 }
             }
 

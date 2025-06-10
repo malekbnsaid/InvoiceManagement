@@ -22,8 +22,11 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 // Apply pending migrations
                 await context.Database.MigrateAsync();
                 
-                // Seed department hierarchy data
-                await SeedDepartmentHierarchyAsync(context);
+                // Seed department data
+                await SeedDepartmentNodesAsync(context);
+                
+                // Seed employee data
+                await SeedEmployeesAsync(context);
                 
                 logger.LogInformation("Database initialization completed successfully");
             }
@@ -34,142 +37,174 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             }
         }
 
-        private static async Task SeedDepartmentHierarchyAsync(ApplicationDbContext context)
+        private static async Task SeedEmployeesAsync(ApplicationDbContext context)
         {
-            if (!await context.DepartmentHierarchies.AnyAsync())
+            if (!await context.ERPEmployees.AnyAsync())
             {
-                var departmentHierarchies = new List<DepartmentHierarchy>
+                var employees = new[]
                 {
-                    // IT Department - Information Security Office (ISO)
-                    new DepartmentHierarchy
+                    new ERPEmployee
                     {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 1,
-                        SectionName = "Information Security Office",
-                        SectionAbbreviation = "ISO",
-                        UnitId = 1,
-                        UnitName = "Security Operations"
+                        EmployeeNumber = "EMP001",
+                        EmployeeName = "John Doe",
+                        Email = "john.doe@company.com",
+                        Department = "Information Technology Department",
+                        DepartmentID = 1574,
+                        JobTitle = "IT Manager",
+                        CreatedBy = "System",
+                        CreatedAt = DateTime.UtcNow,
+                        Rec_DateTime = DateTime.UtcNow,
+                        Rec_IsActive = true
                     },
-                    new DepartmentHierarchy
+                    new ERPEmployee
                     {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 1,
-                        SectionName = "Information Security Office",
-                        SectionAbbreviation = "ISO",
-                        UnitId = 2,
-                        UnitName = "Governance & Compliance"
+                        EmployeeNumber = "EMP002",
+                        EmployeeName = "Jane Smith",
+                        Email = "jane.smith@company.com",
+                        Department = "IT Management Department",
+                        DepartmentID = 1575,
+                        JobTitle = "Project Manager",
+                        CreatedBy = "System",
+                        CreatedAt = DateTime.UtcNow,
+                        Rec_DateTime = DateTime.UtcNow,
+                        Rec_IsActive = true
                     },
-                    new DepartmentHierarchy
+                    new ERPEmployee
                     {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 1,
-                        SectionName = "Information Security Office",
-                        SectionAbbreviation = "ISO",
-                        UnitId = 3,
-                        UnitName = "Risk Management"
-                    },
-                    
-                    // IT Department - Technical Support Services (TSS)
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 2,
-                        SectionName = "Technical Support Services",
-                        SectionAbbreviation = "TSS",
-                        UnitId = 4,
-                        UnitName = "Desktop Support"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 2,
-                        SectionName = "Technical Support Services",
-                        SectionAbbreviation = "TSS",
-                        UnitId = 5,
-                        UnitName = "Service Desk"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 2,
-                        SectionName = "Technical Support Services",
-                        SectionAbbreviation = "TSS",
-                        UnitId = 6,
-                        UnitName = "Device Management"
-                    },
-                    
-                    // IT Department - Infrastructure & Systems Support (ISS)
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 3,
-                        SectionName = "Infrastructure & Systems Support",
-                        SectionAbbreviation = "ISS",
-                        UnitId = 7,
-                        UnitName = "Network Infrastructure"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 3,
-                        SectionName = "Infrastructure & Systems Support",
-                        SectionAbbreviation = "ISS",
-                        UnitId = 8,
-                        UnitName = "Server Management"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 3,
-                        SectionName = "Infrastructure & Systems Support",
-                        SectionAbbreviation = "ISS",
-                        UnitId = 9,
-                        UnitName = "Cloud Services"
-                    },
-                    
-                    // IT Department - Applications (APP)
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 4,
-                        SectionName = "Applications",
-                        SectionAbbreviation = "APP",
-                        UnitId = 10,
-                        UnitName = "Business Applications"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 4,
-                        SectionName = "Applications",
-                        SectionAbbreviation = "APP",
-                        UnitId = 11,
-                        UnitName = "Custom Development"
-                    },
-                    new DepartmentHierarchy
-                    {
-                        DepartmentId = 1,
-                        DepartmentName = "Information Technology",
-                        SectionId = 4,
-                        SectionName = "Applications",
-                        SectionAbbreviation = "APP",
-                        UnitId = 12,
-                        UnitName = "Application Integration"
+                        EmployeeNumber = "EMP003",
+                        EmployeeName = "Bob Wilson",
+                        Email = "bob.wilson@company.com",
+                        Department = "Infrastructure & Systems Section",
+                        DepartmentID = 1649,
+                        JobTitle = "Systems Engineer",
+                        CreatedBy = "System",
+                        CreatedAt = DateTime.UtcNow,
+                        Rec_DateTime = DateTime.UtcNow,
+                        Rec_IsActive = true
                     }
                 };
 
-                await context.DepartmentHierarchies.AddRangeAsync(departmentHierarchies);
+                context.ERPEmployees.AddRange(employees);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedDepartmentNodesAsync(ApplicationDbContext context)
+        {
+            if (!await context.Departments.AnyAsync())
+            {
+                // Create IT Department (top level)
+                var itDepartment = new DepartmentNode
+                {
+                    DepartmentNumber = 1574,
+                    DepartmentNameEnglish = "Information Technology Department",
+                    DepartmentNameArabic = "تقنية المعلومات"
+                };
+                context.Departments.Add(itDepartment);
+                await context.SaveChangesAsync();
+
+                // Create IT Management Department
+                var itManagement = new DepartmentNode
+                {
+                    DepartmentNumber = 1575,
+                    DepartmentNameEnglish = "IT Management Department",
+                    DepartmentNameArabic = "إدارة نظم المعلومات",
+                    ParentId = 1574
+                };
+                context.Departments.Add(itManagement);
+                await context.SaveChangesAsync();
+
+                // Create Sections
+                var sections = new[]
+                {
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1649,
+                        DepartmentNameEnglish = "Infrastructure & Systems Section",
+                        DepartmentNameArabic = "قسم البنية التحتية لنظم المعلومات",
+                        ParentId = 1575,
+                        SectionAbbreviation = "ISS"
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1650,
+                        DepartmentNameEnglish = "Technical Support Section",
+                        DepartmentNameArabic = "قسم الدعم الفني",
+                        ParentId = 1575,
+                        SectionAbbreviation = "TSS"
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1651,
+                        DepartmentNameEnglish = "Application Section",
+                        DepartmentNameArabic = "قسم النظم التطبيقية",
+                        ParentId = 1575,
+                        SectionAbbreviation = "APP"
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1652,
+                        DepartmentNameEnglish = "Information Security Office",
+                        DepartmentNameArabic = "قسم امن المعلومات",
+                        ParentId = 1575,
+                        SectionAbbreviation = "ISO"
+                    }
+                };
+                context.Departments.AddRange(sections);
+                await context.SaveChangesAsync();
+
+                // Create Units
+                var units = new[]
+                {
+                    // ISS Units
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1643,
+                        DepartmentNameEnglish = "Systems Management Unit",
+                        DepartmentNameArabic = "وحدة إدارة الأنظمة",
+                        ParentId = 1649
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1644,
+                        DepartmentNameEnglish = "Database Management Unit",
+                        DepartmentNameArabic = "وحدة إدارة قواعد البيانات",
+                        ParentId = 1649
+                    },
+
+                    // TSS Units
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1645,
+                        DepartmentNameEnglish = "Networking Unit",
+                        DepartmentNameArabic = "وحدة الشبكات",
+                        ParentId = 1650
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1646,
+                        DepartmentNameEnglish = "Users Support Unit",
+                        DepartmentNameArabic = "وحدة دعم المستخدمين",
+                        ParentId = 1650
+                    },
+
+                    // APP Units
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1647,
+                        DepartmentNameEnglish = "Administrative Applications Unit",
+                        DepartmentNameArabic = "وحدة التطبيقات الإدارية",
+                        ParentId = 1651
+                    },
+                    new DepartmentNode
+                    {
+                        DepartmentNumber = 1648,
+                        DepartmentNameEnglish = "Web Development Unit",
+                        DepartmentNameArabic = "وحدة تطوير الويب",
+                        ParentId = 1651
+                    }
+                };
+                context.Departments.AddRange(units);
                 await context.SaveChangesAsync();
             }
         }

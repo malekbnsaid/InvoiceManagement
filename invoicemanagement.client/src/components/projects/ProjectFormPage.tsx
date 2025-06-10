@@ -1,0 +1,232 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import ProjectForm from './ProjectForm';
+import { AlertCircle, CheckCircle2, HelpCircle, ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Button } from '../ui/Button';
+import { projectApi } from '../../services/api';
+import { useMutation } from '@tanstack/react-query';
+import React from 'react';
+import { useToast } from '../ui/use-toast';
+import { Toaster } from '../ui/toaster';
+import { CurrencyType } from '../../types/enums';
+
+interface PaymentPlanLine {
+  year: number;
+  amount: number;
+  currency: CurrencyType;
+  paymentType: string;
+  description?: string;
+}
+
+interface ProjectFormData {
+  name: string;
+  description?: string;
+  section: string;
+  unitId?: string;
+  projectManagerId: string;
+  budget: string;
+  expectedStart: Date | null;
+  expectedEnd: Date | null;
+  tenderDate: Date | null;
+  paymentPlanLines: PaymentPlanLine[];
+  initialNotes?: string;
+  projectNumber?: string;
+}
+
+interface ProjectMutationData {
+  name: string;
+  description: string;
+  sectionId: number;
+  unitId: number | null;
+  projectManagerId: number;
+  budget: number;
+  expectedStart: Date | null;
+  expectedEnd: Date | null;
+  tenderDate: Date | null;
+  paymentPlanLines: {
+    year: number;
+    amount: number;
+    currency: CurrencyType;
+    paymentType: string;
+    description: string;
+  }[];
+  isApproved: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+export default function ProjectFormPage() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
+
+  // Create project mutation
+  const createProject = useMutation({
+    mutationFn: async (data: ProjectMutationData) => {
+      console.log('Mutation function called with data:', data);
+      try {
+        const response = await projectApi.create(data);
+        console.log('API response:', response);
+        return response;
+      } catch (error) {
+        console.error('Error in mutation function:', error);
+        throw error;
+      }
+    },
+    onSuccess: (data: ProjectMutationData) => {
+      console.log('Mutation succeeded:', data);
+      toast({
+        title: "Success!",
+        description: "Project created successfully.",
+        variant: "default",
+        duration: 3000,
+        className: "bg-green-50 border-green-200",
+      });
+      
+      // Navigate after toast shows
+      setTimeout(() => {
+        navigate('/projects');
+      }, 2000);
+    },
+    onError: (error: unknown) => {
+      console.error('Mutation error:', error);
+      let errorMessage = 'An error occurred while creating the project.';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        }
+      }
+      
+      setError(`Error: ${errorMessage}. Please try again.`);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  });
+
+  const handleSubmit = async (data: ProjectFormData) => {
+    console.log('Raw form data:', data);
+    setError(null);
+    
+    try {
+      // Transform the data to match the API expectations
+      const projectData = {
+        name: data.name.trim(),
+        description: data.description?.trim() || '',
+        sectionId: parseInt(data.section),
+        projectManagerId: parseInt(data.projectManagerId),
+        budget: parseFloat(data.budget),
+        expectedStart: data.expectedStart,
+        expectedEnd: data.expectedEnd,
+        tenderDate: data.tenderDate,
+        paymentPlanLines: (data.paymentPlanLines || []).map((line: PaymentPlanLine) => ({
+          year: parseInt(line.year.toString()),
+          amount: parseFloat(line.amount.toString()),
+          currency: line.currency,
+          paymentType: line.paymentType,
+          description: line.description || ''
+        })),
+        isApproved: false,
+        createdBy: 'system',
+        createdAt: new Date().toISOString(),
+        cost: 0,
+        projectNumber: data.projectNumber || ''
+      };
+
+      // Validate required fields
+      if (!projectData.sectionId) {
+        throw new Error('Section is required');
+      }
+      if (!projectData.projectManagerId) {
+        throw new Error('Project Manager is required');
+      }
+
+      // Log the transformed data
+      console.log('Transformed project data:', {
+        ...projectData,
+        sectionId: projectData.sectionId,
+        projectManagerId: projectData.projectManagerId
+      });
+
+      // Remove any potential circular references and undefined values
+      const cleanProjectData = JSON.parse(JSON.stringify(projectData, (key, value) => 
+        value === undefined ? null : value
+      ));
+      
+      // Log the final data being sent to the API
+      console.log('Final data being sent to API:', cleanProjectData);
+      
+      await createProject.mutateAsync(cleanProjectData);
+    } catch (err: unknown) {
+      console.error('Error in handleSubmit:', err);
+      let errorMessage = 'An error occurred while submitting the project request.';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
+        if (axiosError.response?.data?.errors) {
+          // Format validation errors
+          const errors = axiosError.response.data.errors;
+          errorMessage = Object.entries(errors)
+            .map(([key, messages]) => `${key}: ${messages.join(', ')}`)
+            .join('\n');
+        }
+      }
+      
+      setError(`Error: ${errorMessage}. Please try again.`);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto py-6">
+      <div className="flex items-center mb-6">
+        <Button
+          variant="ghost"
+          className="mr-2"
+          onClick={() => navigate('/projects')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Projects
+        </Button>
+        <h1 className="text-2xl font-bold">New Project</h1>
+      </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <ProjectForm
+          onSubmit={handleSubmit}
+          isLoading={createProject.isPending}
+        />
+      </motion.div>
+      
+      <Toaster />
+    </div>
+  );
+} 
