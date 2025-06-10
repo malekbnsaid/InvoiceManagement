@@ -43,6 +43,8 @@ namespace InvoiceManagement.Server.Domain.Entities
         public DateTime? ExpectedStart { get; set; }
         public DateTime? ExpectedEnd { get; set; }
         public DateTime? TenderDate { get; set; }
+        public DateTime? ActualStartDate { get; private set; }
+        public DateTime? ActualEndDate { get; private set; }
         
         // Payment Plan
         public ICollection<PaymentPlanLine> PaymentPlanLines { get; set; } = new List<PaymentPlanLine>();
@@ -60,5 +62,31 @@ namespace InvoiceManagement.Server.Domain.Entities
         
         public virtual ICollection<LPO> LPOs { get; set; } = new List<LPO>();
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
+        // Methods to manage actual dates
+        public void SetActualStartDate()
+        {
+            if (ActualStartDate == null && IsApproved)
+            {
+                ActualStartDate = DateTime.UtcNow;
+            }
+        }
+
+        public void SetActualEndDate()
+        {
+            if (ActualEndDate == null && Budget.HasValue && Cost.HasValue)
+            {
+                if (Cost.Value >= Budget.Value)
+                {
+                    ActualEndDate = DateTime.UtcNow;
+                }
+            }
+        }
+
+        public void UpdateCost(decimal newCost)
+        {
+            Cost = newCost;
+            SetActualEndDate(); // Check if we need to set the end date
+        }
     }
 } 

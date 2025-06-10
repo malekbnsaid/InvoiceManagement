@@ -15,13 +15,13 @@ namespace InvoiceManagement.Server.Application.Interfaces
         Task<bool> DeleteProjectAsync(int id);
         
         // Additional business operations
-        Task<bool> ApproveProjectAsync(int id, string approvedBy);
+        Task<bool> ApproveProjectAsync(int id, string approvedBy, string poNumber);
         Task<bool> RejectProjectAsync(int id, string rejectedBy, string reason);
-        Task<bool> UpdatePONumberAsync(int id, string poNumber, string updatedBy);
         Task<IEnumerable<Project>> GetProjectsBySectionAsync(int sectionId);
         Task<IEnumerable<Project>> GetProjectsByManagerAsync(int projectManagerId);
         Task<decimal> GetTotalProjectBudgetAsync(int id);
         Task<decimal> GetTotalProjectSpendAsync(int id);
         Task<bool> UpdateProjectStatusAsync(int id, string status, string updatedBy);
+        Task<bool> UpdateProjectCostAsync(int id, decimal newCost, string updatedBy);
     }
 } 

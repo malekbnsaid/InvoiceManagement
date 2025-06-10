@@ -130,30 +130,44 @@ namespace InvoiceManagement.Server.Application.Services
             return true;
         }
 
-        public async Task<bool> ApproveProjectAsync(int id, string approvedBy)
+        public async Task<bool> ApproveProjectAsync(int id, string approvedBy, string poNumber)
         {
             var project = await _context.Projects.FindAsync(id);
             if (project == null)
                 return false;
 
-            project.IsApproved = true;
-            project.ApprovalDate = DateTime.UtcNow;
-            project.ApprovedBy = approvedBy;
-            project.ModifiedAt = DateTime.UtcNow;
-            project.ModifiedBy = approvedBy;
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                project.IsApproved = true;
+                project.ApprovalDate = DateTime.UtcNow;
+                project.ApprovedBy = approvedBy;
+                project.PONumber = poNumber;
+                project.ModifiedAt = DateTime.UtcNow;
+                project.ModifiedBy = approvedBy;
 
-            await _context.SaveChangesAsync();
+                // Set actual start date since project is now approved
+                project.SetActualStartDate();
 
-            // Log the approval
-            await _auditService.LogAuditAsync(
-                "Project",
-                id.ToString(),
-                "Approve",
-                approvedBy,
-                $"Approved project: {project.Name}"
-            );
+                await _context.SaveChangesAsync();
 
-            return true;
+                // Log the approval
+                await _auditService.LogAuditAsync(
+                    "Project",
+                    id.ToString(),
+                    "Approve",
+                    approvedBy,
+                    $"Approved project: {project.Name} with PO number: {poNumber}"
+                );
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<bool> RejectProjectAsync(int id, string rejectedBy, string reason)
@@ -181,25 +195,25 @@ namespace InvoiceManagement.Server.Application.Services
             return true;
         }
 
-        public async Task<bool> UpdatePONumberAsync(int id, string poNumber, string updatedBy)
+        public async Task<bool> UpdateProjectStatusAsync(int id, string status, string updatedBy)
         {
             var project = await _context.Projects.FindAsync(id);
             if (project == null)
                 return false;
 
-            project.PONumber = poNumber;
+            // Update status and metadata
             project.ModifiedAt = DateTime.UtcNow;
             project.ModifiedBy = updatedBy;
 
             await _context.SaveChangesAsync();
 
-            // Log the PO number update
+            // Log the status update
             await _auditService.LogAuditAsync(
                 "Project",
                 id.ToString(),
-                "UpdatePONumber",
+                "StatusUpdate",
                 updatedBy,
-                $"Updated PO number to {poNumber}"
+                $"Updated project status: {status}"
             );
 
             return true;
@@ -240,25 +254,25 @@ namespace InvoiceManagement.Server.Application.Services
             return project?.Invoices?.Sum(i => i.InvoiceValue) ?? 0;
         }
 
-        public async Task<bool> UpdateProjectStatusAsync(int id, string status, string updatedBy)
+        public async Task<bool> UpdateProjectCostAsync(int id, decimal newCost, string updatedBy)
         {
             var project = await _context.Projects.FindAsync(id);
             if (project == null)
                 return false;
 
-            // Update status and metadata
+            project.UpdateCost(newCost);
             project.ModifiedAt = DateTime.UtcNow;
             project.ModifiedBy = updatedBy;
 
             await _context.SaveChangesAsync();
 
-            // Log the status update
+            // Log the cost update
             await _auditService.LogAuditAsync(
                 "Project",
                 id.ToString(),
-                "StatusUpdate",
+                "UpdateCost",
                 updatedBy,
-                $"Updated project status: {status}"
+                $"Updated project cost to: {newCost}"
             );
 
             return true;

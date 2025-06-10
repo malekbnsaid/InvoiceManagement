@@ -196,13 +196,14 @@ namespace InvoiceManagement.Server.API.Controllers
                     return BadRequest(new { error = "PO Number is required for approval" });
                 }
 
-                var approvalResult = await _projectService.ApproveProjectAsync(id, request.ApprovedBy ?? User.Identity?.Name ?? "System");
-                if (!approvalResult)
-                    return NotFound();
+                var result = await _projectService.ApproveProjectAsync(
+                    id, 
+                    request.ApprovedBy ?? User.Identity?.Name ?? "System",
+                    request.PONumber
+                );
 
-                var poUpdateResult = await _projectService.UpdatePONumberAsync(id, request.PONumber, request.ApprovedBy ?? User.Identity?.Name ?? "System");
-                if (!poUpdateResult)
-                    return BadRequest(new { error = "Failed to update PO number" });
+                if (!result)
+                    return NotFound();
 
                 return NoContent();
             }

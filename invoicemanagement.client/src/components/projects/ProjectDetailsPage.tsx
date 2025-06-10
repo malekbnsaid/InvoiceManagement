@@ -9,6 +9,7 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Label } from '../ui/label';
+import { Progress } from '../ui/progress';
 import { projectApi } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import {
@@ -19,7 +20,9 @@ import {
   UserIcon,
   CheckCircleIcon,
   XCircleIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { CurrencyType } from '../../types/enums';
 
@@ -200,6 +203,82 @@ export default function ProjectDetailsPage() {
     }
   };
 
+  // Calculate project progress and status
+  const calculateProgress = () => {
+    if (!project) return 0;
+    if (project.budget && project.cost) {
+      return Math.min((project.cost / project.budget) * 100, 100);
+    }
+    return 0;
+  };
+
+  const getProjectStatus = () => {
+    if (!project) return { label: 'Unknown', color: 'gray' };
+    if (project.rejectionReason) return { label: 'Rejected', color: 'destructive' };
+    if (!project.isApproved) return { label: 'Pending Approval', color: 'warning' };
+    if (!project.actualStartDate) return { label: 'Not Started', color: 'secondary' };
+    if (project.actualEndDate) return { label: 'Completed', color: 'success' };
+    return { label: 'In Progress', color: 'primary' };
+  };
+
+  const getTimelineStatus = () => {
+    const timeline = [];
+    if (project) {
+      // Project Creation
+      timeline.push({
+        date: project.createdAt,
+        label: 'Project Created',
+        icon: FolderIcon,
+        status: 'completed',
+        detail: `Created by ${project.createdBy}`
+      });
+
+      // Project Approval/Rejection
+      if (project.isApproved) {
+        timeline.push({
+          date: project.approvalDate,
+          label: 'Project Approved',
+          icon: CheckCircleIcon,
+          status: 'completed',
+          detail: `Approved by ${project.approvedBy} | PO: ${project.poNumber}`
+        });
+      } else if (project.rejectionReason) {
+        timeline.push({
+          date: project.modifiedAt,
+          label: 'Project Rejected',
+          icon: XCircleIcon,
+          status: 'error',
+          detail: project.rejectionReason
+        });
+      }
+
+      // Project Start
+      if (project.actualStartDate) {
+        timeline.push({
+          date: project.actualStartDate,
+          label: 'Project Started',
+          icon: ArrowPathIcon,
+          status: 'completed',
+          detail: 'Project work commenced'
+        });
+      }
+
+      // Project Completion (if cost reaches/exceeds budget)
+      if (project.actualEndDate) {
+        timeline.push({
+          date: project.actualEndDate,
+          label: 'Project Completed',
+          icon: CheckCircleIcon,
+          status: 'completed',
+          detail: project.cost && project.budget 
+            ? `Final cost: ${project.cost.toLocaleString()} SAR (${((project.cost / project.budget) * 100).toFixed(1)}% of budget)`
+            : undefined
+        });
+      }
+    }
+    return timeline;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -224,9 +303,13 @@ export default function ProjectDetailsPage() {
     );
   }
 
+  const status = getProjectStatus();
+  const progress = calculateProgress();
+  const timeline = getTimelineStatus();
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header with Approval Status */}
+      {/* Header with Status */}
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
@@ -240,38 +323,100 @@ export default function ProjectDetailsPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          {project.isApproved ? (
-            <Badge variant="success" className="flex items-center gap-1">
-              <CheckCircleIcon className="h-4 w-4" />
-              Approved by PMO
-            </Badge>
-          ) : project.rejectionReason ? (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <XCircleIcon className="h-4 w-4" />
-              Rejected
-            </Badge>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Badge variant="warning" className="flex items-center gap-1">
-                <ClockIcon className="h-4 w-4" />
-                Pending PMO Approval
-              </Badge>
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  setIsRejecting(false);
-                  setIsApprovalDialogOpen(true);
-                }}
-              >
-                Review
-              </Button>
-            </div>
+        <div className="flex flex-col items-end gap-2">
+          <Badge variant={status.color} className="text-lg px-4 py-2">
+            {status.label}
+          </Badge>
+          {!project.isApproved && !project.rejectionReason && (
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setIsRejecting(false);
+                setIsApprovalDialogOpen(true);
+              }}
+            >
+              Review Project
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Project Details */}
+      {/* Project Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Project Progress</span>
+            <span className="text-2xl font-bold">{progress.toFixed(1)}%</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Progress value={progress} className="h-2" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Budget</p>
+                <p className="text-xl font-semibold">{project.budget?.toLocaleString()} SAR</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Current Cost</p>
+                <p className="text-xl font-semibold">{project.cost?.toLocaleString()} SAR</p>
+              </div>
+            </div>
+            {progress >= 100 && (
+              <div className="flex items-center gap-2 text-amber-500">
+                <ExclamationTriangleIcon className="h-5 w-5" />
+                <span>Project has reached or exceeded budget</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Timeline Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClockIcon className="h-5 w-5" />
+            Project Timeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <div className="absolute top-0 left-4 h-full w-0.5 bg-gray-200"></div>
+            <div className="space-y-8">
+              {timeline.map((event, index) => (
+                <div key={index} className="relative flex items-start gap-4 group">
+                  <div className={`absolute left-4 w-0.5 h-full ${index === timeline.length - 1 ? 'bg-transparent' : 'bg-gray-200'}`}></div>
+                  <div className={`relative flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
+                    event.status === 'completed' ? 'bg-green-50 border-green-500 group-hover:bg-green-100' :
+                    event.status === 'error' ? 'bg-red-50 border-red-500 group-hover:bg-red-100' :
+                    'bg-gray-50 border-gray-500 group-hover:bg-gray-100'
+                  }`}>
+                    <event.icon className={`h-4 w-4 ${
+                      event.status === 'completed' ? 'text-green-500' :
+                      event.status === 'error' ? 'text-red-500' :
+                      'text-gray-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{event.label}</p>
+                      <time className="text-sm text-gray-500">
+                        {format(new Date(event.date), 'PPP')}
+                      </time>
+                    </div>
+                    {event.detail && (
+                      <p className="mt-1 text-sm text-gray-600">{event.detail}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Project Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Basic Information */}
         <Card>
@@ -288,14 +433,6 @@ export default function ProjectDetailsPage() {
                 <p className="text-sm text-gray-500">Project Manager</p>
                 <p className="font-medium">{project.projectManager.employeeName}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Budget</p>
-                <p className="font-medium">{project.budget.toLocaleString()} SAR</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Current Cost</p>
-                <p className="font-medium">{project.cost.toLocaleString()} SAR</p>
-              </div>
             </div>
             <div>
               <p className="text-sm text-gray-500">Description</p>
@@ -304,88 +441,42 @@ export default function ProjectDetailsPage() {
           </CardContent>
         </Card>
 
-        {/* Timeline */}
+        {/* Dates */}
         <Card>
           <CardHeader>
-            <CardTitle>Timeline</CardTitle>
+            <CardTitle>Project Dates</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Expected Start</p>
-                <p className="font-medium">
-                  {project.expectedStart ? format(new Date(project.expectedStart), 'PPP') : 'Not set'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Expected End</p>
-                <p className="font-medium">
-                  {project.expectedEnd ? format(new Date(project.expectedEnd), 'PPP') : 'Not set'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Actual Start</p>
-                <p className="font-medium">
-                  {project.actualStart ? format(new Date(project.actualStart), 'PPP') : 'Not started'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Actual End</p>
-                <p className="font-medium">
-                  {project.actualEnd ? format(new Date(project.actualEnd), 'PPP') : 'In progress'}
-                </p>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Expected Start</p>
+                  <p className="font-medium">
+                    {project.expectedStart ? format(new Date(project.expectedStart), 'PPP') : 'Not set'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Expected End</p>
+                  <p className="font-medium">
+                    {project.expectedEnd ? format(new Date(project.expectedEnd), 'PPP') : 'Not set'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Actual Start</p>
+                  <p className="font-medium">
+                    {project.actualStartDate ? format(new Date(project.actualStartDate), 'PPP') : 'Not started'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Actual End</p>
+                  <p className="font-medium">
+                    {project.actualEndDate ? format(new Date(project.actualEndDate), 'PPP') : 'In progress'}
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Approval Information */}
-        {(project.isApproved || project.rejectionReason) && (
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Approval Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <p className="font-medium">
-                    {project.isApproved ? 'Approved' : 'Rejected'}
-                  </p>
-                </div>
-                {project.approvalDate && (
-                  <div>
-                    <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-medium">
-                      {format(new Date(project.approvalDate), 'PPP')}
-                    </p>
-                  </div>
-                )}
-                {project.approvedBy && (
-                  <div>
-                    <p className="text-sm text-gray-500">Approved By</p>
-                    <p className="font-medium">{project.approvedBy}</p>
-                  </div>
-                )}
-                {project.poNumber && (
-                  <div>
-                    <p className="text-sm text-gray-500">PO Number</p>
-                    <p className="font-medium flex items-center gap-1">
-                      <DocumentTextIcon className="h-4 w-4" />
-                      {project.poNumber}
-                    </p>
-                  </div>
-                )}
-                {project.rejectionReason && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-500">Rejection Reason</p>
-                    <p className="font-medium">{project.rejectionReason}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Payment Plan */}
         <Card className="md:col-span-2">
@@ -429,7 +520,7 @@ export default function ProjectDetailsPage() {
 
       {/* Approval Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {isRejecting ? 'Reject Project' : 'Approve Project'}
@@ -450,6 +541,7 @@ export default function ProjectDetailsPage() {
                   value={poNumber}
                   onChange={(e) => setPoNumber(e.target.value)}
                   placeholder="Enter PO number"
+                  className="col-span-3"
                 />
               </div>
             )}
