@@ -23,5 +23,10 @@ namespace InvoiceManagement.Server.Application.Interfaces
         Task<decimal> GetTotalProjectSpendAsync(int id);
         Task<bool> UpdateProjectStatusAsync(int id, string status, string updatedBy);
         Task<bool> UpdateProjectCostAsync(int id, decimal newCost, string updatedBy);
+
+        // Deletion approval methods
+        Task<bool> RequestProjectDeletionAsync(int id, string requestedBy);
+        Task<bool> ApproveDeletionAsync(int id, string approvedBy);
+        Task<bool> RejectDeletionAsync(int id, string rejectedBy, string reason);
     }
 } 

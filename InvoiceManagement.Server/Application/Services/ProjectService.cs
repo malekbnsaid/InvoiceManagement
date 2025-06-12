@@ -111,14 +111,35 @@ namespace InvoiceManagement.Server.Application.Services
 
         public async Task<bool> DeleteProjectAsync(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
+            var project = await _context.Projects
+                .Include(p => p.LPOs)
+                .Include(p => p.Invoices)
+                .Include(p => p.PaymentPlanLines)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (project == null)
                 return false;
 
-            _context.Projects.Remove(project);
-            await _context.SaveChangesAsync();
+            // Check if project is in deletion workflow
+            if (project.IsPendingDeletion)
+                throw new InvalidOperationException("Project is already in deletion workflow. Use the workflow endpoints instead.");
 
-            // Log the deletion
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Remove related entities first
+                if (project.PaymentPlanLines?.Any() == true)
+                    _context.Set<PaymentPlanLine>().RemoveRange(project.PaymentPlanLines);
+                
+                if (project.LPOs?.Any() == true)
+                    _context.LPOs.RemoveRange(project.LPOs);
+                    
+                if (project.Invoices?.Any() == true)
+                    _context.Invoices.RemoveRange(project.Invoices);
+
+            _context.Projects.Remove(project);
+
+                // Log the deletion before committing
             await _auditService.LogAuditAsync(
                 "Project",
                 id.ToString(),
@@ -127,7 +148,16 @@ namespace InvoiceManagement.Server.Application.Services
                 $"Deleted project: {project.Name}"
             );
 
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
             return true;
+        }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<bool> ApproveProjectAsync(int id, string approvedBy, string poNumber)
@@ -139,24 +169,24 @@ namespace InvoiceManagement.Server.Application.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                project.IsApproved = true;
+            project.IsApproved = true;
                 project.ApprovalDate = DateTime.UtcNow;
                 project.ApprovedBy = approvedBy;
                 project.PONumber = poNumber;
-                project.ModifiedAt = DateTime.UtcNow;
-                project.ModifiedBy = approvedBy;
+            project.ModifiedAt = DateTime.UtcNow;
+            project.ModifiedBy = approvedBy;
 
                 // Set actual start date since project is now approved
                 project.SetActualStartDate();
 
-                await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-                // Log the approval
-                await _auditService.LogAuditAsync(
-                    "Project",
-                    id.ToString(),
-                    "Approve",
-                    approvedBy,
+            // Log the approval
+            await _auditService.LogAuditAsync(
+                "Project",
+                id.ToString(),
+                "Approve",
+                approvedBy,
                     $"Approved project: {project.Name} with PO number: {poNumber}"
                 );
 
@@ -273,6 +303,111 @@ namespace InvoiceManagement.Server.Application.Services
                 "UpdateCost",
                 updatedBy,
                 $"Updated project cost to: {newCost}"
+            );
+
+            return true;
+        }
+
+        public async Task<bool> RequestProjectDeletionAsync(int id, string requestedBy)
+        {
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+                return false;
+
+            project.IsPendingDeletion = true;
+            project.DeletionRequestDate = DateTime.UtcNow;
+            project.DeletionRequestedBy = requestedBy;
+            project.ModifiedAt = DateTime.UtcNow;
+            project.ModifiedBy = requestedBy;
+
+            await _context.SaveChangesAsync();
+
+            // Log the deletion request
+            await _auditService.LogAuditAsync(
+                "Project",
+                id.ToString(),
+                "DeletionRequest",
+                requestedBy,
+                $"Requested deletion of project: {project.Name}"
+            );
+
+            return true;
+        }
+
+        public async Task<bool> ApproveDeletionAsync(int id, string approvedBy)
+        {
+            var project = await _context.Projects
+                .Include(p => p.LPOs)
+                .Include(p => p.Invoices)
+                .Include(p => p.PaymentPlanLines)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (project == null || !project.IsPendingDeletion)
+                return false;
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Remove related entities first
+                if (project.PaymentPlanLines?.Any() == true)
+                    _context.Set<PaymentPlanLine>().RemoveRange(project.PaymentPlanLines);
+                
+                if (project.LPOs?.Any() == true)
+                    _context.LPOs.RemoveRange(project.LPOs);
+                    
+                if (project.Invoices?.Any() == true)
+                    _context.Invoices.RemoveRange(project.Invoices);
+
+                project.IsDeletionApproved = true;
+                project.DeletionApprovedDate = DateTime.UtcNow;
+                project.DeletionApprovedBy = approvedBy;
+                project.ModifiedAt = DateTime.UtcNow;
+                project.ModifiedBy = approvedBy;
+
+                _context.Projects.Remove(project);
+
+                // Log the deletion approval before committing
+                await _auditService.LogAuditAsync(
+                    "Project",
+                    id.ToString(),
+                    "DeletionApproved",
+                    approvedBy,
+                    $"Approved deletion of project: {project.Name}"
+                );
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return true;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<bool> RejectDeletionAsync(int id, string rejectedBy, string reason)
+        {
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null || !project.IsPendingDeletion)
+                return false;
+
+            project.IsPendingDeletion = false;
+            project.IsDeletionApproved = false;
+            project.DeletionRejectionReason = reason;
+            project.ModifiedAt = DateTime.UtcNow;
+            project.ModifiedBy = rejectedBy;
+
+            await _context.SaveChangesAsync();
+
+            // Log the deletion rejection
+            await _auditService.LogAuditAsync(
+                "Project",
+                id.ToString(),
+                "DeletionRejected",
+                rejectedBy,
+                $"Rejected deletion of project: {project.Name}. Reason: {reason}"
             );
 
             return true;

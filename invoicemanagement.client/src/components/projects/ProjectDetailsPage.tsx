@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Progress } from '../ui/progress';
-import { projectApi } from '../../services/api';
+import { projectApi } from '../../services/api/projectApi';
 import { useToast } from '../ui/use-toast';
 import {
   CalendarIcon,
@@ -76,6 +76,31 @@ interface APIResponse<T> {
   [key: string]: any;
 }
 
+interface ProjectDetails extends Omit<Project, 'projectManager' | 'section'> {
+  paymentPlanLines: Array<{
+    year: number;
+    amount: number;
+    currency: CurrencyType;
+    paymentType: string;
+    description: string;
+  }>;
+  invoices: any[];
+  lpOs: any[];
+  projectManager: {
+    employeeName: string;
+    employeeNumber: string;
+  };
+  actualStartDate: string | null;
+  actualEndDate: string | null;
+  status: string;
+  tenderDate: string | null;
+  section: {
+    sectionName: string;
+    sectionAbbreviation: string;
+    departmentNameEnglish: string;
+  };
+}
+
 export default function ProjectDetailsPage() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -91,7 +116,7 @@ export default function ProjectDetailsPage() {
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
-      const response = await projectApi.getById(parseInt(id!));
+      const response = await projectApi.getById(parseInt(id!)) as unknown as ProjectDetails;
       console.log('Raw API response:', response);
       
       // Helper function to handle both array formats
@@ -161,7 +186,7 @@ export default function ProjectDetailsPage() {
       });
       setIsApprovalDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Error",
         description: "Failed to update project approval status. Please try again.",
@@ -213,12 +238,12 @@ export default function ProjectDetailsPage() {
   };
 
   const getProjectStatus = () => {
-    if (!project) return { label: 'Unknown', color: 'gray' };
-    if (project.rejectionReason) return { label: 'Rejected', color: 'destructive' };
-    if (!project.isApproved) return { label: 'Pending Approval', color: 'warning' };
-    if (!project.actualStartDate) return { label: 'Not Started', color: 'secondary' };
-    if (project.actualEndDate) return { label: 'Completed', color: 'success' };
-    return { label: 'In Progress', color: 'primary' };
+    if (!project) return { label: 'Unknown', color: 'secondary' as const };
+    if (project.rejectionReason) return { label: 'Rejected', color: 'danger' as const };
+    if (!project.isApproved) return { label: 'Pending Approval', color: 'warning' as const };
+    if (!project.actualStartDate) return { label: 'Not Started', color: 'secondary' as const };
+    if (project.actualEndDate) return { label: 'Completed', color: 'success' as const };
+    return { label: 'In Progress', color: 'default' as const };
   };
 
   const getTimelineStatus = () => {
@@ -431,7 +456,7 @@ export default function ProjectDetailsPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Project Manager</p>
-                <p className="font-medium">{project.projectManager.employeeName}</p>
+                <p className="font-medium">{project.projectManager?.employeeName}</p>
               </div>
             </div>
             <div>
@@ -497,7 +522,7 @@ export default function ProjectDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {project.paymentPlanLines.map((line, index) => (
+                    {project.paymentPlanLines.map((line: PaymentPlanLine, index: number) => (
                       <tr key={index} className="border-b">
                         <td className="py-2">{line.year}</td>
                         <td className="py-2">{line.amount.toLocaleString()}</td>

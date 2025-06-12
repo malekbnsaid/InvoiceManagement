@@ -178,11 +178,24 @@ namespace InvoiceManagement.Server.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var result = await _projectService.DeleteProjectAsync(id);
-            if (!result)
-                return NotFound();
+            try
+            {
+                var result = await _projectService.DeleteProjectAsync(id);
+                if (!result)
+                    return NotFound();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error deleting project: {ex}");
+                return StatusCode(500, new { error = "An error occurred while deleting the project." });
+            }
         }
 
         // POST: api/Projects/5/approve
@@ -277,6 +290,70 @@ namespace InvoiceManagement.Server.API.Controllers
                 return NotFound();
 
             return NoContent();
+        }
+
+        // POST: api/Projects/5/delete-request
+        [HttpPost("{id}/delete-request")]
+        public async Task<IActionResult> RequestDeletion(int id)
+        {
+            try
+            {
+                var result = await _projectService.RequestProjectDeletionAsync(id, User.Identity?.Name ?? "System");
+                if (!result)
+                    return NotFound();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // POST: api/Projects/5/approve-deletion
+        [HttpPost("{id}/approve-deletion")]
+        public async Task<IActionResult> ApproveDeletion(int id)
+        {
+            try
+            {
+                var result = await _projectService.ApproveDeletionAsync(id, User.Identity?.Name ?? "System");
+                if (!result)
+                    return NotFound();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // POST: api/Projects/5/reject-deletion
+        [HttpPost("{id}/reject-deletion")]
+        public async Task<IActionResult> RejectDeletion(int id, [FromBody] RejectionRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.Reason))
+                {
+                    return BadRequest(new { error = "Rejection reason is required" });
+                }
+
+                var result = await _projectService.RejectDeletionAsync(
+                    id,
+                    request.RejectedBy ?? User.Identity?.Name ?? "System",
+                    request.Reason
+                );
+
+                if (!result)
+                    return NotFound();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         public class ProjectWrapper

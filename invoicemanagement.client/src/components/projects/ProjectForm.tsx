@@ -4,8 +4,9 @@ import { format } from 'date-fns';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FormProvider } from 'react-hook-form';
-import { CalendarIcon, Briefcase, Building2, User, DollarSign, Clock, FileText, CheckCircle2 } from 'lucide-react';
+import { CalendarIcon, Briefcase, Building2, User, DollarSign, Clock, FileText, CheckCircle2, TrashIcon, Trash2Icon } from 'lucide-react';
 import { CurrencyType } from '../../types/enums';
+import { toast } from 'react-hot-toast';
 
 import { Button } from '../ui/Button';
 import {
@@ -33,8 +34,12 @@ import {
 } from '../ui/popover';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { cn } from '../../lib/utils';
-import { projectApi, departmentApi, employeeApi } from '../../services/api';
+import { projectApi } from '../../services/api/projectApi';
+import { departmentApi } from '../../services/api/departmentApi';
+import { employeeApi } from '../../services/api/employeeApi';
 import { useQuery } from '@tanstack/react-query';
+import { Label } from '../ui/label';
+
 // CSS for form message consistency
 const formMessageStyles = "text-sm font-medium text-destructive mt-1";
 
@@ -65,6 +70,14 @@ interface PaymentPlanLine {
   paymentType: string;
   description?: string;
   projectId?: number;
+}
+
+interface RawPaymentPlanLine {
+  year: number | string;
+  amount: number | string;
+  currency?: CurrencyType;
+  paymentType?: string;
+  description?: string;
 }
 
 // Define the form schema
@@ -107,27 +120,40 @@ interface ProjectFormProps {
   initialData?: FormValues;
 }
 
+// Helper function to ensure payment plan lines are in the correct format
+const normalizePaymentPlanLines = (data: any) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (data.$values && Array.isArray(data.$values)) return data.$values;
+  return [];
+};
+
 export default function ProjectForm({ onSubmit, isLoading = false, initialData }: ProjectFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
-  // Initialize form
+  // Initialize form with proper default values for editing
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      name: '',
-      description: '',
-      unitId: '',
-      section: '',
-      budget: '',
-      projectManagerId: '',
-      expectedStart: null,
-      expectedEnd: null,
-      tenderDate: null,
-      paymentPlanLines: [],
-      projectNumber: '',
-      initialNotes: '',
-    },
+    defaultValues: {
+      name: initialData?.name || '',
+      description: initialData?.description || '',
+      section: initialData?.section || '',
+      projectManagerId: initialData?.projectManagerId || '',
+      budget: initialData?.budget || '',
+      expectedStart: initialData?.expectedStart || null,
+      expectedEnd: initialData?.expectedEnd || null,
+      tenderDate: initialData?.tenderDate || null,
+      paymentPlanLines: normalizePaymentPlanLines(initialData?.paymentPlanLines).map((line: RawPaymentPlanLine) => ({
+        year: Number(line.year),
+        amount: Number(line.amount),
+        currency: line.currency || CurrencyType.SAR,
+        paymentType: line.paymentType || 'Annually',
+        description: line.description || ''
+      })),
+      projectNumber: initialData?.projectNumber || '',
+      initialNotes: initialData?.initialNotes || '',
+    }
   });
 
   // Watch section changes
@@ -238,26 +264,26 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     exit: { opacity: 0, x: -50, transition: { duration: 0.3 } }
   };
 
-  // Payment plan line handlers
+  // Update the addPaymentLine function
   const addPaymentLine = () => {
-    const currentLines = form.getValues("paymentPlanLines");
-    form.setValue("paymentPlanLines", [
+    const currentLines = form.getValues('paymentPlanLines') || [];
+    form.setValue('paymentPlanLines', [
       ...currentLines,
       {
         year: new Date().getFullYear(),
         amount: 0,
         currency: CurrencyType.SAR,
-        paymentType: "Annually",
-        description: "",
-        projectId: undefined
-      },
+        paymentType: 'Annually',
+        description: ''
+      }
     ]);
   };
 
+  // Update the removePaymentLine function
   const removePaymentLine = (index: number) => {
-    const currentLines = form.getValues("paymentPlanLines");
+    const currentLines = form.getValues('paymentPlanLines') || [];
     form.setValue(
-      "paymentPlanLines",
+      'paymentPlanLines',
       currentLines.filter((_, i) => i !== index)
     );
   };
@@ -265,44 +291,39 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   // Handle form submission
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const values = form.getValues();
     
-    if (currentStep < totalSteps) {
-      if (validateStep(currentStep)) {
-        setCurrentStep(currentStep + 1);
-      }
-      return;
-    }
-
     try {
-      // Transform payment plan lines to include project reference
-      const paymentPlanLines = values.paymentPlanLines.map(line => ({
-        ...line,
-        amount: Number(line.amount),
-        year: Number(line.year),
-        projectId: line.projectId || 0  // This will be set by the backend
-      }));
+      const values = form.getValues();
+      console.log('Form values before submission:', values);
 
-      // Ensure all values are in the correct format
-      const submissionData: FormValues = {
-        name: values.name,
-        description: values.description,
+      // Handle step navigation
+      if (currentStep < totalSteps) {
+        if (validateStep(currentStep)) {
+          setCurrentStep(currentStep + 1);
+        }
+        return;
+      }
+
+      // Transform the form data while preserving existing data
+      const formData = {
+        ...values, // Base values
+        budget: values.budget ? values.budget.toString() : '', // Ensure budget is string
         section: values.section,
         projectManagerId: values.projectManagerId,
-        budget: values.budget,
-        unitId: values.unitId || undefined,
-        projectNumber: values.projectNumber,
-        initialNotes: values.initialNotes,
-        expectedStart: values.expectedStart,
-        expectedEnd: values.expectedEnd,
-        tenderDate: values.tenderDate,
-        paymentPlanLines
+        paymentPlanLines: (values.paymentPlanLines || []).map(line => ({
+          year: Number(line.year),
+          amount: Number(line.amount),
+          currency: line.currency || CurrencyType.SAR,
+          paymentType: line.paymentType || 'Annually',
+          description: line.description || ''
+        }))
       };
 
-      console.log('Submitting data:', submissionData);
-      await onSubmit(submissionData);
+      console.log('Transformed form data for update:', formData);
+      await onSubmit(formData);
     } catch (error) {
       console.error('Error submitting form:', error);
+      toast.error('Failed to update project. Please try again.');
     }
   };
 
@@ -705,19 +726,16 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
 
                 {/* Payment Plan Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Payment Plan</h3>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addPaymentLine}
-                    >
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">Payment Plan</h2>
+                    <Button type="button" onClick={addPaymentLine}>
                       Add Payment Line
                     </Button>
                   </div>
-
-                  {form.watch("paymentPlanLines")?.map((line, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
+                  
+                  {/* Ensure paymentPlanLines is always an array */}
+                  {Array.isArray(form.watch('paymentPlanLines')) && form.watch('paymentPlanLines').map((line: PaymentPlanLine, index: number) => (
+                    <div key={index} className="grid grid-cols-5 gap-4 items-start border p-4 rounded-lg">
                       <FormField
                         control={form.control}
                         name={`paymentPlanLines.${index}.year`}
@@ -733,7 +751,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 onChange={(e) => field.onChange(parseInt(e.target.value))}
                               />
                             </FormControl>
-                            <FormMessage className={formMessageStyles} />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -753,7 +771,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 onChange={(e) => field.onChange(parseFloat(e.target.value))}
                               />
                             </FormControl>
-                            <FormMessage className={formMessageStyles} />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -782,7 +800,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 ))}
                               </SelectContent>
                             </Select>
-                            <FormMessage className={formMessageStyles} />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -809,7 +827,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 <SelectItem value="Annually">Annually</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage className={formMessageStyles} />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -818,24 +836,25 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         control={form.control}
                         name={`paymentPlanLines.${index}.description`}
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2">
+                          <FormItem>
                             <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Enter payment description" />
-                            </FormControl>
-                            <FormMessage className={formMessageStyles} />
+                            <div className="flex gap-2">
+                              <FormControl>
+                                <Input {...field} placeholder="Enter payment description" />
+                              </FormControl>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => removePaymentLine(index)}
+                              >
+                                <Trash2Icon className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
-
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        className="md:col-span-2"
-                        onClick={() => removePaymentLine(index)}
-                      >
-                        Remove Payment Line
-                      </Button>
                     </div>
                   ))}
                 </div>

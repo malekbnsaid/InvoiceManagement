@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Button } from '../ui/Button';
 import {
   FolderIcon,
   MagnifyingGlassIcon,
@@ -16,29 +16,37 @@ import {
   ArrowsPointingOutIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
-import { projectApi } from '../../services/api';
+import { projectApi } from '../../services/api/projectApi';
 import type { QueryObserverResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
+import ProjectActions from './ProjectActions';
+import { Project } from '../../types/interfaces';
 
-interface Project {
+interface ProjectListItem {
   id: number;
-  projectNumber: string;
   name: string;
+  projectNumber: string;
   description: string;
-  unit: string;
-  budget: number;
-  cost: number;
-  expectedStart: string;
-  expectedEnd: string;
-  actualStart: string | null;
-  actualEnd: string | null;
-  status: string;
-  lposCount: number;
-  invoicesCount: number;
-  projectManager: string;
-  poNumber: string;
-  purchaseDate: string;
-  paymentPlan: string;
+  budget?: number;
+  expectedStart?: string;
+  expectedEnd?: string;
+  status?: string;
+  projectManager?: {
+    employeeName: string;
+  };
+  section?: {
+    id: number;
+    name: string;
+    abbreviation: string;
+  };
+  poNumber?: string;
+  isPendingDeletion?: boolean;
+  isApproved?: boolean;
+}
+
+interface APIResponse<T> {
+  $values?: T[];
+  [key: string]: any;
 }
 
 const ProjectsList = () => {
@@ -46,11 +54,10 @@ const ProjectsList = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   // Fetch projects using React Query
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const response = await projectApi.getAll();
-      // Transform the response to match our interface
+      const response = await projectApi.getAll() as APIResponse<Project> | Project[];
       const projects = Array.isArray(response) 
         ? response 
         : response.$values || [];
@@ -65,12 +72,13 @@ const ProjectsList = () => {
   });
 
   // Filter projects based on search query and status filter
-  const filteredProjects = data?.filter((project: Project) => {
+  const filteredProjects = data?.filter((project: ProjectListItem) => {
     // Search filter
     const matchesSearch = 
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.projectNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.projectManager.toLowerCase().includes(searchQuery.toLowerCase());
+      project.projectManager?.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.section?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Status filter
     const matchesStatus = statusFilter ? project.status === statusFilter : true;
@@ -130,7 +138,7 @@ const ProjectsList = () => {
 
       {/* Projects grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProjects?.map((project: Project) => (
+        {filteredProjects?.map((project: ProjectListItem) => (
           <motion.div
             key={project.id}
             initial={{ opacity: 0, y: 20 }}
@@ -144,9 +152,20 @@ const ProjectsList = () => {
                     <CardTitle className="text-lg font-semibold">{project.name}</CardTitle>
                     <CardDescription>{project.projectNumber}</CardDescription>
                   </div>
-                  <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
-                    {project.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
+                      {project.status}
+                    </Badge>
+                    <ProjectActions 
+                      project={{
+                        id: project.id,
+                        name: project.name,
+                        isPendingDeletion: project.isPendingDeletion,
+                        isApproved: project.isApproved
+                      }}
+                      onRefresh={() => refetch()}
+                    />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -157,23 +176,24 @@ const ProjectsList = () => {
                       <CalendarIcon className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-gray-700 font-medium mr-1">Expected:</span>
                       <span className="text-gray-500">
-                        {format(new Date(project.expectedStart), 'MMM d, yyyy')} - {format(new Date(project.expectedEnd), 'MMM d, yyyy')}
+                        {project.expectedStart && format(new Date(project.expectedStart), 'MMM d, yyyy')} - 
+                        {project.expectedEnd && format(new Date(project.expectedEnd), 'MMM d, yyyy')}
                       </span>
                     </div>
                     <div className="flex items-center text-sm">
                       <BanknotesIcon className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-gray-700 font-medium mr-1">Budget:</span>
-                      <span className="text-gray-500">${project.budget.toLocaleString()}</span>
+                      <span className="text-gray-500">${project.budget?.toLocaleString() || ''}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <FolderIcon className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-gray-700 font-medium mr-1">Unit:</span>
-                      <span className="text-gray-500">{project.unit}</span>
+                      <span className="text-gray-500">{project.section?.name || ''}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <ClockIcon className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-gray-700 font-medium mr-1">PO Number:</span>
-                      <span className="text-gray-500">{project.poNumber}</span>
+                      <span className="text-gray-500">{project.poNumber || ''}</span>
                     </div>
                   </div>
                   

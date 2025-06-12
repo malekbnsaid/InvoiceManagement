@@ -63,6 +63,15 @@ namespace InvoiceManagement.Server.Domain.Entities
         public virtual ICollection<LPO> LPOs { get; set; } = new List<LPO>();
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
 
+        // Deletion Approval
+        public bool IsPendingDeletion { get; set; }
+        public DateTime? DeletionRequestDate { get; set; }
+        public string? DeletionRequestedBy { get; set; }
+        public bool? IsDeletionApproved { get; set; }
+        public DateTime? DeletionApprovedDate { get; set; }
+        public string? DeletionApprovedBy { get; set; }
+        public string? DeletionRejectionReason { get; set; }
+
         // Methods to manage actual dates
         public void SetActualStartDate()
         {

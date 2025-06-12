@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { Button } from '../ui/Button';
 import React from 'react';
-import { departmentApi } from '../../services/api';
+import { departmentApi } from '../../services/api/departmentApi';
 
 // Types that match the actual API response
 type DepartmentNode = {

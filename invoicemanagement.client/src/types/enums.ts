@@ -22,13 +22,8 @@ export enum LPOStatus {
 }
 
 export enum CurrencyType {
+  SAR = 'SAR',
   USD = 'USD',
   EUR = 'EUR',
-  GBP = 'GBP',
-  AED = 'AED',
-  SAR = 'SAR',
-  KWD = 'KWD',
-  BHD = 'BHD',
-  OMR = 'OMR',
-  QAR = 'QAR'
+  GBP = 'GBP'
 } 

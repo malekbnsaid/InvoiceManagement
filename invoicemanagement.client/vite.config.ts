@@ -46,7 +46,7 @@ export default defineConfig({
             '/api': {
                 target,
                 secure: false,
-                rewrite: (path) => path.replace(/^\/api/, '/api')
+                changeOrigin: true
             }
         },
         port: 5173,

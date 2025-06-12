@@ -64,6 +64,21 @@ export interface Vendor {
   modifiedBy?: string;
 }
 
+export interface PaymentPlanLine {
+  year: number;
+  amount: number;
+  currency: CurrencyType;
+  paymentType: string;
+  description?: string;
+}
+
+interface Section {
+  id: number;
+  name: string;
+  abbreviation: string;
+  departmentNameEnglish: string;
+}
+
 export interface Project {
   id: number;
   projectNumber: string;
@@ -77,18 +92,47 @@ export interface Project {
   approvalDate?: Date;
   approvedBy?: string;
   rejectionReason?: string;
-  expectedStart?: Date;
-  expectedEnd?: Date;
+  expectedStart?: Date | null;
+  expectedEnd?: Date | null;
+  actualStartDate?: Date | null;
+  actualEndDate?: Date | null;
+  tenderDate?: Date | null;
   sectionId: number;
-  section: {
-    id: number;
-    name: string;
-    abbreviation: string;
-  };
+  section: Section;
+  paymentPlanLines?: PaymentPlanLine[];
   createdAt: Date;
   createdBy: string;
   modifiedAt?: Date;
   modifiedBy?: string;
+  status?: string;
+}
+
+export interface ProjectApi {
+  getAll: () => Promise<Project[]>;
+  getById: (id: number) => Promise<Project>;
+  getByNumber: (projectNumber: string) => Promise<Project>;
+  create: (project: Project) => Promise<Project>;
+  update: (id: number, project: Project) => Promise<Project>;
+  delete: (id: number) => Promise<void>;
+  approve: (id: number, poNumber: string) => Promise<void>;
+  reject: (id: number, reason: string) => Promise<void>;
+  requestDeletion: (id: number) => Promise<void>;
+  approveDeletion: (id: number) => Promise<void>;
+  rejectDeletion: (id: number, reason: string) => Promise<void>;
+  getProjectsBySection: (sectionId: number) => Promise<Project[]>;
+  getProjectsByManager: (managerId: number) => Promise<Project[]>;
+  getProjectBudget: (id: number) => Promise<number>;
+  getProjectSpend: (id: number) => Promise<number>;
+  updateStatus: (id: number, status: string) => Promise<void>;
+  updateCost: (id: number, cost: number) => Promise<void>;
+  getCompletion: (id: number) => Promise<number>;
+  updateApprovalStatus: (id: number, data: {
+    isApproved: boolean;
+    poNumber?: string;
+    rejectionReason?: string;
+    approvedBy?: string;
+    approvalDate?: string;
+  }) => Promise<void>;
 }
 
 export interface LPO {

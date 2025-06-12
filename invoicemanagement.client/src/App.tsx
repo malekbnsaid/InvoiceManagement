@@ -10,6 +10,8 @@ import ProjectsList from './components/projects/ProjectsList';
 import ProjectFormPage from './components/projects/ProjectFormPage';
 import ProjectDetailsPage from './components/projects/ProjectDetailsPage';
 import LPOsList from './components/lpos/LPOsList';
+import ProjectEditPage from './pages/ProjectEditPage';
+import { Toaster } from './components/ui/toaster';
 import React from 'react';
 
 // Create a client
@@ -44,9 +46,11 @@ function App() {
                 </h1>
               </div>
             } />
+            <Route path="/projects/edit/:id" element={<ProjectEditPage />} />
           </Routes>
         </MainLayout>
       </Router>
+      <Toaster />
     </QueryClientProvider>
   );
 }
