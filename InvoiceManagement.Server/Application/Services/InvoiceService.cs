@@ -26,21 +26,54 @@ namespace InvoiceManagement.Server.Application.Services
             {
                 var invoice = new Invoice
                 {
+                    // Essential Invoice Information
                     InvoiceNumber = ocrResult.InvoiceNumber,
                     InvoiceDate = ocrResult.InvoiceDate ?? DateTime.UtcNow,
                     DueDate = ocrResult.DueDate,
                     InvoiceValue = ocrResult.TotalAmount ?? ocrResult.InvoiceValue ?? 0,
                     Currency = ocrResult.Currency ?? Domain.Enums.CurrencyType.USD,
-                    VendorName = ocrResult.VendorName,
                     Subject = ocrResult.Description,
+                    ReferenceNumber = ocrResult.ReferenceNumber,
+
+                    // Customer Information
+                    CustomerName = ocrResult.CustomerName,
+                    CustomerNumber = ocrResult.CustomerNumber,
+                    BillingAddress = ocrResult.BillingAddress,
+                    ShippingAddress = ocrResult.ShippingAddress,
+
+                    // Vendor Information
+                    VendorName = ocrResult.VendorName,
+                    VendorAddress = ocrResult.VendorAddress,
+                    VendorTaxNumber = ocrResult.VendorTaxId,
+                    VendorPhone = ocrResult.VendorPhone,
+                    VendorEmail = ocrResult.VendorEmail,
+
+                    // Financial Information
+                    SubTotal = ocrResult.SubTotal ?? 0,
+                    TaxAmount = ocrResult.TaxAmount ?? 0,
+                    TaxRate = ocrResult.TaxRate,
+                    PurchaseOrderNumber = ocrResult.PurchaseOrderNumber,
+                    PaymentTerms = ocrResult.PaymentTerms,
+
+                    // Processing Information
                     Status = Domain.Enums.InvoiceStatus.Pending,
+                    ProcessedDate = DateTime.UtcNow,
+                    ProcessedBy = createdBy,
+                    ReceiveDate = DateTime.UtcNow,
+
+                    // Audit Information
                     CreatedBy = createdBy,
                     CreatedAt = DateTime.UtcNow,
+                    
+                    // Document Information
                     Remark = $"OCR Confidence: {ocrResult.ConfidenceScore}. Raw Text: {ocrResult.RawText}"
                 };
 
                 await _invoiceRepository.AddAsync(invoice);
-                _logger.LogInformation("Created invoice {InvoiceNumber} from OCR result", invoice.InvoiceNumber);
+                await _invoiceRepository.SaveChangesAsync(); // Add this line to save changes
+                
+                _logger.LogInformation("Created invoice {InvoiceNumber} from OCR result with confidence {Confidence}", 
+                    invoice.InvoiceNumber, ocrResult.ConfidenceScore);
                 
                 return invoice;
             }

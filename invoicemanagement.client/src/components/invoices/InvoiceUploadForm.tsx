@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
@@ -10,7 +11,8 @@ import {
     X as XMarkIcon, 
     CheckCircle as CheckCircleIcon,
     AlertCircle as AlertCircleIcon,
-    Loader2 as SpinnerIcon
+    Loader2 as SpinnerIcon,
+    Save as SaveIcon
 } from 'lucide-react';
 import { invoiceService } from '../../services/invoiceService';
 import { OcrResult } from '../../types/interfaces';
@@ -26,7 +28,9 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) 
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const onDrop = (acceptedFiles: File[]) => {
         setFiles(prev => [...prev, ...acceptedFiles]);
@@ -89,6 +93,57 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) 
             });
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!ocrResult) {
+            toast({
+                title: "Error",
+                description: "No processed invoice data to save",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        // Validate required fields
+        if (!ocrResult.invoiceNumber) {
+            toast({
+                title: "Error",
+                description: "Invoice number is required",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        if (!ocrResult.invoiceValue && !ocrResult.totalAmount) {
+            toast({
+                title: "Error",
+                description: "Invoice amount is required",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const savedInvoice = await invoiceService.saveInvoice(ocrResult);
+            toast({
+                title: "Success",
+                description: "Invoice saved successfully",
+            });
+            
+            // Navigate to the invoice list instead of a specific invoice
+            navigate('/invoices');
+        } catch (error: any) {
+            console.error('Error saving invoice:', error);
+            toast({
+                title: "Error",
+                description: error.response?.data || error.message || "Failed to save invoice",
+                variant: "destructive"
+            });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -212,6 +267,11 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) 
                                     {ocrResult.errorMessage && (
                                         <div className="text-sm text-red-500 mt-1">{ocrResult.errorMessage}</div>
                                     )}
+                                    {ocrResult.isProcessed && (
+                                        <div className="text-sm text-gray-500 mt-2">
+                                            Please review the extracted data below and click "Save Invoice" to save it to the database.
+                                        </div>
+                                    )}
                                 </AlertDescription>
                             </Alert>
 
@@ -280,7 +340,7 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) 
                     )}
                 </AnimatePresence>
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="flex justify-end space-x-2">
                 <Button
                     onClick={handleUpload}
                     disabled={files.length === 0 || uploading}
@@ -297,6 +357,25 @@ const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) 
                         </>
                     )}
                 </Button>
+                {ocrResult?.isProcessed && (
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        variant="default"
+                    >
+                        {isSaving ? (
+                            <>
+                                <SpinnerIcon className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <SaveIcon className="mr-2 h-4 w-4" />
+                                Save Invoice
+                            </>
+                        )}
+                    </Button>
+                )}
             </CardFooter>
         </Card>
     );

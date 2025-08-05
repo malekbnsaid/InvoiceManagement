@@ -140,7 +140,7 @@ namespace InvoiceManagement.Server.Infrastructure.Services
                     {
                         var currencyValue = subTotalField.Value.AsCurrency();
                         _logger.LogInformation($"  Currency Amount: {currencyValue.Amount}");
-                        _logger.LogInformation($"  Currency Symbol: {currencyValue.Symbol}");
+                        _logger.LogInformation($"  Currency Symbol: '{currencyValue.Symbol}'");
                         
                         ocrResult.SubTotal = Convert.ToDecimal(currencyValue.Amount);
                         var parsedCurrency = ParseCurrencyType(currencyValue.Symbol);
@@ -156,30 +156,58 @@ namespace InvoiceManagement.Server.Infrastructure.Services
                 // Try to get currency from any monetary field if not set yet
                 if (!ocrResult.Currency.HasValue)
                 {
-                    foreach (var fieldKey in new[] { "InvoiceTotal", "TotalTax", "SubTotal" })
+                    _logger.LogInformation("Currency not set from SubTotal, trying other fields...");
+                    foreach (var fieldKey in new[] { "InvoiceTotal", "TotalTax", "SubTotal", "AmountDue" })
                     {
+                        _logger.LogInformation($"Checking {fieldKey} for currency...");
                         if (document.Fields.TryGetValue(fieldKey, out var field) && 
                             field.Value != null && 
                             field.FieldType == DocumentFieldType.Currency)
                         {
                             var currencyValue = field.Value.AsCurrency();
-                            var parsedCurrency = ParseCurrencyType(currencyValue.Symbol);
-                            if (parsedCurrency.HasValue)
+                            _logger.LogInformation($"Found currency field {fieldKey} with symbol: '{currencyValue.Symbol}'");
+                            
+                            if (!string.IsNullOrEmpty(currencyValue.Symbol))
                             {
-                                ocrResult.Currency = parsedCurrency.Value;
-                                _logger.LogInformation($"Found currency {ocrResult.Currency} from {fieldKey} field");
-                                break;
+                                var parsedCurrency = ParseCurrencyType(currencyValue.Symbol);
+                                if (parsedCurrency.HasValue)
+                                {
+                                    ocrResult.Currency = parsedCurrency.Value;
+                                    _logger.LogInformation($"Successfully set currency to {ocrResult.Currency} from {fieldKey}");
+                                    break;
+                                }
+                            }
+                            // Even if we couldn't parse the symbol, extract it from the content
+                            else if (!string.IsNullOrEmpty(field.Content))
+                            {
+                                var symbol = ExtractCurrencySymbol(field.Content);
+                                if (!string.IsNullOrEmpty(symbol))
+                                {
+                                    var parsedCurrency = ParseCurrencyType(symbol);
+                                    if (parsedCurrency.HasValue)
+                                    {
+                                        ocrResult.Currency = parsedCurrency.Value;
+                                        _logger.LogInformation($"Successfully set currency to {ocrResult.Currency} from {fieldKey} content: {field.Content}");
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
                 // If still no currency but we see dollar signs in the content, default to USD
-                if (!ocrResult.Currency.HasValue && result.Content.Contains("$"))
+                if (!ocrResult.Currency.HasValue)
                 {
-                    ocrResult.Currency = CurrencyType.USD;
-                    _logger.LogInformation("Defaulted to USD based on $ symbol in content");
+                    _logger.LogInformation("Checking raw content for currency symbols...");
+                    if (result.Content.Contains("$"))
+                    {
+                        ocrResult.Currency = CurrencyType.USD;
+                        _logger.LogInformation("Set currency to USD based on $ symbol in content");
+                    }
                 }
+
+                _logger.LogInformation($"Final currency value: {ocrResult.Currency}");
 
                 if (document.Fields.TryGetValue("TotalTax", out var taxField))
                 {
@@ -280,6 +308,25 @@ namespace InvoiceManagement.Server.Infrastructure.Services
             }
         }
 
+        private string ExtractCurrencySymbol(string content)
+        {
+            if (string.IsNullOrEmpty(content)) return null;
+
+            // Common currency symbols
+            if (content.Contains("$")) return "$";
+            if (content.Contains("€")) return "€";
+            if (content.Contains("£")) return "£";
+            if (content.Contains("¥")) return "¥";
+
+            // Currency codes
+            if (content.Contains("USD")) return "USD";
+            if (content.Contains("EUR")) return "EUR";
+            if (content.Contains("GBP")) return "GBP";
+            if (content.Contains("JPY")) return "JPY";
+
+            return null;
+        }
+
         private CurrencyType? ParseCurrencyType(string symbol)
         {
             _logger.LogInformation($"Parsing currency symbol: '{symbol}'");
@@ -290,14 +337,26 @@ namespace InvoiceManagement.Server.Infrastructure.Services
                 return null;
             }
 
-            var cleanSymbol = symbol.Trim();
-            return cleanSymbol switch
+            var cleanSymbol = symbol.Trim().ToUpperInvariant();
+            _logger.LogInformation($"Cleaned currency symbol: '{cleanSymbol}'");
+
+            CurrencyType? result = cleanSymbol switch
             {
                 "$" or "USD" => CurrencyType.USD,
                 "€" or "EUR" => CurrencyType.EUR,
                 "£" or "GBP" => CurrencyType.GBP,
+                "¥" or "JPY" => CurrencyType.JPY,
+                "AED" => CurrencyType.AED,
+                "SAR" => CurrencyType.SAR,
+                "KWD" => CurrencyType.KWD,
+                "BHD" => CurrencyType.BHD,
+                "OMR" => CurrencyType.OMR,
+                "QAR" => CurrencyType.QAR,
                 _ => null
             };
+
+            _logger.LogInformation($"Parsed currency result: {result}");
+            return result;
         }
 
         public async Task<bool> ValidateInvoiceFormatAsync(string filePath)

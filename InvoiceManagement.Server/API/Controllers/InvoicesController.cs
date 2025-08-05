@@ -46,22 +46,8 @@ namespace InvoiceManagement.Server.API.Controllers
 
                 // Process with OCR
                 var ocrResult = await _ocrService.ProcessInvoiceAsync(tempPath);
+                _logger.LogInformation("OCR processing completed for file {FileName} with confidence {Confidence}", file.FileName, ocrResult.ConfidenceScore);
                 
-                // Save to database if processing was successful
-                if (ocrResult.IsProcessed)
-                {
-                    try
-                    {
-                        await _invoiceService.CreateFromOcrResultAsync(ocrResult, User.Identity?.Name ?? "system");
-                        _logger.LogInformation("Successfully saved invoice {InvoiceNumber} to database", ocrResult.InvoiceNumber);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to save invoice to database, but OCR processing was successful");
-                        // We still return the OCR result even if database save fails
-                    }
-                }
-
                 // Return the OCR result directly
                 return Ok(ocrResult);
             }
@@ -74,6 +60,36 @@ namespace InvoiceManagement.Server.API.Controllers
             {
                 if (System.IO.File.Exists(tempPath))
                     System.IO.File.Delete(tempPath);
+            }
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<Invoice>> Create([FromBody] OcrResult ocrResult)
+        {
+            if (ocrResult == null)
+            {
+                return BadRequest("OCR result is required");
+            }
+
+            try
+            {
+                var invoice = await _invoiceService.CreateFromOcrResultAsync(ocrResult, User.Identity?.Name ?? "system");
+                _logger.LogInformation("Created invoice {InvoiceNumber} with ID {InvoiceId}", invoice.InvoiceNumber, invoice.Id);
+                
+                // Get the fresh invoice from the database to ensure we have all properties
+                var savedInvoice = await _invoiceService.GetByIdAsync(invoice.Id);
+                if (savedInvoice == null)
+                {
+                    _logger.LogError("Failed to retrieve saved invoice with ID {InvoiceId}", invoice.Id);
+                    return StatusCode(500, "Invoice was saved but could not be retrieved");
+                }
+
+                return Ok(savedInvoice);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating invoice from OCR result");
+                return StatusCode(500, "An error occurred while saving the invoice");
             }
         }
 
