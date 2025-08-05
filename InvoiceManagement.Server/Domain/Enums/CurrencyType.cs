@@ -10,6 +10,7 @@
         KWD,
         BHD,
         OMR,
-        QAR
+        QAR,
+         JPY
     }
 }

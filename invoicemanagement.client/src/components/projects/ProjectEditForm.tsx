@@ -31,6 +31,13 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
       const response = await projectApi.getById(projectId);
       console.log('Original project data:', response);
       
+      // Helper function to parse dates
+      const parseDate = (dateStr: string | null | undefined) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      };
+      
       // Helper function to handle array data that might be wrapped in $values
       const getArrayData = <T,>(data: T[] | APIResponse<T> | undefined): T[] => {
         if (!data) return [];
@@ -45,9 +52,9 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
         section: response.sectionId.toString(),
         projectManagerId: response.projectManagerId.toString(),
         budget: response.budget?.toString() || '',
-        expectedStart: response.expectedStart ? new Date(response.expectedStart) : null,
-        expectedEnd: response.expectedEnd ? new Date(response.expectedEnd) : null,
-        tenderDate: response.tenderDate ? new Date(response.tenderDate) : null,
+        expectedStart: response.expectedStart ? parseDate(response.expectedStart.toString()) : null,
+        expectedEnd: response.expectedEnd ? parseDate(response.expectedEnd.toString()) : null,
+        tenderDate: response.tenderDate ? parseDate(response.tenderDate.toString()) : null,
         paymentPlanLines: getArrayData(response.paymentPlanLines),
         // Store the original data separately
         originalData: response
@@ -72,46 +79,32 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
       }
 
       // Transform the data to match the API expectations
-      const projectData: Project = {
-        id: projectId,
+      const projectData = {
+        ...originalProject, // Start with all original data
+        // Then override with form data
         name: formData.name,
         description: formData.description || '',
-        projectNumber: originalProject.projectNumber || '',
         sectionId: parseInt(formData.section),
         projectManagerId: parseInt(formData.projectManagerId),
         budget: formData.budget ? parseFloat(formData.budget) : 0,
         expectedStart: formData.expectedStart,
         expectedEnd: formData.expectedEnd,
         tenderDate: formData.tenderDate,
-        // Preserve existing status fields
-        isApproved: originalProject.isApproved || false,
-        poNumber: originalProject.poNumber || '',
-        approvalDate: originalProject.approvalDate,
-        approvedBy: originalProject.approvedBy,
-        rejectionReason: originalProject.rejectionReason,
-        status: originalProject.status,
-        actualStartDate: originalProject.actualStartDate,
-        actualEndDate: originalProject.actualEndDate,
-        cost: originalProject.cost,
-        // Section data
-        section: {
-          id: parseInt(formData.section),
-          name: originalProject.section?.name || '',
-          abbreviation: originalProject.section?.abbreviation || '',
-          departmentNameEnglish: originalProject.section?.departmentNameEnglish || ''
-        },
-        createdAt: originalProject.createdAt || new Date(),
-        createdBy: originalProject.createdBy || '',
         paymentPlanLines: (formData.paymentPlanLines || []).map((line: any) => ({
           year: Number(line.year),
           amount: Number(line.amount),
           currency: line.currency,
           paymentType: line.paymentType,
           description: line.description || ''
-        }))
+        })),
+        section: {
+          id: parseInt(formData.section),
+          name: originalProject.section?.name || '',
+          abbreviation: originalProject.section?.abbreviation || '',
+          departmentNameEnglish: originalProject.section?.departmentNameEnglish || ''
+        }
       };
 
-      // Log the exact data being sent
       console.log('Project data being sent:', projectData);
       
       try {
@@ -119,12 +112,7 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
         console.log('API response:', response);
         return response;
       } catch (error: any) {
-        console.error('API Error details:', {
-          error: error,
-          response: error.response?.data,
-          status: error.response?.status,
-          section: projectData.section
-        });
+        console.error('API Error details:', error);
         throw error;
       }
     },

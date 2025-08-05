@@ -209,4 +209,48 @@ export interface Invoice {
   // Related Collections
   attachments?: DocumentAttachment[];
   statusHistory?: StatusHistory[];
+}
+
+export interface OcrResult {
+    // Invoice Details
+    invoiceNumber: string;
+    invoiceDate?: Date;
+    invoiceValue?: number;
+    currency?: CurrencyType;
+    dueDate?: Date;
+    
+    // Financial Information
+    subTotal?: number;
+    taxAmount?: number;
+    totalAmount?: number;
+    taxRate?: string;
+    
+    // Vendor Information
+    vendorName: string;
+    vendorTaxId: string;
+    vendorAddress?: string;
+    vendorPhone?: string;
+    vendorEmail?: string;
+    
+    // Customer Information
+    customerName?: string;
+    customerNumber?: string;
+    billingAddress?: string;
+    shippingAddress?: string;
+    
+    // Additional Information
+    purchaseOrderNumber?: string;
+    paymentTerms?: string;
+    referenceNumber?: string;
+    description?: string;
+    remark?: string;
+    
+    // Processing Information
+    confidenceScore: number;
+    isProcessed: boolean;
+    errorMessage?: string;
+    
+    // Raw OCR Data
+    rawText: string;
+    fieldConfidenceScores: Record<string, number>;
 } 

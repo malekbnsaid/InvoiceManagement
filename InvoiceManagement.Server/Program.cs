@@ -3,6 +3,7 @@ using InvoiceManagement.Server.Application.Services;
 using InvoiceManagement.Server.Domain.Interfaces;
 using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Infrastructure.Repositories;
+using InvoiceManagement.Server.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -22,12 +23,17 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IERPEmployeeService, ERPEmployeeService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+
+// Add OCR service
+builder.Services.AddScoped<IOcrService, AzureFormRecognizerService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
     });
+builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

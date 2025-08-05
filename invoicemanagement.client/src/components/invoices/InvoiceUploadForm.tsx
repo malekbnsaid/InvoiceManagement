@@ -1,176 +1,305 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Progress } from '../ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { 
-  FileUp as DocumentArrowUpIcon, 
-  X as XMarkIcon, 
-  CheckCircle as CheckCircleIcon 
+    FileUp as DocumentArrowUpIcon, 
+    X as XMarkIcon, 
+    CheckCircle as CheckCircleIcon,
+    AlertCircle as AlertCircleIcon,
+    Loader2 as SpinnerIcon
 } from 'lucide-react';
+import { invoiceService } from '../../services/invoiceService';
+import { OcrResult } from '../../types/interfaces';
+import { useToast } from '../ui/use-toast';
+import { formatCurrency } from '../../utils/formatters';
 
-// Import our type-safe hooks
-import { useArrayState } from '../../utils/hooks';
+interface InvoiceUploadFormProps {
+    onOcrComplete?: (result: OcrResult) => void;
+}
 
-const InvoiceUploadForm = () => {
-  const [files, setFiles] = useArrayState<File>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadComplete, setUploadComplete] = useState(false);
+const InvoiceUploadForm: React.FC<InvoiceUploadFormProps> = ({ onOcrComplete }) => {
+    const [files, setFiles] = useState<File[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
+    const { toast } = useToast();
 
-  const onDrop = (acceptedFiles: File[]) => {
-    setFiles((prev: File[]) => [...prev, ...acceptedFiles]);
-  };
+    const onDrop = (acceptedFiles: File[]) => {
+        setFiles(prev => [...prev, ...acceptedFiles]);
+        setOcrResult(null);
+        setUploadProgress(0);
+    };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png']
-    },
-    maxFiles: 5
-  });
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'application/pdf': ['.pdf'],
+            'image/jpeg': ['.jpg', '.jpeg'],
+            'image/png': ['.png']
+        },
+        maxFiles: 1
+    });
 
-  const removeFile = (index: number) => {
-    setFiles((prev: File[]) => prev.filter((_: File, i: number) => i !== index));
-  };
+    const removeFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+        setOcrResult(null);
+        setUploadProgress(0);
+    };
 
-  const handleUpload = async () => {
-    if (files.length === 0) return;
-    
-    setUploading(true);
-    
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // In a real app, you would upload the files to the server here
-    
-    setUploading(false);
-    setUploadComplete(true);
-    
-    // Reset form after showing success message
-    setTimeout(() => {
-      setFiles([]);
-      setUploadComplete(false);
-    }, 3000);
-  };
+    const handleUpload = async () => {
+        if (files.length === 0) return;
+        
+        try {
+            setUploading(true);
+            setUploadProgress(10);
 
-  return (
-    <div className="max-w-3xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-            <DocumentArrowUpIcon className="h-6 w-6 text-primary-500 mr-2" />
-            Upload Invoices
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AnimatePresence>
-            {uploadComplete ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex flex-col items-center justify-center p-8 text-center"
-              >
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 dark:bg-green-900">
-                  <CheckCircleIcon className="h-10 w-10 text-green-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Complete!</h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Your files have been successfully uploaded and are being processed.
-                </p>
-              </motion.div>
-            ) : (
-              <div className="space-y-6">
-                <div 
-                  {...getRootProps()} 
-                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                    isDragActive 
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
-                      : 'border-gray-300 hover:border-primary-400 dark:border-gray-700'
-                  }`}
+            // Simulate progress while processing
+            const progressInterval = setInterval(() => {
+                setUploadProgress(prev => Math.min(prev + 10, 90));
+            }, 500);
+
+            const result = await invoiceService.uploadAndProcess(files[0]);
+            clearInterval(progressInterval);
+            setUploadProgress(100);
+            
+            setOcrResult(result);
+            if (result.isProcessed) {
+                onOcrComplete?.(result);
+                toast({
+                    title: "OCR Processing Complete",
+                    description: `Confidence Score: ${(result.confidenceScore * 100).toFixed(1)}%`,
+                });
+            } else {
+                toast({
+                    title: "OCR Processing Warning",
+                    description: result.errorMessage || "Some fields could not be extracted",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            setOcrResult(null);
+            toast({
+                title: "Error",
+                description: "Failed to process the invoice",
+                variant: "destructive"
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const renderField = (label: string, value: any, formatter?: (value: any) => string) => {
+        const displayValue = value 
+            ? (formatter ? formatter(value) : value)
+            : 'Not found';
+            
+        return (
+            <div>
+                <label className="text-sm text-gray-500">{label}</label>
+                <p className="font-medium">{displayValue}</p>
+            </div>
+        );
+    };
+
+    const formatDate = (date: string | Date) => {
+        return new Date(date).toLocaleDateString();
+    };
+
+    const formatMoney = (amount: number) => {
+        return formatCurrency(amount, ocrResult?.currency);
+    };
+
+    return (
+        <Card className="w-full">
+            <CardHeader>
+                <CardTitle>Upload Invoice</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+                        ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}`}
                 >
-                  <input {...getInputProps()} />
-                  <DocumentArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {isDragActive 
-                      ? 'Drop the files here ...' 
-                      : 'Drag & drop invoice files here, or click to select files'}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                    Supports PDF, JPG, PNG (Max 5 files)
-                  </p>
+                    <input {...getInputProps()} />
+                    <DocumentArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">
+                        {isDragActive
+                            ? "Drop the files here..."
+                            : "Drag 'n' drop invoice files here, or click to select"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Supports PDF, JPG, PNG files
+                    </p>
                 </div>
 
-                {files.length > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="border rounded-lg overflow-hidden"
-                  >
-                    <h3 className="text-sm font-medium bg-gray-50 p-3 border-b dark:bg-gray-800 dark:border-gray-700">
-                      Selected Files ({files.length})
-                    </h3>
-                    <ul className="divide-y dark:divide-gray-700">
-                      {files.map((file: File, index: number) => (
-                        <motion.li 
-                          key={`${file.name}-${index}`}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="flex items-center justify-between p-3"
+                <AnimatePresence>
+                    {files.length > 0 && (
+                        <motion.div 
+                            key="file-list"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-4"
                         >
-                          <div className="flex items-center">
-                            <DocumentArrowUpIcon className="h-5 w-5 text-gray-400 mr-2" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {(file.size / 1024).toFixed(2)} KB
-                              </p>
+                            <h3 className="text-sm font-medium mb-2">Selected Files</h3>
+                            {files.map((file, index) => (
+                                <motion.div 
+                                    key={`${file.name}-${index}`}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                                >
+                                    <div className="flex items-center">
+                                        <DocumentArrowUpIcon className="h-5 w-5 text-gray-400 mr-2" />
+                                        <div>
+                                            <p className="text-sm font-medium">{file.name}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {(file.size / 1024).toFixed(2)} KB
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => removeFile(index)}
+                                        className="text-gray-400 hover:text-gray-500"
+                                    >
+                                        <XMarkIcon className="h-5 w-5" />
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+                    )}
+
+                    {uploading && (
+                        <motion.div
+                            key="upload-progress"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-4"
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <SpinnerIcon className="h-4 w-4 animate-spin" />
+                                <span className="text-sm">Processing invoice...</span>
                             </div>
-                          </div>
-                          <button 
-                            onClick={() => removeFile(index)}
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                          >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-        <CardFooter className="flex justify-end space-x-2 border-t p-4 dark:border-gray-700">
-          <Button variant="outline" disabled={uploading}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpload}
-            disabled={files.length === 0 || uploading || uploadComplete}
-            className="relative"
-          >
-            {uploading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Uploading...
-              </>
-            ) : (
-              'Upload Files'
-            )}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
+                            <Progress value={uploadProgress} className="h-2" />
+                        </motion.div>
+                    )}
+
+                    {ocrResult && (
+                        <motion.div
+                            key="ocr-result"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="mt-4 space-y-4"
+                        >
+                            <Alert variant={ocrResult.isProcessed ? "default" : "destructive"}>
+                                {ocrResult.isProcessed ? (
+                                    <CheckCircleIcon className="h-4 w-4" />
+                                ) : (
+                                    <AlertCircleIcon className="h-4 w-4" />
+                                )}
+                                <AlertTitle>
+                                    {ocrResult.isProcessed ? "OCR Processing Complete" : "OCR Processing Warning"}
+                                </AlertTitle>
+                                <AlertDescription>
+                                    {ocrResult.confidenceScore > 0 
+                                        ? `Confidence Score: ${(ocrResult.confidenceScore * 100).toFixed(1)}%`
+                                        : "Confidence score not available"}
+                                    {ocrResult.errorMessage && (
+                                        <div className="text-sm text-red-500 mt-1">{ocrResult.errorMessage}</div>
+                                    )}
+                                </AlertDescription>
+                            </Alert>
+
+                            <div className="bg-gray-50 p-4 rounded-lg space-y-6">
+                                <div>
+                                    <h4 className="font-medium mb-3">Invoice Details</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {renderField("Invoice Number", ocrResult.invoiceNumber)}
+                                        {renderField("Invoice Date", ocrResult.invoiceDate, formatDate)}
+                                        {renderField("Due Date", ocrResult.dueDate, formatDate)}
+                                        {renderField("Reference Number", ocrResult.referenceNumber)}
+                                        {renderField("PO Number", ocrResult.purchaseOrderNumber)}
+                                        {renderField("Payment Terms", ocrResult.paymentTerms)}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-3">Financial Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {renderField("Sub Total", ocrResult.subTotal, formatMoney)}
+                                        {renderField("Tax Amount", ocrResult.taxAmount, formatMoney)}
+                                        {renderField("Total Amount", ocrResult.totalAmount || ocrResult.invoiceValue, formatMoney)}
+                                        {renderField("Tax Rate", ocrResult.taxRate)}
+                                        {renderField("Currency", ocrResult.currency)}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-3">Vendor Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {renderField("Vendor Name", ocrResult.vendorName)}
+                                        {renderField("Tax ID", ocrResult.vendorTaxId)}
+                                        {renderField("Address", ocrResult.vendorAddress)}
+                                        {renderField("Phone", ocrResult.vendorPhone)}
+                                        {renderField("Email", ocrResult.vendorEmail)}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-medium mb-3">Customer Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {renderField("Customer Name", ocrResult.customerName)}
+                                        {renderField("Customer Number", ocrResult.customerNumber)}
+                                        {renderField("Billing Address", ocrResult.billingAddress)}
+                                        {renderField("Shipping Address", ocrResult.shippingAddress)}
+                                    </div>
+                                </div>
+
+                                {ocrResult.description && (
+                                    <div>
+                                        <h4 className="font-medium mb-3">Line Items</h4>
+                                        <div className="bg-white p-3 rounded border">
+                                            <pre className="whitespace-pre-wrap text-sm">{ocrResult.description}</pre>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {ocrResult.remark && (
+                                    <div>
+                                        <h4 className="font-medium mb-3">Additional Notes</h4>
+                                        <p className="text-sm text-gray-600">{ocrResult.remark}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+                <Button
+                    onClick={handleUpload}
+                    disabled={files.length === 0 || uploading}
+                >
+                    {uploading ? (
+                        <>
+                            <SpinnerIcon className="mr-2 h-4 w-4 animate-spin" />
+                            Processing
+                        </>
+                    ) : (
+                        <>
+                            <DocumentArrowUpIcon className="mr-2 h-4 w-4" />
+                            Process Invoice
+                        </>
+                    )}
+                </Button>
+            </CardFooter>
+        </Card>
+    );
 };
 
 export default InvoiceUploadForm; 

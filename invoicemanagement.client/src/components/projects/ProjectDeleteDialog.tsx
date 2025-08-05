@@ -1,20 +1,18 @@
-import React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '../../hooks/use-toast';
+import React, { useState } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Button } from '../ui/Button';
-import { projectApi } from '../../services/api/projectApi';
+import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Project } from '../../types/interfaces';
+import { useToast } from '../ui/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { projectApi } from '../../services/api/projectApi';
 
 interface ProjectDeleteDialogProps {
   projectId: number;
@@ -32,184 +30,168 @@ export default function ProjectDeleteDialog({
   isOpen,
   onClose,
   onSuccess,
-  isPendingDeletion = false,
-  isAdmin = false, // TODO: Replace with actual role check
+  isPendingDeletion,
+  isAdmin,
 }: ProjectDeleteDialogProps) {
-  const queryClient = useQueryClient();
-  const [rejectionReason, setRejectionReason] = React.useState('');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Request deletion mutation
   const requestDeletionMutation = useMutation({
     mutationFn: async () => {
-      try {
-        await projectApi.requestDeletion(projectId);
-      } catch (error: any) {
-        console.error('Request deletion error:', error);
-        throw new Error(error.response?.data?.error || 'Failed to request deletion');
-      }
+      await projectApi.requestDeletion(projectId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries(['projects']);
       toast({
         title: "Success",
-        description: "Deletion request submitted successfully"
+        description: "Project deletion requested",
+        variant: "default",
       });
       onSuccess?.();
       onClose();
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
+      console.error('Error requesting deletion:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to request project deletion",
+        variant: "destructive",
       });
-    },
+    }
   });
 
   // Approve deletion mutation
   const approveDeletionMutation = useMutation({
     mutationFn: async () => {
-      try {
-        await projectApi.approveDeletion(projectId);
-      } catch (error: any) {
-        console.error('Approve deletion error:', error);
-        throw new Error(error.response?.data?.error || 'Failed to approve deletion');
-      }
+      await projectApi.approveDeletion(projectId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries(['projects']);
       toast({
         title: "Success",
-        description: "Project deleted successfully"
+        description: "Project deletion approved",
+        variant: "default",
       });
       onSuccess?.();
       onClose();
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
+      console.error('Error approving deletion:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to approve project deletion",
+        variant: "destructive",
       });
-    },
+    }
   });
 
   // Reject deletion mutation
   const rejectDeletionMutation = useMutation({
     mutationFn: async () => {
-      try {
-        await projectApi.rejectDeletion(projectId, { reason: rejectionReason });
-      } catch (error: any) {
-        console.error('Reject deletion error:', error);
-        throw new Error(error.response?.data?.error || 'Failed to reject deletion');
+      if (!rejectionReason.trim()) {
+        throw new Error('Rejection reason is required');
       }
+      await projectApi.rejectDeletion(projectId, rejectionReason);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries(['projects']);
       toast({
         title: "Success",
-        description: "Deletion request rejected"
+        description: "Project deletion rejected",
+        variant: "default",
       });
       onSuccess?.();
       onClose();
+      setRejectionReason('');
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
+      console.error('Error rejecting deletion:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to reject project deletion",
+        variant: "destructive",
       });
-    },
+    }
   });
 
-  const handleRequestDeletion = () => {
-    requestDeletionMutation.mutate();
+  const handleClose = () => {
+    setRejectionReason('');
+    onClose();
   };
-
-  const handleApproveDeletion = () => {
-    approveDeletionMutation.mutate();
-  };
-
-  const handleRejectDeletion = () => {
-    if (!rejectionReason) {
-      toast({
-        title: "Error",
-        description: "Please provide a reason for rejection",
-        variant: "destructive"
-      });
-      return;
-    }
-    rejectDeletionMutation.mutate();
-  };
-
-  const isLoading = requestDeletionMutation.isPending || 
-                    approveDeletionMutation.isPending || 
-                    rejectDeletionMutation.isPending;
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isPendingDeletion ? 'Review Deletion Request' : 'Delete Project'}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
             {isPendingDeletion
-              ? `Review the deletion request for project "${projectName}". This action cannot be undone.`
-              : `Are you sure you want to delete project "${projectName}"? This action requires approval and cannot be undone.`
-            }
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+              ? isAdmin
+                ? "Review Deletion Request"
+                : "Deletion Request Pending"
+              : "Delete Project"}
+          </DialogTitle>
+          <DialogDescription>
+            {isPendingDeletion
+              ? isAdmin
+                ? `Do you want to approve or reject the deletion request for "${projectName}"?`
+                : `Your deletion request for "${projectName}" is pending approval.`
+              : `Are you sure you want to request deletion of "${projectName}"? This action requires admin approval.`}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Show rejection reason input only for admins reviewing deletion request */}
         {isPendingDeletion && isAdmin && (
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Enter reason for rejection (required for rejecting deletion)"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">Rejection Reason (required for rejection)</Label>
+              <Textarea
+                id="reason"
+                placeholder="Enter reason for rejecting the deletion request..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+              />
+            </div>
           </div>
         )}
 
-        <AlertDialogFooter className="space-x-2">
-          <AlertDialogCancel disabled={isLoading}>
-            Cancel
-          </AlertDialogCancel>
-          
-          {/* Show different buttons based on state and role */}
-          {!isPendingDeletion && (
-            <Button
-              variant="destructive"
-              onClick={handleRequestDeletion}
-              disabled={isLoading}
-            >
-              {requestDeletionMutation.isPending ? 'Requesting...' : 'Request Deletion'}
+        <DialogFooter>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
             </Button>
-          )}
-
-          {isPendingDeletion && isAdmin && (
-            <>
+            
+            {!isPendingDeletion && (
               <Button
-                variant="default"
-                onClick={handleApproveDeletion}
-                disabled={isLoading}
+                variant="destructive"
+                onClick={() => requestDeletionMutation.mutate()}
+                disabled={requestDeletionMutation.isPending}
               >
-                {approveDeletionMutation.isPending ? 'Approving...' : 'Approve Deletion'}
+                {requestDeletionMutation.isPending ? "Requesting..." : "Request Deletion"}
               </Button>
+            )}
 
-              <Button
-                variant="secondary"
-                onClick={handleRejectDeletion}
-                disabled={isLoading || !rejectionReason}
-              >
-                {rejectDeletionMutation.isPending ? 'Rejecting...' : 'Reject Deletion'}
-              </Button>
-            </>
-          )}
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            {isPendingDeletion && isAdmin && (
+              <>
+                <Button
+                  variant="destructive"
+                  onClick={() => rejectDeletionMutation.mutate()}
+                  disabled={rejectDeletionMutation.isPending || !rejectionReason.trim()}
+                >
+                  {rejectDeletionMutation.isPending ? "Rejecting..." : "Reject"}
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => approveDeletionMutation.mutate()}
+                  disabled={approveDeletionMutation.isPending}
+                >
+                  {approveDeletionMutation.isPending ? "Approving..." : "Approve"}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 } 

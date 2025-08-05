@@ -16,6 +16,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<Project> Projects { get; set; } = null!;
         public DbSet<LPO> LPOs { get; set; } = null!;
         public DbSet<Invoice> Invoices { get; set; } = null!;
+        public DbSet<InvoiceLineItem> InvoiceLineItems { get; set; } = null!;
         public DbSet<StatusHistory> StatusHistories { get; set; } = null!;
         public DbSet<ProjectNumberRequest> ProjectNumberRequests { get; set; } = null!;
         public DbSet<DocumentAttachment> DocumentAttachments { get; set; } = null!;
@@ -35,6 +36,25 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             {
                 entity.Property(e => e.InvoiceValue).HasPrecision(18, 2);
                 entity.Property(e => e.PaidAmount).HasPrecision(18, 2);
+                entity.Property(e => e.SubTotal).HasPrecision(18, 2);
+                entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+                entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<InvoiceLineItem>(entity =>
+            {
+                entity.Property(e => e.Quantity).HasPrecision(18, 2);
+                entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+                entity.Property(e => e.Amount).HasPrecision(18, 2);
+                entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+                entity.Property(e => e.TaxRate).HasPrecision(5, 2);
+                entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
+                entity.Property(e => e.DiscountRate).HasPrecision(5, 2);
+
+                entity.HasOne(e => e.Invoice)
+                    .WithMany(i => i.LineItems)
+                    .HasForeignKey(e => e.InvoiceId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<LPO>(entity =>

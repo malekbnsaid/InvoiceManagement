@@ -15,6 +15,21 @@ namespace InvoiceManagement.Server.Domain.Entities
         public string? Subject { get; set; }
         public string? ReferenceNumber { get; set; }
         
+        // New OCR-specific Fields
+        public string? BillingAddress { get; set; }
+        public string? ShippingAddress { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerNumber { get; set; }
+        public string? PurchaseOrderNumber { get; set; }
+        public string? PaymentTerms { get; set; }
+        public string? TaxRegistrationNumber { get; set; }
+        
+        // Enhanced Financial Information
+        public decimal SubTotal { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public string? TaxRate { get; set; }
+        
         // Processing Information
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Pending;
         public DateTime? ReceiveDate { get; set; }
@@ -25,6 +40,10 @@ namespace InvoiceManagement.Server.Domain.Entities
         
         // Vendor Information
         public string? VendorName { get; set; }
+        public string? VendorAddress { get; set; }
+        public string? VendorTaxNumber { get; set; }
+        public string? VendorPhone { get; set; }
+        public string? VendorEmail { get; set; }
         
         // Project Information
         public string? ProjectReference { get; set; }
@@ -53,5 +72,6 @@ namespace InvoiceManagement.Server.Domain.Entities
         public Vendor? Vendor { get; set; }
         public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
         public Invoice? DuplicateOfInvoice { get; set; }
+        public ICollection<InvoiceLineItem> LineItems { get; set; } = new List<InvoiceLineItem>();
     }
 } 

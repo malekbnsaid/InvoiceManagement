@@ -4,6 +4,7 @@ using InvoiceManagement.Server.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InvoiceManagement.Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250617102728_AddInvoiceTable")]
+    partial class AddInvoiceTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -363,9 +366,6 @@ namespace InvoiceManagement.Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("BillingAddress")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -375,16 +375,6 @@ namespace InvoiceManagement.Server.Migrations
 
                     b.Property<int>("Currency")
                         .HasColumnType("int");
-
-                    b.Property<string>("CustomerName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CustomerNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("DiscountAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime2");
@@ -437,9 +427,6 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<DateTime?>("PaymentDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("PaymentTerms")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ProcessedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -452,9 +439,6 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<string>("ProjectReference")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PurchaseOrderNumber")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("ReceiveDate")
                         .HasColumnType("datetime2");
 
@@ -464,45 +448,16 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<string>("Remark")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ShippingAddress")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("SubTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Subject")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("TaxAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TaxRate")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TaxRegistrationNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("VendorAddress")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("VendorEmail")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("VendorId")
                         .HasColumnType("int");
 
                     b.Property<string>("VendorName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("VendorPhone")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("VendorTaxNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -516,75 +471,6 @@ namespace InvoiceManagement.Server.Migrations
                     b.HasIndex("VendorId");
 
                     b.ToTable("Invoices");
-                });
-
-            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.InvoiceLineItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("DiscountAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("DiscountRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<int>("InvoiceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ItemNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TaxAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TaxRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<string>("Unit")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InvoiceId");
-
-                    b.ToTable("InvoiceLineItems");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.LPO", b =>
@@ -1156,17 +1042,6 @@ namespace InvoiceManagement.Server.Migrations
                     b.Navigation("Vendor");
                 });
 
-            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.InvoiceLineItem", b =>
-                {
-                    b.HasOne("InvoiceManagement.Server.Domain.Entities.Invoice", "Invoice")
-                        .WithMany("LineItems")
-                        .HasForeignKey("InvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Invoice");
-                });
-
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.LPO", b =>
                 {
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.Project", "Project")
@@ -1269,8 +1144,6 @@ namespace InvoiceManagement.Server.Migrations
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Invoice", b =>
                 {
-                    b.Navigation("LineItems");
-
                     b.Navigation("StatusHistories");
                 });
 

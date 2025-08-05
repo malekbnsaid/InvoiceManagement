@@ -132,7 +132,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
-  // Initialize form with proper default values for editing
+  // Initialize form with proper default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -144,13 +144,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       expectedStart: initialData?.expectedStart || null,
       expectedEnd: initialData?.expectedEnd || null,
       tenderDate: initialData?.tenderDate || null,
-      paymentPlanLines: normalizePaymentPlanLines(initialData?.paymentPlanLines).map((line: RawPaymentPlanLine) => ({
-        year: Number(line.year),
-        amount: Number(line.amount),
-        currency: line.currency || CurrencyType.SAR,
-        paymentType: line.paymentType || 'Annually',
-        description: line.description || ''
-      })),
+      paymentPlanLines: initialData?.paymentPlanLines || [{
+        year: new Date().getFullYear(),
+        amount: 0,
+        currency: CurrencyType.SAR,
+        paymentType: 'Annually',
+        description: ''
+      }],
       projectNumber: initialData?.projectNumber || '',
       initialNotes: initialData?.initialNotes || '',
     }
@@ -408,14 +408,11 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         <FormControl>
                           <Select
                             onValueChange={(value) => {
-                              if (value) {
-                                field.onChange(value);
-                                form.setValue('unitId', '');
-                                updateProjectNumber(value);
-                              }
+                              field.onChange(value);
+                              form.setValue('unitId', '');
+                              updateProjectNumber(value);
                             }}
-                            value={field.value}
-                            defaultValue={field.value}
+                            value={field.value || ""}
                           >
                             <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                               <SelectValue placeholder="Select section" />
@@ -470,8 +467,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
-                          value={field.value}
-                          defaultValue={field.value}
+                          value={field.value || ""}
                           disabled={!sectionValue}
                         >
                           <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
@@ -504,8 +500,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                       <FormControl>
                         <Select
                           onValueChange={field.onChange}
-                          value={field.value}
-                          defaultValue={field.value}
+                          value={field.value || ""}
                         >
                           <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                             <SelectValue placeholder="Select project manager" />
@@ -784,8 +779,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             <FormLabel>Currency</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              value={field.value}
-                              defaultValue={field.value}
+                              value={field.value || CurrencyType.SAR}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -813,8 +807,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             <FormLabel>Payment Type</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              value={field.value}
-                              defaultValue={field.value}
+                              value={field.value || "Annually"}
                             >
                               <FormControl>
                                 <SelectTrigger>

@@ -102,6 +102,16 @@ export default function ProjectFormPage() {
             abbreviation: '', 
             departmentNameEnglish: sectionsData?.find((s: Department) => s.id === data.sectionId)?.sectionName || ''
           },
+          expectedStart: data.expectedStart,
+          expectedEnd: data.expectedEnd,
+          tenderDate: data.tenderDate,
+          paymentPlanLines: data.paymentPlanLines.map(line => ({
+            year: Number(line.year),
+            amount: Number(line.amount),
+            currency: line.currency,
+            paymentType: line.paymentType,
+            description: line.description || ''
+          })),
           createdAt: new Date(),
           createdBy: 'system'
         };
@@ -187,6 +197,9 @@ export default function ProjectFormPage() {
         }
       };
 
+      // Log the transformed data
+      console.log('Transformed project data:', projectData);
+
       // Validate required fields
       if (!projectData.sectionId) {
         throw new Error('Section is required');
@@ -194,13 +207,6 @@ export default function ProjectFormPage() {
       if (!projectData.projectManagerId) {
         throw new Error('Project Manager is required');
       }
-
-      // Log the transformed data
-      console.log('Transformed project data:', {
-        ...projectData,
-        sectionId: projectData.sectionId,
-        projectManagerId: projectData.projectManagerId
-      });
 
       // Remove any potential circular references and undefined values
       const cleanProjectData = JSON.parse(JSON.stringify(projectData, (key, value) => 
