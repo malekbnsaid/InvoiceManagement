@@ -6,7 +6,7 @@ export const formatCurrency = (amount: number, currency?: CurrencyType): string 
         [CurrencyType.EUR]: { locale: 'de-DE', currency: 'EUR' },
         [CurrencyType.GBP]: { locale: 'en-GB', currency: 'GBP' },
         [CurrencyType.AED]: { locale: 'ar-AE', currency: 'AED' },
-        [CurrencyType.SAR]: { locale: 'ar-SA', currency: 'SAR' },
+        [CurrencyType.QAR]: { locale: 'ar-QA', currency: 'QAR' },
         [CurrencyType.KWD]: { locale: 'ar-KW', currency: 'KWD' },
         [CurrencyType.BHD]: { locale: 'ar-BH', currency: 'BHD' },
         [CurrencyType.OMR]: { locale: 'ar-OM', currency: 'OMR' },

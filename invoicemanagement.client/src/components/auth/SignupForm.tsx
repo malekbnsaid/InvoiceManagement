@@ -72,9 +72,20 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
         });
         onSignupSuccess(formData.username, formData.password);
       } else {
+        // Provide more user-friendly error messages
+        let userMessage = response.message || "Failed to create account";
+        
+        if (response.message === "Employee number already has an account") {
+          userMessage = "This employee number is already registered. Please use a different employee number or contact your administrator if you need access to an existing account.";
+        } else if (response.message === "Username already exists") {
+          userMessage = "This username is already taken. Please choose a different username.";
+        } else if (response.message === "Email already exists") {
+          userMessage = "This email is already registered. Please use a different email address or try logging in instead.";
+        }
+        
         toast({
           title: "Signup failed",
-          description: response.message || "Failed to create account",
+          description: userMessage,
           variant: "destructive",
         });
       }
@@ -165,6 +176,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter your employee number"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Use your company employee ID. If you already have an account, please login instead.
+                </p>
               </div>
 
               <div>
@@ -228,18 +242,21 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
               </div>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={onSwitchToLogin}
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Sign in here
-                </button>
-              </p>
-            </div>
+                                    <div className="mt-6 text-center">
+                          <p className="text-sm text-gray-600">
+                            Already have an account?{' '}
+                            <button
+                              type="button"
+                              onClick={onSwitchToLogin}
+                              className="font-medium text-indigo-600 hover:text-indigo-500"
+                            >
+                              Sign in here
+                            </button>
+                          </p>
+                          <p className="mt-2 text-xs text-gray-500">
+                            If you're having trouble signing up, please contact your system administrator.
+                          </p>
+                        </div>
 
             {import.meta.env.VITE_DEV_BYPASS === 'true' && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">

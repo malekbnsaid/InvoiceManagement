@@ -50,7 +50,7 @@ export default function LPOForm({ onSubmit, initialData, isLoading = false, proj
       supplierName: '',
       projectId: '',
       totalAmount: '',
-      currency: CurrencyType.SAR,
+              currency: CurrencyType.QAR,
       description: '',
       status: 'draft',
     },

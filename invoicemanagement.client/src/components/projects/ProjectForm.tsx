@@ -149,7 +149,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       paymentPlanLines: initialData?.paymentPlanLines || [{
         year: new Date().getFullYear(),
         amount: 0,
-        currency: CurrencyType.SAR,
+        currency: CurrencyType.QAR,
         paymentType: 'Annually',
         description: ''
       }],
@@ -240,7 +240,15 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       case 2:
         return !!values.budget;
       case 3:
-        return true;
+        // Validate PaymentPlanLines
+        const paymentLines = values.paymentPlanLines || [];
+        if (paymentLines.length === 0) return false;
+        return paymentLines.every(line => 
+          line.year && !isNaN(line.year) && 
+          line.amount && !isNaN(line.amount) && 
+          line.currency && 
+          line.paymentType
+        );
       default:
         return false;
     }
@@ -318,13 +326,15 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         budget: values.budget ? values.budget.toString() : '', // Ensure budget is string
         section: values.section,
         projectManagerId: values.projectManagerId,
-        paymentPlanLines: (values.paymentPlanLines || []).map(line => ({
-          year: Number(line.year),
-          amount: Number(line.amount),
-          currency: line.currency || CurrencyType.SAR,
-          paymentType: line.paymentType || 'Annually',
-          description: line.description || ''
-        }))
+        paymentPlanLines: (values.paymentPlanLines || [])
+          .filter(line => line.year && line.amount && line.currency && line.paymentType)
+          .map(line => ({
+            year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
+            amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
+            currency: line.currency || CurrencyType.QAR,
+            paymentType: line.paymentType || 'Annually',
+            description: line.description || ''
+          }))
       };
 
       console.log('Transformed form data for update:', formData);
@@ -336,33 +346,40 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Create New Project</CardTitle>
+    <Card className="w-full max-w-5xl mx-auto shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+      <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-black rounded-t-lg">
+        <CardTitle className="text-2xl font-bold  flex items-center gap-3">
+          <Briefcase className="h-6 w-6" />
+          Create New Project
+        </CardTitle>
+        <br></br>
+        <p className="text-primary-foreground/80 text-sm mt-1 text-black">
+          Fill in the project details below. You can navigate between steps using the progress indicator.
+        </p>
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="p-8">
         <Form {...form}>
-          <form onSubmit={handleFormSubmit} className="space-y-6">
-            {/* Step indicator */}
-            <div className="flex justify-between items-center mb-8">
+          <form onSubmit={handleFormSubmit} className="space-y-8">
+            {/* Enhanced Step indicator */}
+            <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border">
               {Array.from({ length: totalSteps }).map((_, index) => (
                 <div key={index} className="flex items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-base transition-all duration-300 ${
                       currentStep > index + 1
-                        ? 'bg-primary text-white'
+                        ? 'bg-green-500 text-white shadow-lg scale-110'
                         : currentStep === index + 1
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-white shadow-lg scale-110 ring-4 ring-primary/20'
                         : 'bg-gray-200 text-gray-600'
                     }`}
                   >
-                    {index + 1}
+                    {currentStep > index + 1 ? '✓' : index + 1}
                   </div>
                   {index < totalSteps - 1 && (
                     <div
-                      className={`w-24 h-1 ${
-                        currentStep > index + 1 ? 'bg-primary' : 'bg-gray-200'
+                      className={`w-24 h-1 mx-3 transition-all duration-300 ${
+                        currentStep > index + 1 ? 'bg-green-500' : 'bg-gray-200'
                       }`}
                     />
                   )}
@@ -379,20 +396,27 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                 exit="exit"
                 className="space-y-6"
               >
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-l-4 border-primary shadow-sm">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <Briefcase className="h-6 w-6 text-primary" />
+                    Step 1: Project Information
+                  </h2>
+                  <p className="text-gray-600 mt-2">Enter the basic project details and select the section and project manager.</p>
+                </div>
                 {/* Project Name */}
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
+                      <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                         <Briefcase className="h-4 w-4 text-primary" />
                         Project Name
                       </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Enter project name" 
-                          className="focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                          className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white" 
                           {...field} 
                         />
                       </FormControl>
@@ -402,14 +426,14 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                 />
 
                 {/* Section and Project Number in a grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Section Selection */}
                   <FormField
                     control={form.control}
                     name="section"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <Building2 className="h-4 w-4 text-primary" />
                           Section
                         </FormLabel>
@@ -422,7 +446,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             }}
                             value={field.value || ""}
                           >
-                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
                               <SelectValue placeholder="Select section" />
                             </SelectTrigger>
                             <SelectContent>
@@ -445,7 +469,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     name="projectNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <FileText className="h-4 w-4 text-primary" />
                           Project Number
                         </FormLabel>
@@ -453,7 +477,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           <Input 
                             {...field} 
                             disabled 
-                            className="bg-gray-50 dark:bg-gray-800"
+                            className="bg-gray-100 border border-gray-200 text-gray-600 font-mono py-2 px-3"
                           />
                         </FormControl>
                         <FormMessage className={formMessageStyles} />
@@ -468,19 +492,19 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   name="unitId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-primary" />
-                        Unit (Optional)
-                      </FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                          disabled={!sectionValue}
-                        >
-                          <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
-                            <SelectValue placeholder="Select unit (optional)" />
-                          </SelectTrigger>
+                                              <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          Unit (Optional)
+                        </FormLabel>
+                        <FormControl>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                            disabled={!sectionValue}
+                          >
+                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
+                              <SelectValue placeholder="Select unit (optional)" />
+                            </SelectTrigger>
                           <SelectContent>
                             {filteredUnits.map((unit: Department) => (
                               <SelectItem key={unit.id} value={unit.id.toString()}>
@@ -501,18 +525,18 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   name="projectManagerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-primary" />
-                        Project Manager
-                      </FormLabel>
-                      <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                        >
-                          <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all">
-                            <SelectValue placeholder="Select project manager" />
-                          </SelectTrigger>
+                                              <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
+                          <User className="h-4 w-4 text-primary" />
+                          Project Manager
+                        </FormLabel>
+                        <FormControl>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                          >
+                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
+                              <SelectValue placeholder="Select project manager" />
+                            </SelectTrigger>
                           <SelectContent>
                             {employeesData?.map((employee: Employee) => (
                               <SelectItem key={employee.id} value={employee.id.toString()}>
@@ -533,17 +557,17 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        Description (Optional)
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea 
+                                              <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
+                          <FileText className="h-4 w-4 text-primary" />
+                          Description (Optional)
+                        </FormLabel>
+                        <FormControl>
+                                                  <Textarea 
                           placeholder="Enter project description (optional)" 
-                          className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                          className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white" 
                           {...field} 
                         />
-                      </FormControl>
+                        </FormControl>
                       <FormMessage className={formMessageStyles} />
                     </FormItem>
                   )}
@@ -560,6 +584,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                 exit="exit"
                 className="space-y-6"
               >
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border-l-4 border-green-500 shadow-sm">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <CalendarIcon className="h-6 w-6 text-green-600" />
+                    Step 2: Timeline & Budget
+                  </h2>
+                  <p className="text-gray-600 mt-2">Set the project timeline and budget information.</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Expected Start Date */}
                   <FormField
@@ -567,7 +598,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     name="expectedStart"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Expected Start Date
                         </FormLabel>
@@ -577,7 +608,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -617,7 +648,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     name="expectedEnd"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Expected End Date
                         </FormLabel>
@@ -627,7 +658,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -664,7 +695,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     name="tenderDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Tender Date
                         </FormLabel>
@@ -674,7 +705,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >
@@ -708,7 +739,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     name="budget"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
+                        <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <DollarSign className="h-4 w-4 text-primary" />
                           Budget
                         </FormLabel>
@@ -717,7 +748,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             type="number"
                             step="0.01"
                             placeholder="Enter project budget"
-                            className="focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                            className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white"
                             {...field}
                           />
                         </FormControl>
@@ -728,30 +759,48 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                 </div>
 
                 {/* Payment Plan Section */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">Payment Plan</h2>
-                    <Button type="button" onClick={addPaymentLine}>
-                      Add Payment Line
+                <div className="space-y-4 bg-white p-4 rounded-xl border-2 border-gray-100 shadow-sm">
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                      Payment Plan
+                    </h2>
+                    <Button 
+                      type="button" 
+                      onClick={addPaymentLine}
+                      className="bg-white hover:bg-gray-50 text-primary border-2 border-primary px-6 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+                    >
+                      + Add Payment Line
                     </Button>
                   </div>
                   
                   {/* Ensure paymentPlanLines is always an array */}
                   {Array.isArray(form.watch('paymentPlanLines')) && form.watch('paymentPlanLines').map((line: PaymentPlanLine, index: number) => (
-                    <div key={index} className="grid grid-cols-5 gap-4 items-start border p-4 rounded-lg">
+                    <div key={index} className="grid grid-cols-5 gap-4 items-start bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:border-primary/50 hover:shadow-md transition-all duration-300">
                       <FormField
                         control={form.control}
                         name={`paymentPlanLines.${index}.year`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Year</FormLabel>
+                            <FormLabel className="font-semibold text-gray-700">Year</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 min={2000}
                                 max={2100}
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '') {
+                                    field.onChange(new Date().getFullYear());
+                                  } else {
+                                    const parsed = parseInt(value);
+                                    if (!isNaN(parsed)) {
+                                      field.onChange(parsed);
+                                    }
+                                  }
+                                }}
+                                className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white"
                               />
                             </FormControl>
                             <FormMessage />
@@ -764,14 +813,25 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         name={`paymentPlanLines.${index}.amount`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Amount</FormLabel>
+                            <FormLabel className="font-semibold text-gray-700">Amount</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
                                 step="0.01"
                                 min={0}
                                 {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '') {
+                                    field.onChange(0);
+                                  } else {
+                                    const parsed = parseFloat(value);
+                                    if (!isNaN(parsed)) {
+                                      field.onChange(parsed);
+                                    }
+                                  }
+                                }}
+                                className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white"
                               />
                             </FormControl>
                             <FormMessage />
@@ -784,13 +844,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         name={`paymentPlanLines.${index}.currency`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Currency</FormLabel>
+                            <FormLabel className="font-semibold text-gray-700">Currency</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              value={field.value || CurrencyType.SAR}
+                              value={field.value || CurrencyType.QAR}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50">
                                   <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                               </FormControl>
@@ -812,13 +872,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         name={`paymentPlanLines.${index}.paymentType`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Payment Type</FormLabel>
+                            <FormLabel className="font-semibold text-gray-700">Payment Type</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               value={field.value || "Annually"}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50">
                                   <SelectValue placeholder="Select payment type" />
                                 </SelectTrigger>
                               </FormControl>
@@ -838,18 +898,23 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         name={`paymentPlanLines.${index}.description`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <div className="flex gap-2">
+                            <FormLabel className="font-semibold text-gray-700">Description</FormLabel>
+                            <div className="flex gap-3">
                               <FormControl>
-                                <Input {...field} placeholder="Enter payment description" />
+                                <Input 
+                                  {...field} 
+                                  placeholder="Enter payment description" 
+                                  className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white"
+                                />
                               </FormControl>
                               <Button
                                 type="button"
                                 variant="destructive"
                                 size="icon"
                                 onClick={() => removePaymentLine(index)}
+                                className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
                               >
-                                <Trash2Icon className="h-4 w-4" />
+                                <Trash2Icon className="h-5 w-5" />
                               </Button>
                             </div>
                             <FormMessage />
@@ -871,91 +936,98 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                 exit="exit"
                 className="space-y-6"
               >
+                <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-6 rounded-xl border-l-4 border-purple-500">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-purple-600" />
+                    Step 3: Review & Submit
+                  </h2>
+                  <p className="text-gray-600 mt-2">Review all the information and submit your project request.</p>
+                </div>
                 {/* Initial Notes */}
                 <FormField
                   control={form.control}
                   name="initialNotes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        Additional Notes
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea 
+                                              <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
+                          <FileText className="h-4 w-4 text-primary" />
+                          Additional Notes
+                        </FormLabel>
+                        <FormControl>
+                                                  <Textarea 
                           placeholder="Enter any additional project notes or documentation requirements" 
-                          className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                          className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white" 
                           {...field} 
                         />
-                      </FormControl>
+                        </FormControl>
                       <FormMessage className={formMessageStyles} />
                     </FormItem>
                   )}
                 />
 
                 {/* Project Summary */}
-                <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                <div className="mt-6 p-6 bg-white rounded-xl border border-gray-100 shadow-sm">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-3 text-gray-800">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                     Project Summary
                   </h3>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Project Name</p>
-                        <p className="font-medium">{form.watch('name') || '-'}</p>
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Project Name</p>
+                        <p className="font-semibold text-gray-800 text-lg">{form.watch('name') || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Project Number</p>
-                        <p className="font-medium">{form.watch('projectNumber') || '-'}</p>
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Project Number</p>
+                        <p className="font-semibold text-gray-800 text-lg font-mono">{form.watch('projectNumber') || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Section</p>
-                        <p className="font-medium">
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Section</p>
+                        <p className="font-semibold text-gray-800 text-lg">
                           {sections.find((s: Department) => s.id.toString() === form.watch('section'))?.sectionName || '-'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Unit</p>
-                        <p className="font-medium">
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Unit</p>
+                        <p className="font-semibold text-gray-800 text-lg">
                           {filteredUnits.find((u: Department) => u.id.toString() === form.watch('unitId'))?.sectionName || '-'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Project Manager</p>
-                        <p className="font-medium">
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Project Manager</p>
+                        <p className="font-semibold text-gray-800 text-lg">
                           {employeesData?.find((e: Employee) => e.id.toString() === form.watch('projectManagerId'))?.employeeName || '-'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Budget</p>
-                        <p className="font-medium">{form.watch('budget') || '-'}</p>
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Budget</p>
+                        <p className="font-semibold text-gray-800 text-lg">{form.watch('budget') || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Expected Start</p>
-                        <p className="font-medium">
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Expected Start</p>
+                        <p className="font-semibold text-gray-800 text-lg">
                           {form.watch('expectedStart') ? format(form.watch('expectedStart')!, 'PPP') : '-'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Expected End</p>
-                        <p className="font-medium">
+                        <p className="text-sm font-semibold text-gray-600 mb-1">Expected End</p>
+                        <p className="font-semibold text-gray-800 text-lg">
                           {form.watch('expectedEnd') ? format(form.watch('expectedEnd')!, 'PPP') : '-'}
                         </p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
-                      <p className="font-medium mt-1">{form.watch('description') || '-'}</p>
+                      <p className="text-sm font-semibold text-gray-600 mb-1">Description</p>
+                      <p className="font-semibold text-gray-800 text-lg mt-1">{form.watch('description') || '-'}</p>
                     </div>
                     {form.watch('paymentPlanLines')?.length > 0 && (
-                      <div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Payment Plan</p>
-                        <div className="space-y-2">
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">Payment Plan</p>
+                        <div className="space-y-3">
                           {form.watch('paymentPlanLines')?.map((line, index) => (
-                            <div key={index} className="flex items-center justify-between text-sm">
-                              <span>{line.year} - {line.paymentType}</span>
-                              <span>{line.amount} {line.currency}</span>
+                            <div key={index} className="flex items-center justify-between text-sm bg-white p-3 rounded border border-gray-100">
+                              <span className="font-medium">{line.year} - {line.paymentType}</span>
+                              <span className="font-semibold text-primary">{line.amount} {line.currency}</span>
                             </div>
                           ))}
                         </div>
@@ -967,7 +1039,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between pt-6">
+            <div className="flex justify-between pt-8 border-t border-gray-200">
               {currentStep > 1 && (
                 <Button
                   type="button"
@@ -976,9 +1048,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     e.preventDefault();
                     prevStep();
                   }}
-                  className="w-24"
+                  className="w-32 h-10 font-semibold border-2 border-gray-300 hover:border-primary hover:text-primary transition-all duration-200 bg-white text-gray-800 hover:bg-gray-50"
                 >
-                  Previous
+                  ← Previous
                 </Button>
               )}
               <div className="flex-1" />
@@ -992,14 +1064,14 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     }
                   }
                 }}
-                className="w-24"
+                className="w-32 h-10 font-semibold bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-600 transition-all duration-200 hover:scale-105 shadow-md"
                 disabled={isLoading || !validateStep(currentStep)}
               >
                 {isLoading 
                   ? "Processing..." 
                   : currentStep === totalSteps 
-                    ? "Create" 
-                    : "Next"
+                    ? "Create Project" 
+                    : "Next →"
                 }
               </Button>
             </div>

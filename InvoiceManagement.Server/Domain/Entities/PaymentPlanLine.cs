@@ -17,6 +17,6 @@ namespace InvoiceManagement.Server.Domain.Entities
         public int ProjectId { get; set; }
         
         // Navigation property
-        public Project Project { get; set; } = null!;
+        public Project? Project { get; set; }
     }
 } 

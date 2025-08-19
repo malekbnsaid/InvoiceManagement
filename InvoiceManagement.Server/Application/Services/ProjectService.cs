@@ -32,6 +32,7 @@ namespace InvoiceManagement.Server.Application.Services
                 var projects = await _context.Projects
                     .Include(p => p.ProjectManager)
                     .Include(p => p.Section)
+                    .Include(p => p.PaymentPlanLines)
                     .ToListAsync();
                 
                 return projects ?? Enumerable.Empty<Project>();
@@ -49,6 +50,7 @@ namespace InvoiceManagement.Server.Application.Services
                 var project = await _context.Projects
                     .Include(p => p.ProjectManager)
                     .Include(p => p.Section)
+                    .Include(p => p.PaymentPlanLines)
                     .FirstOrDefaultAsync(p => p.Id == id);
                 
                 return project;
@@ -66,6 +68,7 @@ namespace InvoiceManagement.Server.Application.Services
                 var project = await _context.Projects
                     .Include(p => p.Section)
                     .Include(p => p.ProjectManager)
+                    .Include(p => p.PaymentPlanLines)
                     .FirstOrDefaultAsync(p => p.ProjectNumber == projectNumber);
                 
                 return project;
@@ -95,8 +98,32 @@ namespace InvoiceManagement.Server.Application.Services
             project.Section = section;
             project.ProjectManager = projectManager;
             
+            // Store PaymentPlanLines temporarily and clear them to avoid EF issues
+            var paymentPlanLines = project.PaymentPlanLines?.ToList() ?? new List<PaymentPlanLine>();
+            if (project.PaymentPlanLines != null)
+            {
+                project.PaymentPlanLines.Clear();
+            }
+            
+            // Add and save the project first
             await _context.Projects.AddAsync(project);
             await _context.SaveChangesAsync();
+
+            // Now add PaymentPlanLines with the correct ProjectId
+            if (paymentPlanLines.Any())
+            {
+                foreach (var line in paymentPlanLines)
+                {
+                    line.ProjectId = project.Id;
+                    line.CreatedAt = DateTime.UtcNow;
+                    line.CreatedBy = project.CreatedBy;
+                }
+                await _context.PaymentPlanLines.AddRangeAsync(paymentPlanLines);
+                await _context.SaveChangesAsync();
+                
+                // Reload the project with PaymentPlanLines
+                project.PaymentPlanLines = paymentPlanLines;
+            }
 
             // Log the creation
             await _auditService.LogAuditAsync(
@@ -112,14 +139,45 @@ namespace InvoiceManagement.Server.Application.Services
 
         public async Task<Project?> UpdateProjectAsync(Project project)
         {
-            var existingProject = await _context.Projects.FindAsync(project.Id);
+            var existingProject = await _context.Projects
+                .Include(p => p.PaymentPlanLines)
+                .FirstOrDefaultAsync(p => p.Id == project.Id);
+                
             if (existingProject == null)
                 return null;
 
             // Update metadata
             project.ModifiedAt = DateTime.UtcNow;
             
+            // Handle PaymentPlanLines separately to avoid EF issues
+            var paymentPlanLines = project.PaymentPlanLines?.ToList() ?? new List<PaymentPlanLine>();
+            if (project.PaymentPlanLines != null)
+            {
+                project.PaymentPlanLines.Clear(); // Clear to avoid EF tracking issues
+            }
+            
+            // Update the main project properties
             _context.Entry(existingProject).CurrentValues.SetValues(project);
+            
+            // Handle PaymentPlanLines updates
+            if (paymentPlanLines.Any())
+            {
+                // Remove existing payment plan lines
+                if (existingProject.PaymentPlanLines?.Any() == true)
+                {
+                    _context.PaymentPlanLines.RemoveRange(existingProject.PaymentPlanLines);
+                }
+                
+                // Add new payment plan lines
+                foreach (var line in paymentPlanLines)
+                {
+                    line.ProjectId = project.Id;
+                    line.ModifiedAt = DateTime.UtcNow;
+                    line.ModifiedBy = project.ModifiedBy ?? "System";
+                }
+                await _context.PaymentPlanLines.AddRangeAsync(paymentPlanLines);
+            }
+            
             await _context.SaveChangesAsync();
 
             // Log the update
@@ -154,7 +212,7 @@ namespace InvoiceManagement.Server.Application.Services
             {
                 // Remove related entities first
                 if (project.PaymentPlanLines?.Any() == true)
-                    _context.Set<PaymentPlanLine>().RemoveRange(project.PaymentPlanLines);
+                    _context.PaymentPlanLines.RemoveRange(project.PaymentPlanLines);
                 
                 if (project.LPOs?.Any() == true)
                     _context.LPOs.RemoveRange(project.LPOs);

@@ -426,11 +426,10 @@ namespace InvoiceManagement.Server.Infrastructure.Services.OCR
                 "£" or "GBP" => CurrencyType.GBP,
                 "¥" or "JPY" => CurrencyType.JPY,
                 "د.إ" or "AED" => CurrencyType.AED,
-                "ر.س" or "SAR" => CurrencyType.SAR,
+                "ر.ق" or "QAR" => CurrencyType.QAR,
                 "د.ك" or "KWD" => CurrencyType.KWD,
                 "د.ب" or "BHD" => CurrencyType.BHD,
                 "ر.ع" or "OMR" => CurrencyType.OMR,
-                "ر.ق" or "QAR" => CurrencyType.QAR,
                 _ => null
             };
         }

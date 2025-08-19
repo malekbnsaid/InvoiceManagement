@@ -54,29 +54,8 @@ class AuthService {
 
   // Check if dev bypass is enabled
   private isDevBypass(): boolean {
-    // Check multiple ways the environment variable might be set
-    const envValue = import.meta.env.VITE_DEV_BYPASS;
-    const nodeEnv = import.meta.env.MODE;
-    const isDev = nodeEnv === 'development';
-    
-    console.log('🔐 AuthService: isDevBypass called');
-    console.log('🔐 AuthService: VITE_DEV_BYPASS value:', envValue);
-    console.log('🔐 AuthService: MODE:', nodeEnv);
-    console.log('🔐 AuthService: Is development mode:', isDev);
-    
-    // If VITE_DEV_BYPASS is explicitly set to 'true', use it
-    if (envValue === 'true') {
-      console.log('🔐 AuthService: VITE_DEV_BYPASS is true, returning true');
-      return true;
-    }
-    
-    // Fallback: if in development mode and no explicit setting, enable DevBypass
-    if (isDev && envValue !== 'false') {
-      console.log('🔐 AuthService: Fallback to development mode, returning true');
-      return true;
-    }
-    
-    console.log('🔐 AuthService: DevBypass disabled, returning false');
+    // Temporarily disabled for testing real authentication
+    console.log('🔐 AuthService: DevBypass temporarily disabled for testing');
     return false;
   }
 

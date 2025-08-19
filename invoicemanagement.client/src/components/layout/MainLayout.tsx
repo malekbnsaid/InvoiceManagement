@@ -340,13 +340,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             )}
             {!desktopSidebarCollapsed && <span className="ml-3">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
-          <button
-            onClick={logout}
-            className={`flex ${desktopSidebarCollapsed ? 'justify-center mt-2' : 'items-center'} w-full px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!desktopSidebarCollapsed ? 'mt-1' : ''}`}
-          >
-            <LogOut className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            {!desktopSidebarCollapsed && <span className="ml-3">Logout</span>}
-          </button>
+          {user && (
+            <button
+              onClick={logout}
+              className={`flex ${desktopSidebarCollapsed ? 'justify-center mt-2' : 'items-center'} w-full px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!desktopSidebarCollapsed ? 'mt-1' : ''}`}
+            >
+              <LogOut className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              {!desktopSidebarCollapsed && <span className="ml-3">Logout</span>}
+            </button>
+          )}
         </div>
       </motion.aside>
 

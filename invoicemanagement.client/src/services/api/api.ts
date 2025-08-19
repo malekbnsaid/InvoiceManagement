@@ -63,6 +63,27 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error status
       console.error('API Error:', error.response.data);
+      console.error('API Error Status:', error.response.status);
+      console.error('API Error Headers:', error.response.headers);
+      console.error('Full Error Response:', JSON.stringify(error.response.data, null, 2));
+      
+      // Check for validation errors (multiple possible formats)
+      if (error.response.data.errors) {
+        const validationErrors = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        return Promise.reject(new Error(`Validation failed:\n${validationErrors}`));
+      }
+      
+      // Check for ValidationProblemDetails format
+      if (error.response.data.title && error.response.data.errors) {
+        const validationErrors = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        return Promise.reject(new Error(`${error.response.data.title}\n${validationErrors}`));
+      }
+      
+      // Check for other error types
       return Promise.reject(new Error(error.response.data.error || error.response.data.message || 'An error occurred'));
     } else if (error.request) {
       // Request was made but no response

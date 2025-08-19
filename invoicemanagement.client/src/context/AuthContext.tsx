@@ -32,8 +32,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (username: string, password: string) => {
     try {
       const response = await authService.login({ username, password });
+      // Update local state to match authService
       setUser(response.user);
       setIsAuthenticated(true);
+      
+      // Also refresh from authService to ensure consistency
+      const currentUser = authService.getUser();
+      const authenticated = authService.isAuthenticated();
+      setUser(currentUser);
+      setIsAuthenticated(authenticated);
+      
+      console.log('🔐 Login successful, user state updated:', currentUser);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -42,13 +51,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     authService.logout();
+    // Update local state to match authService
     setUser(null);
     setIsAuthenticated(false);
+    
+    // Also refresh from authService to ensure consistency
+    const currentUser = authService.getUser();
+    const authenticated = authService.isAuthenticated();
+    setUser(currentUser);
+    setIsAuthenticated(authenticated);
+    
+    console.log('🔐 Logout successful, user state updated:', currentUser);
   };
 
   const refreshUser = () => {
     const currentUser = authService.getUser();
+    const authenticated = authService.isAuthenticated();
     setUser(currentUser);
+    setIsAuthenticated(authenticated);
+    console.log('🔐 User refreshed:', currentUser, 'Authenticated:', authenticated);
   };
 
   useEffect(() => {

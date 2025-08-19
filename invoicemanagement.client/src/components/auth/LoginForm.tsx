@@ -32,9 +32,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
       onLoginSuccess(credentials.username, credentials.password);
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Provide more user-friendly error messages
+      let userMessage = "Invalid username or password. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid username or password")) {
+          userMessage = "Invalid username or password. Please check your credentials and try again.";
+        } else if (error.message.includes("User not found")) {
+          userMessage = "User not found. Please check your username or sign up for a new account.";
+        } else if (error.message.includes("Account inactive")) {
+          userMessage = "Your account is inactive. Please contact your administrator.";
+        } else if (error.message.includes("Network error")) {
+          userMessage = "Connection error. Please check your internet connection and try again.";
+        }
+      }
+      
       toast({
         title: "Login failed",
-        description: "Invalid username or password. Please try again.",
+        description: userMessage,
         variant: "destructive",
       });
     } finally {

@@ -26,6 +26,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<DepartmentNode> Departments { get; set; } = null!;
         public DbSet<ERPEmployee> ERPEmployees { get; set; } = null!;
         public DbSet<AppUser> AppUsers { get; set; } = null!;
+        public DbSet<PaymentPlanLine> PaymentPlanLines { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -66,6 +67,15 @@ namespace InvoiceManagement.Server.Infrastructure.Data
             modelBuilder.Entity<PaymentPlanLine>(entity =>
             {
                 entity.Property(e => e.Amount).HasPrecision(18, 2);
+                
+                // Configure the relationship with Project
+                entity.HasOne(ppl => ppl.Project)
+                    .WithMany(p => p.PaymentPlanLines)
+                    .HasForeignKey(ppl => ppl.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                // Ensure ProjectId is required
+                entity.Property(ppl => ppl.ProjectId).IsRequired();
             });
 
             modelBuilder.Entity<Project>(entity =>
@@ -127,6 +137,13 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                     .WithOne(i => i.Project)
                     .HasForeignKey(i => i.ProjectId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                // Relationship with PaymentPlanLine
+                entity.HasMany(p => p.PaymentPlanLines)
+                    .WithOne(ppl => ppl.Project)
+                    .HasForeignKey(ppl => ppl.ProjectId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired(false); // Allow null for optional relationship
             });
 
             // Configure other relationships

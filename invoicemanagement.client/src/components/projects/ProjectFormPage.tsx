@@ -170,19 +170,32 @@ export default function ProjectFormPage() {
       const projectData = {
         name: data.name.trim(),
         description: data.description?.trim() || '',
-        sectionId: parseInt(data.section),
-        projectManagerId: parseInt(data.projectManagerId),
-        budget: parseFloat(data.budget),
+        sectionId: data.section ? parseInt(data.section) || 0 : 0,
+        projectManagerId: data.projectManagerId ? parseInt(data.projectManagerId) || 0 : 0,
+        budget: data.budget ? parseFloat(data.budget) : 0,
         expectedStart: data.expectedStart,
         expectedEnd: data.expectedEnd,
         tenderDate: data.tenderDate,
-        paymentPlanLines: (data.paymentPlanLines || []).map((line: PaymentPlanLine) => ({
-          year: parseInt(line.year.toString()),
-          amount: parseFloat(line.amount.toString()),
-          currency: line.currency,
-          paymentType: line.paymentType,
-          description: line.description || ''
-        })),
+        paymentPlanLines: (data.paymentPlanLines || [])
+          .filter(line => {
+            const isValid = line.year && line.amount && line.currency && line.paymentType;
+            if (!isValid) {
+              console.log('Filtering out invalid PaymentPlanLine:', line);
+            }
+            return isValid;
+          })
+          .map((line: PaymentPlanLine) => {
+            const mappedLine = {
+              year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
+              amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
+              currency: line.currency,
+              paymentType: line.paymentType,
+              description: line.description || '',
+              project: null // Explicitly set Project to null to satisfy validation
+            };
+            console.log('Mapped PaymentPlanLine:', mappedLine);
+            return mappedLine;
+          }),
         isApproved: false,
         createdBy: 'system',
         createdAt: new Date().toISOString(),
@@ -199,14 +212,44 @@ export default function ProjectFormPage() {
 
       // Log the transformed data
       console.log('Transformed project data:', projectData);
+      console.log('Raw form data:', data);
+      console.log('PaymentPlanLines from form:', data.paymentPlanLines);
 
       // Validate required fields
-      if (!projectData.sectionId) {
-        throw new Error('Section is required');
+      if (!projectData.sectionId || isNaN(projectData.sectionId)) {
+        throw new Error('Valid Section is required');
       }
-      if (!projectData.projectManagerId) {
-        throw new Error('Project Manager is required');
+      if (!projectData.projectManagerId || isNaN(projectData.projectManagerId)) {
+        throw new Error('Valid Project Manager is required');
       }
+      
+      // Validate PaymentPlanLines
+      if (projectData.paymentPlanLines.length === 0) {
+        throw new Error('At least one PaymentPlanLine is required');
+      }
+      
+      // Validate each PaymentPlanLine has valid numeric values
+      for (let i = 0; i < projectData.paymentPlanLines.length; i++) {
+        const line = projectData.paymentPlanLines[i];
+        if (!line.year || isNaN(line.year) || line.year < 2000 || line.year > 2100) {
+          throw new Error(`PaymentPlanLine ${i + 1}: Invalid year (${line.year})`);
+        }
+        if (!line.amount || isNaN(line.amount) || line.amount <= 0) {
+          throw new Error(`PaymentPlanLine ${i + 1}: Invalid amount (${line.amount})`);
+        }
+        if (!line.currency) {
+          throw new Error(`PaymentPlanLine ${i + 1}: Currency is required`);
+        }
+        if (!line.paymentType) {
+          throw new Error(`PaymentPlanLine ${i + 1}: Payment type is required`);
+        }
+      }
+      
+      // Log validation results
+      console.log('Validation passed for sectionId:', projectData.sectionId);
+      console.log('Validation passed for projectManagerId:', projectData.projectManagerId);
+      console.log('PaymentPlanLines count:', projectData.paymentPlanLines.length);
+      console.log('PaymentPlanLines validation passed');
 
       // Remove any potential circular references and undefined values
       const cleanProjectData = JSON.parse(JSON.stringify(projectData, (key, value) => 
