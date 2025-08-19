@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace InvoiceManagement.Server.Domain.Entities
 {
@@ -15,8 +16,10 @@ namespace InvoiceManagement.Server.Domain.Entities
         public decimal? TaxRate { get; set; }
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountRate { get; set; }
+        public double? ConfidenceScore { get; set; }
         
         // Navigation property
+        [JsonIgnore]
         public virtual Invoice Invoice { get; set; } = null!;
     }
 } 

@@ -11,6 +11,6 @@
         BHD,
         OMR,
         QAR,
-         JPY
+        JPY
     }
 }

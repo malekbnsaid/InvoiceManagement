@@ -156,6 +156,86 @@ export interface LPO {
   modifiedBy?: string;
 }
 
+export interface InvoiceLineItem {
+    id: number;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    itemNumber?: string;
+    unit?: string;
+    taxAmount?: number;
+    taxRate?: string;
+    discountAmount?: number;
+    discountRate?: string;
+    confidenceScore?: number;
+    createdAt: Date;
+    createdBy: string;
+    modifiedAt?: Date;
+    modifiedBy?: string;
+}
+
+export interface OcrLineItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    itemNumber?: string;
+    unit?: string;
+    taxAmount?: number;
+    taxRate?: number;
+    discountAmount?: number;
+    discountRate?: number;
+    confidenceScore?: number;
+}
+
+export interface OcrResult {
+    // Invoice Details
+    invoiceNumber: string;
+    invoiceDate?: Date;
+    invoiceValue?: number;
+    currency?: CurrencyType;
+    dueDate?: Date;
+    
+    // Financial Information
+    subTotal?: number;
+    taxAmount?: number;
+    totalAmount?: number;
+    taxRate?: string;
+    
+    // Line Items
+    lineItems: OcrLineItem[];
+    
+    // Vendor Information
+    vendorName: string;
+    vendorTaxId: string;  // Required field, will be set to "PENDING" by default in the component
+    vendorAddress?: string;
+    vendorPhone?: string;
+    vendorEmail?: string;
+    
+    // Customer Information
+    customerName?: string;
+    customerNumber?: string;
+    billingAddress?: string;
+    shippingAddress?: string;
+    
+    // Additional Information
+    purchaseOrderNumber?: string;
+    paymentTerms?: string;
+    referenceNumber?: string;
+    description?: string;
+    remark?: string;
+    
+    // Processing Information
+    confidenceScore: number;
+    isProcessed: boolean;
+    errorMessage?: string;
+    
+    // Raw OCR Data
+    rawText: string;
+    fieldConfidenceScores: Record<string, number>;
+}
+
 export interface Invoice {
   id: number;
   // Essential Invoice Information
@@ -209,48 +289,5 @@ export interface Invoice {
   // Related Collections
   attachments?: DocumentAttachment[];
   statusHistory?: StatusHistory[];
-}
-
-export interface OcrResult {
-    // Invoice Details
-    invoiceNumber: string;
-    invoiceDate?: Date;
-    invoiceValue?: number;
-    currency?: CurrencyType;
-    dueDate?: Date;
-    
-    // Financial Information
-    subTotal?: number;
-    taxAmount?: number;
-    totalAmount?: number;
-    taxRate?: string;
-    
-    // Vendor Information
-    vendorName: string;
-    vendorTaxId: string;
-    vendorAddress?: string;
-    vendorPhone?: string;
-    vendorEmail?: string;
-    
-    // Customer Information
-    customerName?: string;
-    customerNumber?: string;
-    billingAddress?: string;
-    shippingAddress?: string;
-    
-    // Additional Information
-    purchaseOrderNumber?: string;
-    paymentTerms?: string;
-    referenceNumber?: string;
-    description?: string;
-    remark?: string;
-    
-    // Processing Information
-    confidenceScore: number;
-    isProcessed: boolean;
-    errorMessage?: string;
-    
-    // Raw OCR Data
-    rawText: string;
-    fieldConfidenceScores: Record<string, number>;
+  lineItems?: InvoiceLineItem[];
 } 

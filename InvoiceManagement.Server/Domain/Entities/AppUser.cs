@@ -16,6 +16,9 @@ namespace InvoiceManagement.Server.Domain.Entities
         public int userType_code { get; set; } // Maps to user roles
         public string EMAIL { get; set; } = string.Empty;
         
+        // Authentication
+        public string PasswordHash { get; set; } = string.Empty;
+        
         // Record information
         public DateTime Rec_Date { get; set; }
         public string Rec_User { get; set; } = string.Empty;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using InvoiceManagement.Server.Domain.Enums;
 
 namespace InvoiceManagement.Server.Domain.Entities
@@ -9,6 +10,7 @@ namespace InvoiceManagement.Server.Domain.Entities
         // Essential Invoice Information
         public string InvoiceNumber { get; set; } = string.Empty;
         public decimal InvoiceValue { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public CurrencyType Currency { get; set; }
         public DateTime InvoiceDate { get; set; }
         public DateTime? DueDate { get; set; }
@@ -67,11 +69,18 @@ namespace InvoiceManagement.Server.Domain.Entities
         public int? VendorId { get; set; }
         
         // Navigation Properties
+        [JsonIgnore]
         public Project? Project { get; set; }
+        [JsonIgnore]
         public LPO? LPO { get; set; }
+        [JsonIgnore]
         public Vendor? Vendor { get; set; }
+        [JsonIgnore]
         public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
+        [JsonIgnore]
         public Invoice? DuplicateOfInvoice { get; set; }
         public ICollection<InvoiceLineItem> LineItems { get; set; } = new List<InvoiceLineItem>();
+        [JsonIgnore]
+        public ICollection<DocumentAttachment> Attachments { get; set; } = new List<DocumentAttachment>();
     }
 } 

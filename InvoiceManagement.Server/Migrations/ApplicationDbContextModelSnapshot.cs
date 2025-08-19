@@ -52,6 +52,10 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("Rec_Date")
                         .HasColumnType("datetime2");
 
@@ -157,6 +161,9 @@ namespace InvoiceManagement.Server.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ChangeDescription")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -189,6 +196,12 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<int?>("InvoiceId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("InvoiceId1")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCurrentVersion")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("LPOId")
                         .HasColumnType("int");
 
@@ -205,6 +218,9 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<int?>("ProjectId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProjectId1")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("UploadDate")
                         .HasColumnType("datetime2");
 
@@ -212,13 +228,20 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceId");
 
+                    b.HasIndex("InvoiceId1");
+
                     b.HasIndex("LPOId");
 
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("ProjectId1");
 
                     b.ToTable("DocumentAttachments");
                 });
@@ -230,6 +253,9 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AppUserUser_Seq")
+                        .HasColumnType("int");
 
                     b.Property<string>("BasicSalary")
                         .HasMaxLength(50)
@@ -348,6 +374,8 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppUserUser_Seq");
 
                     b.HasIndex("EmployeeNumber")
                         .IsUnique();
@@ -530,6 +558,9 @@ namespace InvoiceManagement.Server.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<double?>("ConfidenceScore")
+                        .HasColumnType("float");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -677,6 +708,9 @@ namespace InvoiceManagement.Server.Migrations
                     b.Property<int>("ERPEmployeeId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ERPEmployeeId1")
+                        .HasColumnType("int");
+
                     b.Property<int?>("EntityId")
                         .HasColumnType("int");
 
@@ -707,6 +741,8 @@ namespace InvoiceManagement.Server.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ERPEmployeeId");
+
+                    b.HasIndex("ERPEmployeeId1");
 
                     b.ToTable("Notifications");
                 });
@@ -813,6 +849,9 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ERPEmployeeId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("ExpectedEnd")
                         .HasColumnType("datetime2");
 
@@ -858,6 +897,8 @@ namespace InvoiceManagement.Server.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ERPEmployeeId");
 
                     b.HasIndex("ProjectManagerId");
 
@@ -1109,6 +1150,10 @@ namespace InvoiceManagement.Server.Migrations
                         .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.Invoice", null)
+                        .WithMany("Attachments")
+                        .HasForeignKey("InvoiceId1");
+
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.LPO", "LPO")
                         .WithMany()
                         .HasForeignKey("LPOId")
@@ -1119,11 +1164,24 @@ namespace InvoiceManagement.Server.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.Project", null)
+                        .WithMany("DocumentAttachments")
+                        .HasForeignKey("ProjectId1");
+
                     b.Navigation("Invoice");
 
                     b.Navigation("LPO");
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.ERPEmployee", b =>
+                {
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.AppUser", "AppUser")
+                        .WithMany()
+                        .HasForeignKey("AppUserUser_Seq");
+
+                    b.Navigation("AppUser");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Invoice", b =>
@@ -1193,6 +1251,10 @@ namespace InvoiceManagement.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", null)
+                        .WithMany("Notifications")
+                        .HasForeignKey("ERPEmployeeId1");
+
                     b.Navigation("ERPEmployee");
                 });
 
@@ -1209,6 +1271,10 @@ namespace InvoiceManagement.Server.Migrations
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Project", b =>
                 {
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", null)
+                        .WithMany("ManagedProjects")
+                        .HasForeignKey("ERPEmployeeId");
+
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", "ProjectManager")
                         .WithMany()
                         .HasForeignKey("ProjectManagerId")
@@ -1235,11 +1301,11 @@ namespace InvoiceManagement.Server.Migrations
                         .IsRequired();
 
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.Project", "Project")
-                        .WithMany()
+                        .WithMany("ProjectNumberRequests")
                         .HasForeignKey("ProjectId");
 
                     b.HasOne("InvoiceManagement.Server.Domain.Entities.ERPEmployee", "RequestedBy")
-                        .WithMany()
+                        .WithMany("ProjectNumberRequests")
                         .HasForeignKey("RequestedById")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1267,8 +1333,19 @@ namespace InvoiceManagement.Server.Migrations
                     b.Navigation("Children");
                 });
 
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.ERPEmployee", b =>
+                {
+                    b.Navigation("ManagedProjects");
+
+                    b.Navigation("Notifications");
+
+                    b.Navigation("ProjectNumberRequests");
+                });
+
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Invoice", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("LineItems");
 
                     b.Navigation("StatusHistories");
@@ -1281,11 +1358,15 @@ namespace InvoiceManagement.Server.Migrations
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Project", b =>
                 {
+                    b.Navigation("DocumentAttachments");
+
                     b.Navigation("Invoices");
 
                     b.Navigation("LPOs");
 
                     b.Navigation("PaymentPlanLines");
+
+                    b.Navigation("ProjectNumberRequests");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.Vendor", b =>

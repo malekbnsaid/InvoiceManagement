@@ -10,7 +10,8 @@ export const formatCurrency = (amount: number, currency?: CurrencyType): string 
         [CurrencyType.KWD]: { locale: 'ar-KW', currency: 'KWD' },
         [CurrencyType.BHD]: { locale: 'ar-BH', currency: 'BHD' },
         [CurrencyType.OMR]: { locale: 'ar-OM', currency: 'OMR' },
-        [CurrencyType.QAR]: { locale: 'ar-QA', currency: 'QAR' }
+        [CurrencyType.QAR]: { locale: 'ar-QA', currency: 'QAR' },
+        [CurrencyType.JPY]: { locale: 'ja-JP', currency: 'JPY' }
     };
 
     const { locale, currency: currencyCode } = currency && currency in currencyMap

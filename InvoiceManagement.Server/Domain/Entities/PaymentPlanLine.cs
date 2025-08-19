@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using InvoiceManagement.Server.Domain.Enums;
 
 namespace InvoiceManagement.Server.Domain.Entities
@@ -7,6 +8,7 @@ namespace InvoiceManagement.Server.Domain.Entities
     {
         public int Year { get; set; }
         public decimal Amount { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public CurrencyType Currency { get; set; }
         public string PaymentType { get; set; } = string.Empty; // e.g., "Monthly", "Quarterly", "Annually"
         public string? Description { get; set; }

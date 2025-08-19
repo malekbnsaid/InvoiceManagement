@@ -2,6 +2,7 @@ import React from 'react';
 import { ReactNode, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, 
   FileText, 
@@ -14,7 +15,6 @@ import {
   X as XMarkIcon,
   Bell,
   PlusCircle,
-  Building,
   LogOut,
   Moon,
   Sun,
@@ -57,12 +57,6 @@ const navItems: NavItem[] = [
     description: 'Purchase orders management'
   },
   {
-    name: 'IT Departments',
-    path: '/departments',
-    icon: <Building className="h-5 w-5" />,
-    description: 'Department structure'
-  },
-  {
     name: 'Reports',
     path: '/reports',
     icon: <BarChart className="h-5 w-5" />,
@@ -101,6 +95,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -346,6 +341,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             {!desktopSidebarCollapsed && <span className="ml-3">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
           <button
+            onClick={logout}
             className={`flex ${desktopSidebarCollapsed ? 'justify-center mt-2' : 'items-center'} w-full px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 ${!desktopSidebarCollapsed ? 'mt-1' : ''}`}
           >
             <LogOut className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -384,11 +380,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               </button>
               <div className="flex items-center">
                 <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-gray-700 flex items-center justify-center text-primary-700 dark:text-primary-400 font-semibold text-sm">
-                  JD
+                  {user ? user.username.substring(0, 2).toUpperCase() : 'GU'}
                 </div>
-                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline-block">
-                  IT Admin
-                </span>
+                <div className="ml-2 hidden sm:block">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+                    {user ? user.username : 'Guest'}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {user ? user.role : 'No Role'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

@@ -179,7 +179,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(d => d.LPOId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
             // Notifications
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.ERPEmployee)

@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { authService } from '../authService';
 
 // Create axios instance with default config
+const apiBaseURL = 'http://localhost:5274/api';
+console.log('🔐 API: Creating axios instance with baseURL:', apiBaseURL);
+
 export const api = axios.create({
-  baseURL: 'http://localhost:5274/api',
+  baseURL: apiBaseURL, // Temporary direct URL for testing
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,7 +15,14 @@ export const api = axios.create({
 // Add request interceptor
 api.interceptors.request.use(
   (config) => {
-    // You can add auth token here if needed
+    console.log('🔐 API: Making request to:', config.method?.toUpperCase(), config.url);
+    console.log('🔐 API: Full URL:', (config.baseURL || '') + (config.url || ''));
+    
+    // Add auth token to requests
+    const token = authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -24,12 +35,35 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    // Handle errors globally
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token
+        await authService.refreshToken();
+        const newToken = authService.getToken();
+        
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed, redirect to login
+        authService.logout();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Handle other errors globally
     if (error.response) {
       // Server responded with error status
       console.error('API Error:', error.response.data);
-      return Promise.reject(new Error(error.response.data.error || 'An error occurred'));
+      return Promise.reject(new Error(error.response.data.error || error.response.data.message || 'An error occurred'));
     } else if (error.request) {
       // Request was made but no response
       console.error('Network Error:', error.request);

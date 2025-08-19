@@ -43,5 +43,11 @@ namespace InvoiceManagement.Server.Domain.Entities
         public string? Rec_UserId { get; set; }
         public string? Rec_IPAddress { get; set; }
         public bool Rec_IsActive { get; set; }
+        
+        // Navigation properties
+        public virtual ICollection<Project> ManagedProjects { get; set; } = new List<Project>();
+        public virtual ICollection<ProjectNumberRequest> ProjectNumberRequests { get; set; } = new List<ProjectNumberRequest>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public virtual AppUser? AppUser { get; set; }
     }
 } 

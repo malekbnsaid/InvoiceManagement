@@ -7,6 +7,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { CalendarIcon, Briefcase, Building2, User, DollarSign, Clock, FileText, CheckCircle2, TrashIcon, Trash2Icon } from 'lucide-react';
 import { CurrencyType } from '../../types/enums';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 
 import { Button } from '../ui/Button';
 import {
@@ -131,6 +132,7 @@ const normalizePaymentPlanLines = (data: any) => {
 export default function ProjectForm({ onSubmit, isLoading = false, initialData }: ProjectFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
+  const { user } = useAuth();
 
   // Initialize form with proper default values
   const form = useForm<FormValues>({
@@ -291,6 +293,12 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   // Handle form submission
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    
+    // Check if user has permission to create projects
+    if (!user || !['PM', 'PMO', 'Head', 'Admin'].includes(user.role)) {
+      toast.error('You do not have permission to create projects. Only Project Managers, PMO, Heads, and Admins can create projects.');
+      return;
+    }
     
     try {
       const values = form.getValues();

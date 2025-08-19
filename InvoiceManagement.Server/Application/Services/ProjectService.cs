@@ -27,28 +27,53 @@ namespace InvoiceManagement.Server.Application.Services
 
         public async Task<IEnumerable<Project>> GetAllProjectsAsync()
         {
-            return await _context.Projects
-                .Include(p => p.Section)
-                .Include(p => p.ProjectManager)
-                .ToListAsync();
+            try
+            {
+                var projects = await _context.Projects
+                    .Include(p => p.ProjectManager)
+                    .Include(p => p.Section)
+                    .ToListAsync();
+                
+                return projects ?? Enumerable.Empty<Project>();
+            }
+            catch (Exception)
+            {
+                return Enumerable.Empty<Project>();
+            }
         }
 
-        public async Task<Project> GetProjectByIdAsync(int id)
+        public async Task<Project?> GetProjectByIdAsync(int id)
         {
-            return await _context.Projects
-                .Include(p => p.Section)
-                .Include(p => p.ProjectManager)
-                .Include(p => p.LPOs)
-                .Include(p => p.Invoices)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                var project = await _context.Projects
+                    .Include(p => p.ProjectManager)
+                    .Include(p => p.Section)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+                
+                return project;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
-        public async Task<Project> GetProjectByNumberAsync(string projectNumber)
+        public async Task<Project?> GetProjectByNumberAsync(string projectNumber)
         {
-            return await _context.Projects
-                .Include(p => p.Section)
-                .Include(p => p.ProjectManager)
-                .FirstOrDefaultAsync(p => p.ProjectNumber == projectNumber);
+            try
+            {
+                var project = await _context.Projects
+                    .Include(p => p.Section)
+                    .Include(p => p.ProjectManager)
+                    .FirstOrDefaultAsync(p => p.ProjectNumber == projectNumber);
+                
+                return project;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public async Task<Project> CreateProjectAsync(Project project)
@@ -85,7 +110,7 @@ namespace InvoiceManagement.Server.Application.Services
             return project;
         }
 
-        public async Task<Project> UpdateProjectAsync(Project project)
+        public async Task<Project?> UpdateProjectAsync(Project project)
         {
             var existingProject = await _context.Projects.FindAsync(project.Id);
             if (existingProject == null)

@@ -12,7 +12,17 @@ import ProjectDetailsPage from './components/projects/ProjectDetailsPage';
 import LPOsList from './components/lpos/LPOsList';
 import ProjectEditPage from './pages/ProjectEditPage';
 import { Toaster } from './components/ui/toaster';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute, PMOrHigherRoute, PMOOrHigherRoute, SecretaryOrHigherRoute, HeadOrAdminRoute } from './components/auth/ProtectedRoute';
 import React from 'react';
+
+// Debug environment variables
+console.log('🔐 App.tsx: Environment variables:');
+console.log('🔐 VITE_DEV_BYPASS:', import.meta.env.VITE_DEV_BYPASS);
+console.log('🔐 MODE:', import.meta.env.MODE);
+console.log('🔐 DEV:', import.meta.env.DEV);
+console.log('🔐 PROD:', import.meta.env.PROD);
+console.log('🔐 API Base URL: Using Vite proxy to /api');
 
 // Create a client
 const queryClient = new QueryClient();
@@ -20,37 +30,83 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <MainLayout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/projects" element={<ProjectsList />} />
-            <Route path="/projects/new" element={<ProjectFormPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-            <Route path="invoices" element={<InvoiceList />} />
-            <Route path="invoices/upload" element={<InvoiceUploadForm />} />
-            <Route path="invoices/:id" element={<InvoiceDetails />} />
-            <Route path="lpos" element={<LPOsList />} />
-            <Route path="departments" element={<SectionsAndUnits />} />
-            <Route path="reports" element={
-              <div className="h-full flex items-center justify-center">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Reports Page (Coming Soon)
-                </h1>
-              </div>
-            } />
-            <Route path="settings" element={
-              <div className="h-full flex items-center justify-center">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Settings Page (Coming Soon)
-                </h1>
-              </div>
-            } />
-            <Route path="/projects/edit/:id" element={<ProjectEditPage />} />
-          </Routes>
-        </MainLayout>
-      </Router>
-      <Toaster />
+      <AuthProvider>
+        <Router>
+          <MainLayout>
+            <Routes>
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/projects" element={
+                <ProtectedRoute>
+                  <ProjectsList />
+                </ProtectedRoute>
+              } />
+              <Route path="/projects/new" element={
+                <PMOrHigherRoute>
+                  <ProjectFormPage />
+                </PMOrHigherRoute>
+              } />
+              <Route path="/projects/:id" element={
+                <ProtectedRoute>
+                  <ProjectDetailsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="invoices" element={
+                <ProtectedRoute>
+                  <InvoiceList />
+                </ProtectedRoute>
+              } />
+              <Route path="invoices/upload" element={
+                <SecretaryOrHigherRoute>
+                  <InvoiceUploadForm />
+                </SecretaryOrHigherRoute>
+              } />
+              <Route path="invoices/:id" element={
+                <ProtectedRoute>
+                  <InvoiceDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="lpos" element={
+                <ProtectedRoute>
+                  <LPOsList />
+                </ProtectedRoute>
+              } />
+              <Route path="departments" element={
+                <HeadOrAdminRoute>
+                  <SectionsAndUnits />
+                </HeadOrAdminRoute>
+              } />
+              <Route path="reports" element={
+                <ProtectedRoute>
+                  <div className="h-full flex items-center justify-center">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Reports Page (Coming Soon)
+                    </h1>
+                  </div>
+                </ProtectedRoute>
+              } />
+              <Route path="settings" element={
+                <ProtectedRoute>
+                  <div className="h-full flex items-center justify-center">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Settings Page (Coming Soon)
+                    </h1>
+                  </div>
+                </ProtectedRoute>
+              } />
+              <Route path="/projects/edit/:id" element={
+                <PMOrHigherRoute>
+                  <ProjectEditPage />
+                </PMOrHigherRoute>
+              } />
+            </Routes>
+          </MainLayout>
+        </Router>
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

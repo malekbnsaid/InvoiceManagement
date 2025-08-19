@@ -8,10 +8,10 @@ namespace InvoiceManagement.Server.Application.Interfaces
     public interface IProjectService
     {
         Task<IEnumerable<Project>> GetAllProjectsAsync();
-        Task<Project> GetProjectByIdAsync(int id);
-        Task<Project> GetProjectByNumberAsync(string projectNumber);
+        Task<Project?> GetProjectByIdAsync(int id);
+        Task<Project?> GetProjectByNumberAsync(string projectNumber);
         Task<Project> CreateProjectAsync(Project project);
-        Task<Project> UpdateProjectAsync(Project project);
+        Task<Project?> UpdateProjectAsync(Project project);
         Task<bool> DeleteProjectAsync(int id);
         
         // Additional business operations

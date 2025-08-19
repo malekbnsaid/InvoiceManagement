@@ -2,6 +2,7 @@ using InvoiceManagement.Server.Domain.Entities;
 using InvoiceManagement.Server.Application.Interfaces;
 using InvoiceManagement.Server.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ namespace InvoiceManagement.Server.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ProjectsController : ControllerBase
     {
         private readonly IProjectService _projectService;
@@ -61,6 +63,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // POST: api/Projects
         [HttpPost]
+        [Authorize(Policy = "PMOrHigher")]
         public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
         {
             try
@@ -162,6 +165,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // PUT: api/Projects/5
         [HttpPut("{id}")]
+        [Authorize(Policy = "PMOrHigher")]
         public async Task<IActionResult> UpdateProject(int id, Project project)
         {
             if (id != project.Id)
@@ -176,6 +180,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // DELETE: api/Projects/5
         [HttpDelete("{id}")]
+        [Authorize(Policy = "PMOOrHigher")]
         public async Task<IActionResult> DeleteProject(int id)
         {
             try
@@ -200,6 +205,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // POST: api/Projects/5/approve
         [HttpPost("{id}/approve")]
+        [Authorize(Policy = "PMOOrHigher")]
         public async Task<IActionResult> ApproveProject(int id, [FromBody] ApprovalRequest request)
         {
             try
@@ -228,6 +234,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         // POST: api/Projects/5/reject
         [HttpPost("{id}/reject")]
+        [Authorize(Policy = "PMOOrHigher")]
         public async Task<IActionResult> RejectProject(int id, [FromBody] RejectionRequest request)
         {
             try
@@ -285,7 +292,8 @@ namespace InvoiceManagement.Server.API.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateProjectStatus(int id, [FromBody] string status)
         {
-            var result = await _projectService.UpdateProjectStatusAsync(id, status, User.Identity.Name);
+            var userName = User.Identity?.Name ?? "System";
+            var result = await _projectService.UpdateProjectStatusAsync(id, status, userName);
             if (!result)
                 return NotFound();
 
@@ -358,7 +366,7 @@ namespace InvoiceManagement.Server.API.Controllers
 
         public class ProjectWrapper
         {
-            public Project project { get; set; }
+            public Project? project { get; set; }
         }
 
         public class ApprovalRequest

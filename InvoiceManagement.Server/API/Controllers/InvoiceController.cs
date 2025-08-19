@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using InvoiceManagement.Server.Application.Interfaces;
 using InvoiceManagement.Server.Application.DTOs;
 
@@ -9,6 +10,7 @@ namespace InvoiceManagement.Server.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class InvoiceController : ControllerBase
     {
         private readonly IOcrService _ocrService;
@@ -32,6 +34,7 @@ namespace InvoiceManagement.Server.API.Controllers
         }
 
         [HttpPost("upload")]
+        [Authorize(Policy = "SecretaryOrHigher")]
         public async Task<ActionResult<OcrResult>> UploadAndProcessInvoice(IFormFile file)
         {
             try

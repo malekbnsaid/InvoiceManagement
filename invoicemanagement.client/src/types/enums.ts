@@ -30,5 +30,6 @@ export enum CurrencyType {
   KWD = 'KWD',
   BHD = 'BHD',
   OMR = 'OMR',
-  QAR = 'QAR'
+  QAR = 'QAR',
+  JPY = 'JPY'
 } 

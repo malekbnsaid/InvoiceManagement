@@ -24,7 +24,7 @@ namespace InvoiceManagement.Server.Application.Services
         public async Task<string> GenerateProjectNumberAsync(int sectionId)
         {
             // Get section abbreviation from the DepartmentHierarchy
-            string sectionAbbreviation = await _departmentService.GetSectionAbbreviationAsync(sectionId);
+            string? sectionAbbreviation = await _departmentService.GetSectionAbbreviationAsync(sectionId);
             
             if (string.IsNullOrEmpty(sectionAbbreviation))
             {

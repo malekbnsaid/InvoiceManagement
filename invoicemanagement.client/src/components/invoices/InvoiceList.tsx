@@ -1,6 +1,5 @@
 import React from 'react';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -17,7 +16,8 @@ import {
   Cpu,
   Shield,
   Server as ServerIcon,
-  Terminal
+  Terminal,
+  FileText
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/Button';
@@ -41,176 +41,176 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '../ui/select';
-
-// Define Invoice interface
-interface Invoice {
-  id: string;
-  vendor: string;
-  amount: number;
-  date: string;
-  dueDate: string;
-  status: string;
-  section: string;
-  unit: string;
-  vendorLogo: string;
-  projectId: string;
-}
-
-// Mock data for IT department invoices
-const mockInvoices: Invoice[] = [
-  {
-    id: 'INV-2023-156',
-    vendor: 'Cyber Security Solutions',
-    amount: 28500.00,
-    date: '2023-05-11',
-    dueDate: '2023-06-11',
-    status: 'approved',
-    section: 'ISO',
-    unit: 'Security Operations',
-    vendorLogo: '',
-    projectId: 'ISO/5/2023-01'
-  },
-  {
-    id: 'INV-2023-142',
-    vendor: 'Dell Technologies',
-    amount: 12340.75,
-    date: '2023-05-09',
-    dueDate: '2023-06-09',
-    status: 'pending',
-    section: 'TSS',
-    unit: 'Hardware Support',
-    vendorLogo: '',
-    projectId: 'TSS/4/2023-04'
-  },
-  {
-    id: 'INV-2023-138',
-    vendor: 'AWS Cloud Services',
-    amount: 8790.50,
-    date: '2023-05-08',
-    dueDate: '2023-06-08',
-    status: 'processing',
-    section: 'ISS',
-    unit: 'Cloud Services',
-    vendorLogo: '',
-    projectId: 'ISS/5/2023-02'
-  },
-  {
-    id: 'INV-2023-127',
-    vendor: 'Microsoft Corporation',
-    amount: 15400.25,
-    date: '2023-05-05',
-    dueDate: '2023-06-05',
-    status: 'approved',
-    section: 'APP',
-    unit: 'Custom Development',
-    vendorLogo: '',
-    projectId: 'APP/4/2023-05'
-  },
-  {
-    id: 'INV-2023-119',
-    vendor: 'Oracle Database Systems',
-    amount: 22350.00,
-    date: '2023-05-03',
-    dueDate: '2023-06-03',
-    status: 'pending',
-    section: 'ISS',
-    unit: 'Database Administration',
-    vendorLogo: '',
-    projectId: 'ISS/4/2023-09'
-  },
-  {
-    id: 'INV-2023-112',
-    vendor: 'Cisco Networks',
-    amount: 31780.50,
-    date: '2023-04-28',
-    dueDate: '2023-05-28',
-    status: 'paid',
-    section: 'ISS',
-    unit: 'Network Infrastructure',
-    vendorLogo: '',
-    projectId: 'ISS/4/2023-07'
-  },
-  {
-    id: 'INV-2023-108',
-    vendor: 'SAP Enterprise Solutions',
-    amount: 45250.00,
-    date: '2023-04-25',
-    dueDate: '2023-05-25',
-    status: 'overdue',
-    section: 'APP',
-    unit: 'Enterprise Applications',
-    vendorLogo: '',
-    projectId: 'APP/3/2023-02'
-  },
-  {
-    id: 'INV-2023-103',
-    vendor: 'Symantec Security',
-    amount: 18720.75,
-    date: '2023-04-20',
-    dueDate: '2023-05-20',
-    status: 'paid',
-    section: 'ISO',
-    unit: 'Risk Management',
-    vendorLogo: '',
-    projectId: 'ISO/3/2023-08'
-  }
-];
-
-// Utility function to format currency
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-};
+import { invoiceService } from '../../services/invoiceService';
+import { Invoice } from '../../types/interfaces';
+import { useToast } from '../ui/use-toast';
+import { formatCurrency } from '../../utils/formatters';
 
 // Status badge styles
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'paid':
-      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400';
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400';
-    case 'approved':
-      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400';
-    case 'processing':
-      return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400';
-    case 'overdue':
-      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400';
+const getStatusColor = (status: any) => {
+  // Convert status to string and handle different types
+  const statusStr = String(status || '').toLowerCase();
+  
+  switch (statusStr) {
+    // String enum values
     case 'draft':
-      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400';
+    case '0':
+    case '0.0':
+      return 'bg-gray-100 text-gray-800';
+    case 'pendingapproval':
+    case 'pending':
+    case '1':
+    case '1.0':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'approved':
+    case '2':
+    case '2.0':
+      return 'bg-green-100 text-green-800';
+    case 'rejected':
+    case '3':
+    case '3.0':
+      return 'bg-red-100 text-red-800';
+    case 'processing':
+    case '4':
+    case '4.0':
+      return 'bg-blue-100 text-blue-800';
+    case 'paid':
+    case '5':
+    case '5.0':
+      return 'bg-green-100 text-green-800';
+    case 'cancelled':
+    case '6':
+    case '6.0':
+      return 'bg-red-100 text-red-800';
+    case 'onhold':
+    case '7':
+    case '7.0':
+      return 'bg-orange-100 text-orange-800';
+    case 'overdue':
+    case '8':
+    case '8.0':
+      return 'bg-red-100 text-red-800';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400';
+      return 'bg-gray-100 text-gray-800';
   }
 };
 
-// Section icon mapping
+// Helper function to get status display text
+const getStatusText = (status: any) => {
+  const statusStr = String(status || '').toLowerCase();
+  
+  switch (statusStr) {
+    // String enum values
+    case 'draft':
+    case '0':
+    case '0.0':
+      return 'Draft';
+    case 'pendingapproval':
+    case 'pending':
+    case '1':
+    case '1.0':
+      return 'Pending Approval';
+    case 'approved':
+    case '2':
+    case '2.0':
+      return 'Approved';
+    case 'rejected':
+    case '3':
+    case '3.0':
+      return 'Rejected';
+    case 'processing':
+    case '4':
+    case '4.0':
+      return 'Processing';
+    case 'paid':
+    case '5':
+    case '5.0':
+      return 'Paid';
+    case 'cancelled':
+    case '6':
+    case '6.0':
+      return 'Cancelled';
+    case 'onhold':
+    case '7':
+    case '7.0':
+      return 'On Hold';
+    case 'overdue':
+    case '8':
+    case '8.0':
+      return 'Overdue';
+    default:
+      return 'Unknown';
+  }
+};
+
 const getSectionIcon = (section: string) => {
-  switch (section) {
+  switch (section.toUpperCase()) {
     case 'ISO':
-      return <Shield className="h-4 w-4 text-red-500" />;
+      return <Shield className="h-4 w-4 text-blue-500" />;
     case 'TSS':
-      return <Terminal className="h-4 w-4 text-blue-500" />;
-    case 'ISS':
       return <ServerIcon className="h-4 w-4 text-green-500" />;
-    case 'APP':
+    case 'ISS':
       return <Cpu className="h-4 w-4 text-purple-500" />;
+    case 'APP':
+      return <Terminal className="h-4 w-4 text-orange-500" />;
     default:
       return <Building className="h-4 w-4 text-gray-500" />;
   }
 };
 
 const InvoiceList = () => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState(null);
-  const [selectedSection, setSelectedSection] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [sortField, setSortField] = useState('date');
-  const [sortDirection, setSortDirection] = useState('desc' as 'asc' | 'desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedInvoices, setSelectedInvoices] = useState([] as string[]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   
+  const { toast } = useToast();
   const itemsPerPage = 5;
+
+  // Fetch invoices from API
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const response = await invoiceService.getInvoices();
+        
+        // Handle different response formats
+        let data;
+        if (Array.isArray(response)) {
+          data = response;
+        } else if (response && response.$values && Array.isArray(response.$values)) {
+          data = response.$values;
+        } else if (response && Array.isArray(response)) {
+          data = response;
+        } else {
+          console.warn('Unexpected response format:', response);
+          data = [];
+        }
+        
+        setInvoices(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching invoices:', err);
+        setError('Failed to load invoices');
+        setInvoices([]); // Ensure invoices is always an array
+        toast({
+          title: "Error",
+          description: "Failed to load invoices",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoices();
+  }, [toast]);
 
   // Handle sorting
   const handleSort = (field: string) => {
@@ -223,37 +223,47 @@ const InvoiceList = () => {
   };
 
   // Filter invoices based on search term, status, and section
-  const filteredInvoices = mockInvoices.filter(invoice => {
+  const filteredInvoices = (invoices || []).filter(invoice => {
     const matchesSearch = searchTerm === '' || 
-      invoice.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.projectId.toLowerCase().includes(searchTerm.toLowerCase());
+      (invoice.vendorName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (invoice.projectReference?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     
-    const matchesStatus = selectedStatus === null || invoice.status === selectedStatus;
+    const matchesStatus = selectedStatus === null || selectedStatus === 'all' || invoice.status === selectedStatus;
     
-    const matchesSection = selectedSection === null || invoice.section === selectedSection;
+    // Note: Section filtering would need to be implemented based on your data structure
+    const matchesSection = selectedSection === null || selectedSection === 'all' || true; // Placeholder
     
     return matchesSearch && matchesStatus && matchesSection;
   });
 
   // Sort invoices
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-    if (sortField === 'amount') {
-      return sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount;
-    } else if (sortField === 'date') {
-      return sortDirection === 'asc' 
-        ? new Date(a.date).getTime() - new Date(b.date).getTime() 
-        : new Date(b.date).getTime() - new Date(a.date).getTime();
-    } else if (sortField === 'dueDate') {
-      return sortDirection === 'asc' 
-        ? new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime() 
-        : new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-    } else if (sortField === 'vendor') {
-      return sortDirection === 'asc' 
-        ? a.vendor.localeCompare(b.vendor) 
-        : b.vendor.localeCompare(a.vendor);
+    let aValue: any, bValue: any;
+    
+    switch (sortField) {
+      case 'date':
+        aValue = new Date(a.invoiceDate);
+        bValue = new Date(b.invoiceDate);
+        break;
+      case 'amount':
+        aValue = a.invoiceValue;
+        bValue = b.invoiceValue;
+        break;
+      case 'vendor':
+        aValue = a.vendorName;
+        bValue = b.vendorName;
+        break;
+      default:
+        aValue = a.invoiceDate;
+        bValue = b.invoiceDate;
+        break;
+    }
+    
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1;
     } else {
-      return 0;
+      return aValue < bValue ? 1 : -1;
     }
   });
 
@@ -264,336 +274,286 @@ const InvoiceList = () => {
     currentPage * itemsPerPage
   );
 
-  // Handle invoice selection
-  const toggleInvoiceSelection = (id: string): void => {
-    if (selectedInvoices.includes(id)) {
-      setSelectedInvoices(selectedInvoices.filter((invId: string) => invId !== id));
-    } else {
-      setSelectedInvoices([...selectedInvoices, id]);
-    }
+  const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+
+  const handleSelectInvoice = (invoiceId: string) => {
+    setSelectedInvoices(prev => 
+      prev.includes(invoiceId) 
+        ? prev.filter(id => id !== invoiceId)
+        : [...prev, invoiceId]
+    );
   };
 
-  // Handle bulk selection
-  const toggleSelectAll = () => {
+  const handleSelectAll = () => {
     if (selectedInvoices.length === paginatedInvoices.length) {
       setSelectedInvoices([]);
     } else {
-      setSelectedInvoices(paginatedInvoices.map(invoice => invoice.id));
+      setSelectedInvoices(paginatedInvoices.map(invoice => invoice.id.toString()));
     }
   };
 
-  // Simulate refresh data
-  const refreshData = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  const sectionOptions = Array.from(new Set(mockInvoices.map(invoice => invoice.section)));
-  const statusOptions = Array.from(new Set(mockInvoices.map(invoice => invoice.status)));
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshIcon className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  // Move event handlers to separate functions
-  const handleSearchChange = (e: any) => {
-    setSearchTerm(e.target.value);
-  };
-  
-  const handleStatusChange = (value: any) => {
-    setSelectedStatus(value || null);
-  };
-  
-  const handleSectionChange = (value: any) => {
-    setSelectedSection(value || null);
-  };
-  
-  const handlePrevPage = () => {
-    setCurrentPage((prev: number) => Math.max(prev - 1, 1));
-  };
-  
-  const handleNextPage = () => {
-    setCurrentPage((prev: number) => Math.min(prev + 1, totalPages));
-  };
+  // Show empty state if no invoices
+  if (!invoices || invoices.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-6"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+            <p className="text-gray-600">Manage and track all invoices</p>
+          </div>
+          <Link to="/invoices/upload">
+            <Button>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Upload Invoice
+            </Button>
+          </Link>
+        </div>
+
+        {/* Empty State */}
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <DocumentIcon className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices found</h3>
+            <p className="text-gray-600 mb-6">Get started by uploading your first invoice</p>
+            <Link to="/invoices/upload">
+              <Button>
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Upload First Invoice
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
 
   return (
-    <motion.div
+    <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="max-w-7xl mx-auto"
+      className="space-y-6"
     >
-      <Card className="w-full shadow-md">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0 pb-4">
-          <div>
-            <CardTitle className="text-2xl font-bold">IT Department Invoices</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Manage and track invoices across IT sections
-            </p>
-          </div>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={refreshData}
-              disabled={isLoading}
-            >
-              <RefreshIcon className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button 
-              variant="default"
-              className="bg-primary text-white hover:bg-primary/90"
-              asChild
-            >
-              <Link to="/invoices/upload">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                New Invoice
-              </Link>
-            </Button>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+          <p className="text-gray-600">Manage and track all invoices</p>
+        </div>
+        <Link to="/invoices/upload">
+          <Button>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Upload Invoice
+          </Button>
+        </Link>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FilterIcon className="h-5 w-5" />
+            Filters & Search
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row justify-between mb-4 space-y-2 md:space-y-0">
-            <div className="relative w-full md:w-1/3">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search invoices or projects..."
-                className="pl-9"
+                placeholder="Search invoices..."
                 value={searchTerm}
-                onChange={handleSearchChange}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
             </div>
-            <div className="flex space-x-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex space-x-1">
-                    <FilterIcon className="h-4 w-4" />
-                    <span>Filter</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Status</h4>
-                      <Select 
-                        value={selectedStatus || ""} 
-                        onValueChange={handleStatusChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All Statuses" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          {statusOptions.map(status => (
-                            <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="font-medium">IT Section</h4>
-                      <Select 
-                        value={selectedSection || ""} 
-                        onValueChange={handleSectionChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="All Sections" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Sections</SelectItem>
-                          {sectionOptions.map(section => (
-                            <SelectItem key={section} value={section}>
-                              {section}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex justify-between">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setSelectedStatus(null);
-                          setSelectedSection(null);
-                        }}
-                      >
-                        Reset
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          // Apply filters
-                        }}
-                      >
-                        Apply
-                      </Button>
-                    </div>
+            
+            <Select value={selectedStatus || 'all'} onValueChange={(value) => setSelectedStatus(value === 'all' ? null : value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedSection || 'all'} onValueChange={(value) => setSelectedSection(value === 'all' ? null : value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by section" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sections</SelectItem>
+                <SelectItem value="ISO">ISO</SelectItem>
+                <SelectItem value="TSS">TSS</SelectItem>
+                <SelectItem value="ISS">ISS</SelectItem>
+                <SelectItem value="APP">APP</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Button variant="outline" onClick={() => {
+              setSearchTerm('');
+              setSelectedStatus('all');
+              setSelectedSection('all');
+            }}>
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invoices Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox 
+                    checked={selectedInvoices.length === paginatedInvoices.length && paginatedInvoices.length > 0}
+                    onChange={handleSelectAll}
+                  />
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('vendor')}
+                >
+                  <div className="flex items-center gap-1">
+                    Vendor
+                    {sortField === 'vendor' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    Date
+                    {sortField === 'date' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('amount')}
+                >
+                  <div className="flex items-center gap-1">
+                    Amount
+                    {sortField === 'amount' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedInvoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
                     <Checkbox 
-                      checked={
-                        paginatedInvoices.length > 0 &&
-                        selectedInvoices.length === paginatedInvoices.length
-                      }
-                      onChange={toggleSelectAll}
-                      aria-label="Select all"
+                      checked={selectedInvoices.includes(invoice.id.toString())}
+                      onChange={() => handleSelectInvoice(invoice.id.toString())}
                     />
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort('id')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Invoice #</span>
-                      {sortField === 'id' && (
-                        sortDirection === 'asc' ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="" />
+                        <AvatarFallback>
+                          {invoice.vendorName?.charAt(0).toUpperCase() || 'V'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{invoice.vendorName || 'Unknown Vendor'}</div>
+                        <div className="text-sm text-gray-500">{invoice.invoiceNumber}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {new Date(invoice.invoiceDate).toLocaleDateString()}
+                      </div>
+                      {invoice.dueDate && (
+                        <div className="text-sm text-gray-500">
+                          Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                        </div>
                       )}
                     </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort('vendor')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Vendor</span>
-                      {sortField === 'vendor' && (
-                        sortDirection === 'asc' ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
-                      )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">
+                      {formatCurrency(invoice.invoiceValue, invoice.currency)}
                     </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort('amount')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Amount</span>
-                      {sortField === 'amount' && (
-                        sortDirection === 'asc' ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
-                      )}
+                    <div className="text-sm text-gray-500">
+                      {invoice.currency}
                     </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort('date')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Date</span>
-                      {sortField === 'date' && (
-                        sortDirection === 'asc' ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
-                      )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(invoice.status)}>
+                      {getStatusText(invoice.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Link to={`/invoices/${invoice.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <EyeIcon className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button variant="ghost" size="sm">
+                        <PencilIcon className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <DocumentIcon className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer"
-                    onClick={() => handleSort('dueDate')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Due Date</span>
-                      {sortField === 'dueDate' && (
-                        sortDirection === 'asc' ? 
-                          <ChevronUp className="h-4 w-4" /> : 
-                          <ChevronDown className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead>Project ID</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedInvoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center">
-                      No invoices found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedInvoices.map((invoice) => (
-                    <TableRow key={invoice.id} className="group">
-                      <TableCell>
-                        <Checkbox 
-                          checked={selectedInvoices.includes(invoice.id)}
-                          onChange={() => toggleInvoiceSelection(invoice.id)}
-                          aria-label={`Select invoice ${invoice.id}`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-8 w-8">
-                            {invoice.vendorLogo ? (
-                              <AvatarImage src={invoice.vendorLogo} alt={invoice.vendor} />
-                            ) : null}
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {invoice.vendor.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{invoice.vendor}</span>
-                        </div>
-
-                      </TableCell>
-                      <TableCell>{formatCurrency(invoice.amount)}</TableCell>
-                      <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusColor(invoice.status)} capitalize`}>
-                          {invoice.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {getSectionIcon(invoice.section)}
-                          <span>{invoice.section}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/projects/${invoice.projectId}`} className="text-primary-600 hover:underline">
-                          {invoice.projectId}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={`/invoices/${invoice.id}`}>
-                              <EyeIcon className="h-4 w-4" />
-                              <span className="sr-only">View</span>
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <PencilIcon className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <DocumentIcon className="h-4 w-4" />
-                            <span className="sr-only">Download</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">

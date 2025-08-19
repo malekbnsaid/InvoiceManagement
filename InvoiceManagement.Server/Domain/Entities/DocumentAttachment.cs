@@ -26,5 +26,10 @@ namespace InvoiceManagement.Server.Domain.Entities
         public Invoice? Invoice { get; set; }
         public Project? Project { get; set; }
         public LPO? LPO { get; set; }
+        
+        // Simple versioning (optional)
+        public int VersionNumber { get; set; } = 1;
+        public bool IsCurrentVersion { get; set; } = true;
+        public string? ChangeDescription { get; set; }
     }
 } 

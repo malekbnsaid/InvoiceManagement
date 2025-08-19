@@ -1,0 +1,44 @@
+### Test Authentication Endpoints
+
+### 1. Test Login (should work with any credentials in dev mode)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password123"
+}
+
+### 2. Test Protected Endpoint (should work with dev bypass)
+GET {{baseUrl}}/api/projects
+Authorization: Bearer fake-dev-token
+
+### 3. Test Project Creation (should work with PM role or higher)
+POST {{baseUrl}}/api/projects
+Authorization: Bearer fake-dev-token
+Content-Type: application/json
+
+{
+  "name": "Test Project",
+  "description": "Test project for authentication",
+  "section": "1",
+  "budget": "10000",
+  "projectManagerId": "1",
+  "expectedStart": "2024-01-01T00:00:00Z",
+  "expectedEnd": "2024-12-31T00:00:00Z"
+}
+
+### 4. Test Invoice Upload (should work with Secretary role or higher)
+POST {{baseUrl}}/api/invoice/upload
+Authorization: Bearer fake-dev-token
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.pdf"
+Content-Type: application/pdf
+
+< ./SampleData/sample-invoice.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Variables
+@baseUrl = http://localhost:5274

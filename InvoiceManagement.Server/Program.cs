@@ -1,37 +1,71 @@
+using Microsoft.EntityFrameworkCore;
+using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Application.Interfaces;
 using InvoiceManagement.Server.Application.Services;
-using InvoiceManagement.Server.Domain.Interfaces;
-using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Infrastructure.Repositories;
-using InvoiceManagement.Server.Infrastructure.Services;
-using Microsoft.EntityFrameworkCore;
+using InvoiceManagement.Server.Domain.Interfaces;
+using InvoiceManagement.Server.Domain.Entities;
+using InvoiceManagement.Server.Infrastructure.Services.OCR;
+using InvoiceManagement.Server.Application.Services.OCR;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using InvoiceManagement.Server.Infrastructure.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Validate Azure Form Recognizer configuration
+var azureConfig = builder.Configuration.GetSection("Azure:FormRecognizer");
+if (string.IsNullOrEmpty(azureConfig["Endpoint"]) || string.IsNullOrEmpty(azureConfig["Key"]))
+{
+    throw new InvalidOperationException(
+        "Azure Form Recognizer configuration is missing. Please check appsettings.json and ensure Endpoint and Key are configured.");
+}
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register repositories
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-
 // Register services
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
-builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IERPEmployeeService, ERPEmployeeService>();
-builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
+builder.Services.AddScoped<IVendorService, VendorService>();
+
+// Register authentication services
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Register repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IRepository<Invoice>, Repository<Invoice>>();
+builder.Services.AddScoped<IRepository<Project>, Repository<Project>>();
+builder.Services.AddScoped<IRepository<ERPEmployee>, Repository<ERPEmployee>>();
+builder.Services.AddScoped<IRepository<Vendor>, Repository<Vendor>>();
+builder.Services.AddScoped<IRepository<LPO>, Repository<LPO>>();
 
 // Add OCR service
+// OCR Services
+builder.Services.AddScoped<DateExtractionService>();
+builder.Services.AddScoped<OcrProcessingPipeline>();
+builder.Services.AddScoped<LineItemExtractionService>();
 builder.Services.AddScoped<IOcrService, AzureFormRecognizerService>();
+
+// Register Document Management services
+// Removed complex document management services - keeping it simple
+
+// Document storage is now handled directly in InvoiceService
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
     });
 builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -44,29 +78,61 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         builder =>
         {
-            builder.WithOrigins("https://localhost:5173", "http://localhost:5173")
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
+            builder.WithOrigins(
+                    "https://localhost:5173", 
+                    "http://localhost:5173",
+                    "https://localhost:3000",
+                    "http://localhost:3000",
+                    "https://localhost:5174",
+                    "http://localhost:5174",
+                    "https://localhost:8080",
+                    "http://localhost:8080"
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
 });
 
-// Remove authentication and authorization
-// builder.Services.AddAuthentication("Bearer")
-//     .AddJwtBearer(options =>
-//     {
-//         options.TokenValidationParameters = new TokenValidationParameters
-//         {
-//             ValidateIssuer = true,
-//             ValidateAudience = true,
-//             ValidateLifetime = true,
-//             ValidateIssuerSigningKey = true,
-//             ValidIssuer = builder.Configuration["Jwt:Issuer"],
-//             ValidAudience = builder.Configuration["Jwt:Audience"],
-//             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found")))
-//         };
-//     });
+// Add JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found")))
+    };
+});
 
-// builder.Services.AddAuthorization();
+// Add Authorization
+builder.Services.AddAuthorization(options =>
+{
+    // Admin can do everything
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    
+    // Head can manage departments and approve projects
+    options.AddPolicy("HeadOrAdmin", policy => policy.RequireRole("Head", "Admin"));
+    
+    // PMO can approve projects
+    options.AddPolicy("PMOOrHigher", policy => policy.RequireRole("PMO", "Head", "Admin"));
+    
+    // PM can create projects
+    options.AddPolicy("PMOrHigher", policy => policy.RequireRole("PM", "PMO", "Head", "Admin"));
+    
+    // Secretary can upload invoices
+    options.AddPolicy("SecretaryOrHigher", policy => policy.RequireRole("Secretary", "PM", "PMO", "Head", "Admin"));
+});
 
 var app = builder.Build();
 
@@ -92,9 +158,12 @@ app.UseHttpsRedirection();
 // Enable CORS
 app.UseCors("AllowReactApp");
 
-// Remove or comment out:
-// app.UseAuthentication();
-// app.UseAuthorization();
+// Add DevBypass middleware before authentication
+app.UseDevBypass();
+
+// Enable Authentication and Authorization
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

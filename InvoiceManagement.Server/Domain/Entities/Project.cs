@@ -60,8 +60,11 @@ namespace InvoiceManagement.Server.Domain.Entities
         [ForeignKey("ProjectManagerId")]
         public virtual ERPEmployee? ProjectManager { get; set; }
         
+        // Related entities
         public virtual ICollection<LPO> LPOs { get; set; } = new List<LPO>();
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+        public virtual ICollection<ProjectNumberRequest> ProjectNumberRequests { get; set; } = new List<ProjectNumberRequest>();
+        public virtual ICollection<DocumentAttachment> DocumentAttachments { get; set; } = new List<DocumentAttachment>();
 
         // Deletion Approval
         public bool IsPendingDeletion { get; set; }

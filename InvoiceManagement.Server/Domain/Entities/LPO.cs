@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using InvoiceManagement.Server.Domain.Enums;
 
 namespace InvoiceManagement.Server.Domain.Entities
@@ -14,6 +15,7 @@ namespace InvoiceManagement.Server.Domain.Entities
         
         // Financial
         public decimal TotalAmount { get; set; }
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public CurrencyType Currency { get; set; }
         public decimal? RemainingAmount { get; set; }
         
