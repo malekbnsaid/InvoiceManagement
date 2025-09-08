@@ -263,6 +263,7 @@ export class ProjectBusinessRules {
     // Use UTC to avoid timezone issues
     const today = new Date();
     const todayUTC = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const warnings: string[] = [];
 
     // Validate start date
     if (data.expectedStart) {
@@ -277,10 +278,7 @@ export class ProjectBusinessRules {
       // Warn if start date is not a business day
       if (!this.isBusinessDay(data.expectedStart)) {
         const nextBusinessDay = this.getNextBusinessDay(data.expectedStart);
-        return { 
-          valid: true, 
-          warning: `Project start date (${data.expectedStart.toLocaleDateString()}) is not a business day. Consider starting on ${nextBusinessDay.toLocaleDateString()}.` 
-        };
+        warnings.push(`Project start date (${data.expectedStart.toLocaleDateString()}) is not a business day. Consider starting on ${nextBusinessDay.toLocaleDateString()}.`);
       }
     }
 
@@ -297,10 +295,7 @@ export class ProjectBusinessRules {
       // Warn if end date is not a business day
       if (!this.isBusinessDay(data.expectedEnd)) {
         const nextBusinessDay = this.getNextBusinessDay(data.expectedEnd);
-        return { 
-          valid: true, 
-          warning: `Project end date (${data.expectedEnd.toLocaleDateString()}) is not a business day. Consider ending on ${nextBusinessDay.toLocaleDateString()}.` 
-        };
+        warnings.push(`Project end date (${data.expectedEnd.toLocaleDateString()}) is not a business day. Consider ending on ${nextBusinessDay.toLocaleDateString()}.`);
       }
     }
 
@@ -325,18 +320,12 @@ export class ProjectBusinessRules {
 
       // Warn for very short projects (less than 1 week)
       if (days < 7) {
-        return { 
-          valid: true, 
-          warning: `Project duration is very short (${Math.ceil(days)} days). Consider if this should be handled as an expense instead.` 
-        };
+        warnings.push(`Project duration is very short (${Math.ceil(days)} days). Consider if this should be handled as an expense instead.`);
       }
 
       // Warn for very long projects (more than 5 years)
       if (days > 1825) { // 5 years
-        return { 
-          valid: true, 
-          warning: `Project duration is very long (${Math.ceil(days / 365)} years). Consider breaking into phases.` 
-        };
+        warnings.push(`Project duration is very long (${Math.ceil(days / 365)} years). Consider breaking into phases.`);
       }
     }
 

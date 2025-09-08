@@ -827,8 +827,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
-                                startMonth={new Date(1980, 6)}
-                                hideNavigation
+                                fromYear={2020}
+                                toYear={2035}
                                 components={{
                                   DropdownNav: (props: DropdownNavProps) => {
                                     return (
@@ -936,8 +936,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
-                                startMonth={new Date(1980, 6)}
-                                hideNavigation
+                                fromYear={2020}
+                                toYear={2035}
                                 components={{
                                   DropdownNav: (props: DropdownNavProps) => {
                                     return (
@@ -1045,8 +1045,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
-                                startMonth={new Date(1980, 6)}
-                                hideNavigation
+                                fromYear={2020}
+                                toYear={2035}
                                 components={{
                                   DropdownNav: (props: DropdownNavProps) => {
                                     return (
