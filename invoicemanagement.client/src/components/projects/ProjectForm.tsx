@@ -415,7 +415,12 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     // Check payment plan validation
     if (values.paymentPlanLines && values.paymentPlanLines.length > 0) {
       const budget = parseFloat(values.budget) || 0;
-      const paymentResult = ProjectBusinessRules.validatePaymentPlan(values.paymentPlanLines, budget);
+      const paymentResult = ProjectBusinessRules.validatePaymentPlan(
+        values.paymentPlanLines, 
+        budget, 
+        values.expectedStart || undefined, 
+        values.expectedEnd || undefined
+      );
       if (paymentResult.warning) {
         warnings.push(paymentResult.warning);
       }
@@ -1171,8 +1176,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             }));
                             const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
                               paymentLines, 
-                              form.watch('expectedStart'), 
-                              form.watch('expectedEnd')
+form.watch('expectedStart') || undefined, 
+form.watch('expectedEnd') || undefined
                             );
                             const budget = parseFloat(form.watch('budget')) || 0;
                             return totalPaymentPlan > budget ? 'text-amber-600' : 'text-green-600';
@@ -1188,8 +1193,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             }));
                             const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
                               paymentLines, 
-                              form.watch('expectedStart'), 
-                              form.watch('expectedEnd')
+form.watch('expectedStart') || undefined, 
+form.watch('expectedEnd') || undefined
                             );
                             return ProjectBusinessRules.formatCurrency(totalPaymentPlan);
                           })()}
@@ -1208,8 +1213,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             }));
                             const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
                               paymentLines, 
-                              form.watch('expectedStart'), 
-                              form.watch('expectedEnd')
+form.watch('expectedStart') || undefined, 
+form.watch('expectedEnd') || undefined
                             );
                             const budget = parseFloat(form.watch('budget')) || 0;
                             const variance = budget - totalPaymentPlan;
@@ -1226,8 +1231,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             }));
                             const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
                               paymentLines, 
-                              form.watch('expectedStart'), 
-                              form.watch('expectedEnd')
+form.watch('expectedStart') || undefined, 
+form.watch('expectedEnd') || undefined
                             );
                             const budget = parseFloat(form.watch('budget')) || 0;
                             const variance = budget - totalPaymentPlan;
@@ -1301,13 +1306,51 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     {/* Payment Calculation Breakdown */}
                     {form.watch('paymentPlanLines') && form.watch('paymentPlanLines').length > 0 && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <h5 className="text-sm font-medium text-blue-800 mb-2">Payment Calculation Breakdown:</h5>
+                        <h5 className="text-sm font-medium text-blue-800 mb-2">Payment Calculation Breakdown (Project Duration):</h5>
                         {form.watch('paymentPlanLines').map((line: any, index: number) => {
                           const amount = parseFloat(line.amount?.toString()) || 0;
-                          const annualAmount = ProjectBusinessRules.calculateAnnualPaymentAmount(amount, line.paymentType);
+                          const projectAmount = ProjectBusinessRules.calculateProjectPaymentAmount(
+                            amount, 
+                            line.paymentType, 
+form.watch('expectedStart') || undefined, 
+form.watch('expectedEnd') || undefined
+                          );
+                          
+                          // Calculate project duration for display
+                          const startDate = form.watch('expectedStart');
+                          const endDate = form.watch('expectedEnd');
+                          let projectMonths = 0;
+                          if (startDate && endDate) {
+                            const duration = endDate.getTime() - startDate.getTime();
+                            projectMonths = Math.ceil(duration / (1000 * 60 * 60 * 24 * 30.44));
+                          }
+                          
+                          // Calculate payment count for display
+                          let paymentCount = 0;
+                          switch (line.paymentType) {
+                            case 'Monthly':
+                              paymentCount = Math.min(projectMonths, 12);
+                              break;
+                            case 'Quarterly':
+                              paymentCount = Math.min(Math.ceil(projectMonths / 3), 4);
+                              break;
+                            case 'Semi-Annually':
+                              paymentCount = Math.min(Math.ceil(projectMonths / 6), 2);
+                              break;
+                            case 'Annually':
+                              paymentCount = projectMonths >= 12 ? 1 : 0;
+                              break;
+                            case 'One-time':
+                              paymentCount = 1;
+                              break;
+                            default:
+                              paymentCount = 1;
+                          }
+                          
                           return (
                             <div key={index} className="text-xs text-blue-700 mb-1">
-                              {line.paymentType}: {ProjectBusinessRules.formatCurrency(amount)} × {line.paymentType === 'Monthly' ? '12' : line.paymentType === 'Quarterly' ? '4' : line.paymentType === 'Semi-Annually' ? '2' : '1'} = {ProjectBusinessRules.formatCurrency(annualAmount)}
+                              {line.paymentType}: {ProjectBusinessRules.formatCurrency(amount)} × {paymentCount} payments = {ProjectBusinessRules.formatCurrency(projectAmount)} 
+                              {projectMonths > 0 && ` (${projectMonths} month project)`}
                             </div>
                           );
                         })}

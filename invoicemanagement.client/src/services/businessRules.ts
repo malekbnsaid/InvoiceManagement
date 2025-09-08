@@ -108,7 +108,7 @@ export class ProjectBusinessRules {
   }
 
   // Payment plan validation rules
-  static validatePaymentPlan(payments: PaymentPlanLine[], budget: number): ValidationResult {
+  static validatePaymentPlan(payments: PaymentPlanLine[], budget: number, projectStart?: Date, projectEnd?: Date): ValidationResult {
     if (payments.length === 0) {
       return { 
         valid: false, 
@@ -194,15 +194,16 @@ export class ProjectBusinessRules {
       };
     }
 
-    // Calculate total payment plan based on payment types
-    const totalPaymentPlan = payments.reduce((sum, line) => {
-      const paymentType = PAYMENT_TYPES[line.paymentType as keyof typeof PAYMENT_TYPES];
-      if (paymentType) {
-        // For payment types with frequency > 1, multiply by frequency to get annual amount
-        return sum + (line.amount * paymentType.frequency);
-      }
-      return sum + line.amount;
-    }, 0);
+    // Calculate total payment plan based on project duration if available, otherwise use annual calculation
+    const totalPaymentPlan = projectStart && projectEnd 
+      ? this.calculateTotalProjectPaymentPlan(payments, projectStart, projectEnd)
+      : payments.reduce((sum, line) => {
+          const paymentType = PAYMENT_TYPES[line.paymentType as keyof typeof PAYMENT_TYPES];
+          if (paymentType) {
+            return sum + (line.amount * paymentType.frequency);
+          }
+          return sum + line.amount;
+        }, 0);
     
     const variance = budget > 0 ? Math.abs(totalPaymentPlan - budget) / budget : 0;
     
