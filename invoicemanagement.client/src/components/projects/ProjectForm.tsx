@@ -308,53 +308,19 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         console.log('Step 1 validation:', step1Valid, { name: values.name, section: values.section, projectManagerId: values.projectManagerId });
         return step1Valid;
       case 2:
-        const step2Valid = !!values.expectedStart && !!values.expectedEnd && !!values.budget;
+        // Check if required fields are filled (budget is required, dates are required for step 2)
+        const step2Valid = !!values.expectedStart && !!values.expectedEnd && !!values.budget && values.budget.trim() !== '';
         console.log('Step 2 validation:', step2Valid, { expectedStart: values.expectedStart, expectedEnd: values.expectedEnd, budget: values.budget });
         
-        // Additional business rule validation for step 2
-        if (step2Valid) {
-          const budget = parseFloat(values.budget) || 0;
-          const budgetResult = ProjectBusinessRules.validateBudget(budget, user?.role || 'User');
-          if (!budgetResult.valid) {
-            console.log('Step 2 budget validation failed:', budgetResult.message);
-            return false;
-          }
-          
-          const dateResult = ProjectBusinessRules.validateDates({
-            expectedStart: values.expectedStart || undefined,
-            expectedEnd: values.expectedEnd || undefined,
-            tenderDate: values.tenderDate || undefined
-          });
-          if (!dateResult.valid) {
-            console.log('Step 2 date validation failed:', dateResult.message);
-            return false;
-          }
-        }
-        
+        // Only do basic field validation for step navigation
+        // Business rule validation will be shown as warnings, not blocking errors
         return step2Valid;
       case 3:
-        // Validate PaymentPlanLines using business rules
+        // Basic validation: just check if payment plan lines exist
         const paymentLines = values.paymentPlanLines || [];
-        if (paymentLines.length === 0) return false;
-        
-        const budget = parseFloat(values.budget) || 0;
-        const paymentResult = ProjectBusinessRules.validatePaymentPlan(paymentLines, budget);
-        
-        console.log('Step 3 validation - Payment plan result:', paymentResult);
-        
-        // Allow step 3 to proceed even with warnings (payment plan can exceed budget)
-        if (!paymentResult.valid) {
-          console.log('Step 3 validation failed:', paymentResult.message);
-          return false;
-        }
-        
-        // Show warning if payment plan exceeds budget but allow continuation
-        if (paymentResult.warning) {
-          console.log('Step 3 warning:', paymentResult.warning);
-          // We'll show this warning in the UI but allow progression
-        }
-        
-        return true;
+        const step3Valid = paymentLines.length > 0;
+        console.log('Step 3 validation:', step3Valid, { paymentPlanLines: paymentLines });
+        return step3Valid;
       default:
         return false;
     }
@@ -398,8 +364,24 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     );
   };
 
+  // Trigger validation for current step fields to show errors in UI
+  const triggerStepValidation = async (step: number): Promise<void> => {
+    switch (step) {
+      case 1:
+        await form.trigger(['name', 'section', 'projectManagerId']);
+        break;
+      case 2:
+        await form.trigger(['expectedStart', 'expectedEnd', 'budget']);
+        break;
+      case 3:
+        await form.trigger(['paymentPlanLines']);
+        break;
+    }
+  };
+
   // Check for validation warnings
   const checkValidationWarnings = useCallback(() => {
+    console.log('checkValidationWarnings called');
     const values = form.getValues();
     const warnings: string[] = [];
     
@@ -428,13 +410,24 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     
     // Check date validation
     if (values.expectedStart || values.expectedEnd || values.tenderDate) {
+      console.log('Checking date validation for:', {
+        expectedStart: values.expectedStart,
+        expectedEnd: values.expectedEnd,
+        tenderDate: values.tenderDate
+      });
       const dateResult = ProjectBusinessRules.validateDates({
         expectedStart: values.expectedStart || undefined,
         expectedEnd: values.expectedEnd || undefined,
         tenderDate: values.tenderDate || undefined
       });
+      console.log('Date validation result:', dateResult);
       if (dateResult.warning) {
+        console.log('Date validation warning:', dateResult.warning);
         warnings.push(dateResult.warning);
+      }
+      if (dateResult.message) {
+        console.log('Date validation message (error):', dateResult.message);
+        warnings.push(`Error: ${dateResult.message}`);
       }
     }
     
@@ -452,6 +445,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       }
     }
     
+    // Test warning removed
+    
+    console.log('All collected warnings:', warnings);
     setValidationWarnings(warnings);
   }, [form, user?.role]);
 
@@ -463,6 +459,14 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     });
     return () => subscription.unsubscribe();
   }, [checkValidationWarnings]);
+
+  // Also check warnings when current step changes to step 2
+  React.useEffect(() => {
+    if (currentStep === 2) {
+      console.log('Step 2 activated, checking validation warnings');
+      checkValidationWarnings();
+    }
+  }, [currentStep, checkValidationWarnings]);
 
   // Handle form submission
   const handleFormSubmit = async (event: React.FormEvent) => {
@@ -480,7 +484,11 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
 
       // Handle step navigation
       if (currentStep < totalSteps) {
-        if (validateStep(currentStep)) {
+        // Trigger validation for current step fields to show errors
+        await triggerStepValidation(currentStep);
+        // Only validate current step fields, not the entire form
+        const stepValidation = validateStep(currentStep);
+        if (stepValidation) {
           setCurrentStep(currentStep + 1);
         }
         return;
@@ -938,6 +946,15 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 defaultMonth={field.value ?? new Date()}
                                 fromYear={2020}
                                 toYear={2035}
+                                disabled={(date) => {
+                                  const startDate = form.watch('expectedStart');
+                                  if (startDate) {
+                                    const startDateUTC = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                                    const dateUTC = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                                    return dateUTC < startDateUTC;
+                                  }
+                                  return false;
+                                }}
                                 components={{
                                   DropdownNav: (props: DropdownNavProps) => {
                                     return (
@@ -1047,6 +1064,15 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 defaultMonth={field.value ?? new Date()}
                                 fromYear={2020}
                                 toYear={2035}
+                                disabled={(date) => {
+                                  const startDate = form.watch('expectedStart');
+                                  if (startDate) {
+                                    const startDateUTC = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                                    const dateUTC = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                                    return dateUTC >= startDateUTC;
+                                  }
+                                  return false;
+                                }}
                                 components={{
                                   DropdownNav: (props: DropdownNavProps) => {
                                     return (
@@ -1674,9 +1700,12 @@ form.watch('expectedEnd') || undefined
               <div className="flex-1" />
               <Button
                 type={currentStep === totalSteps ? "submit" : "button"}
-                onClick={(e) => {
+                onClick={async (e) => {
                   if (currentStep < totalSteps) {
                     e.preventDefault();
+                    // Trigger validation for current step fields to show errors
+                    await triggerStepValidation(currentStep);
+                    // Only validate current step fields
                     if (validateStep(currentStep)) {
                       setCurrentStep(currentStep + 1);
                     }

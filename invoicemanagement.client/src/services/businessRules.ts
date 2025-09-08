@@ -260,6 +260,7 @@ export class ProjectBusinessRules {
     expectedEnd?: Date;
     tenderDate?: Date;
   }): ValidationResult {
+    console.log('validateDates called with:', data);
     // Use UTC to avoid timezone issues
     const today = new Date();
     const todayUTC = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -268,7 +269,14 @@ export class ProjectBusinessRules {
     // Validate start date
     if (data.expectedStart) {
       const startDateUTC = new Date(data.expectedStart.getFullYear(), data.expectedStart.getMonth(), data.expectedStart.getDate());
+      console.log('Start date validation:', {
+        startDate: data.expectedStart,
+        startDateUTC: startDateUTC,
+        todayUTC: todayUTC,
+        isPast: startDateUTC < todayUTC
+      });
       if (startDateUTC < todayUTC) {
+        console.log('Start date is in the past, returning error');
         return { 
           valid: false, 
           message: "Project start date cannot be in the past." 
@@ -276,9 +284,12 @@ export class ProjectBusinessRules {
       }
 
       // Warn if start date is not a business day
+      console.log('Checking business day for start date:', data.expectedStart, 'isBusinessDay:', this.isBusinessDay(data.expectedStart));
       if (!this.isBusinessDay(data.expectedStart)) {
         const nextBusinessDay = this.getNextBusinessDay(data.expectedStart);
-        warnings.push(`Project start date (${data.expectedStart.toLocaleDateString()}) is not a business day. Consider starting on ${nextBusinessDay.toLocaleDateString()}.`);
+        const warning = `Project start date (${data.expectedStart.toLocaleDateString()}) is not a business day. Consider starting on ${nextBusinessDay.toLocaleDateString()}.`;
+        console.log('Adding business day warning:', warning);
+        warnings.push(warning);
       }
     }
 
@@ -292,10 +303,24 @@ export class ProjectBusinessRules {
         };
       }
 
+      // Check if end date is before start date
+      if (data.expectedStart) {
+        const startDateUTC = new Date(data.expectedStart.getFullYear(), data.expectedStart.getMonth(), data.expectedStart.getDate());
+        if (endDateUTC < startDateUTC) {
+          return { 
+            valid: false, 
+            message: "Project end date cannot be before the start date." 
+          };
+        }
+      }
+
       // Warn if end date is not a business day
+      console.log('Checking business day for end date:', data.expectedEnd, 'isBusinessDay:', this.isBusinessDay(data.expectedEnd));
       if (!this.isBusinessDay(data.expectedEnd)) {
         const nextBusinessDay = this.getNextBusinessDay(data.expectedEnd);
-        warnings.push(`Project end date (${data.expectedEnd.toLocaleDateString()}) is not a business day. Consider ending on ${nextBusinessDay.toLocaleDateString()}.`);
+        const warning = `Project end date (${data.expectedEnd.toLocaleDateString()}) is not a business day. Consider ending on ${nextBusinessDay.toLocaleDateString()}.`;
+        console.log('Adding business day warning for end date:', warning);
+        warnings.push(warning);
       }
     }
 
@@ -303,6 +328,13 @@ export class ProjectBusinessRules {
     if (data.expectedStart && data.expectedEnd) {
       const duration = data.expectedEnd.getTime() - data.expectedStart.getTime();
       const days = duration / (1000 * 60 * 60 * 24);
+      
+      console.log('Project duration calculation:', {
+        startDate: data.expectedStart,
+        endDate: data.expectedEnd,
+        durationMs: duration,
+        days: days
+      });
       
       if (days < 1) {
         return { 
@@ -320,12 +352,16 @@ export class ProjectBusinessRules {
 
       // Warn for very short projects (less than 1 week)
       if (days < 7) {
-        warnings.push(`Project duration is very short (${Math.ceil(days)} days). Consider if this should be handled as an expense instead.`);
+        const warning = `Project duration is very short (${Math.ceil(days)} days). Consider if this should be handled as an expense instead.`;
+        console.log('Adding short project warning:', warning);
+        warnings.push(warning);
       }
 
       // Warn for very long projects (more than 5 years)
       if (days > 1825) { // 5 years
-        warnings.push(`Project duration is very long (${Math.ceil(days / 365)} years). Consider breaking into phases.`);
+        const warning = `Project duration is very long (${Math.ceil(days / 365)} years). Consider breaking into phases.`;
+        console.log('Adding long project warning:', warning);
+        warnings.push(warning);
       }
     }
 
@@ -342,14 +378,30 @@ export class ProjectBusinessRules {
 
       // Warn if tender date is too close to start date (less than 30 days)
       const daysBetween = (data.expectedStart.getTime() - data.tenderDate.getTime()) / (1000 * 60 * 60 * 24);
+      console.log('Tender date validation:', {
+        tenderDate: data.tenderDate,
+        startDate: data.expectedStart,
+        daysBetween: daysBetween
+      });
       if (daysBetween < 30) {
-        return { 
-          valid: true, 
-          warning: `Tender date is only ${Math.ceil(daysBetween)} days before project start. Consider allowing more time for tender evaluation.` 
-        };
+        const warning = `Tender date is only ${Math.ceil(daysBetween)} days before project start. Consider allowing more time for tender evaluation.`;
+        console.log('Adding tender date warning:', warning);
+        warnings.push(warning);
       }
     }
 
+    // Return result with all warnings
+    console.log('Date validation warnings collected:', warnings);
+    if (warnings.length > 0) {
+      const result = { 
+        valid: true, 
+        warning: warnings.join('; ') 
+      };
+      console.log('Returning date validation result with warnings:', result);
+      return result;
+    }
+
+    console.log('Returning date validation result: no warnings');
     return { valid: true };
   }
 

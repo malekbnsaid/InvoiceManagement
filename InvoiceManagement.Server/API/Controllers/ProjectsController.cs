@@ -191,7 +191,7 @@ namespace InvoiceManagement.Server.API.Controllers
                     if (project.Budget.HasValue && totalPaymentPlan > 0)
                     {
                         var variance = Math.Abs(totalPaymentPlan - project.Budget.Value) / project.Budget.Value;
-                        if (variance > 0.5) // 50% variance
+                        if (variance > 0.5m) // 50% variance
                         {
                             Console.WriteLine($"Warning: Payment plan variance is {variance:P1} - this may need review");
                         }
