@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ProjectForm from './ProjectForm';
-import { AlertCircle, CheckCircle2, HelpCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/Button';
 import { projectApi } from '../../services/api/projectApi';
@@ -13,6 +13,9 @@ import { useToast } from '../ui/use-toast';
 import { Toaster } from '../ui/toaster';
 import { CurrencyType } from '../../types/enums';
 import { Project } from '../../types/interfaces';
+import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
+import { ProjectBusinessRules } from '../../services/businessRules';
 
 interface Department {
   id: number;
@@ -70,6 +73,33 @@ export default function ProjectFormPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { canCreateProject } = usePermissions();
+
+  // Show access denied message if user doesn't have permission
+  if (!canCreateProject) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-12 text-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 max-w-md mx-auto">
+              You don't have permission to create projects. Only users with Project Manager role or higher can create projects.
+            </p>
+            <Button 
+              onClick={() => navigate('/projects')}
+              className="mt-6"
+              variant="outline"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Projects
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch sections data
   const { data: sectionsData } = useQuery({
@@ -113,7 +143,7 @@ export default function ProjectFormPage() {
             description: line.description || ''
           })),
           createdAt: new Date(),
-          createdBy: 'system'
+          createdBy: user?.username || 'system'
         };
         const response = await projectApi.create(projectData);
         console.log('API response:', response);
@@ -215,34 +245,24 @@ export default function ProjectFormPage() {
       console.log('Raw form data:', data);
       console.log('PaymentPlanLines from form:', data.paymentPlanLines);
 
-      // Validate required fields
-      if (!projectData.sectionId || isNaN(projectData.sectionId)) {
-        throw new Error('Valid Section is required');
+      // Validate using business rules
+      const validationResult = ProjectBusinessRules.validateProject({
+        budget: projectData.budget,
+        paymentPlanLines: projectData.paymentPlanLines,
+        expectedStart: projectData.expectedStart,
+        expectedEnd: projectData.expectedEnd,
+        tenderDate: projectData.tenderDate,
+        userRole: user?.role || 'User'
+      });
+
+      if (!validationResult.valid) {
+        throw new Error(validationResult.message || 'Validation failed');
       }
-      if (!projectData.projectManagerId || isNaN(projectData.projectManagerId)) {
-        throw new Error('Valid Project Manager is required');
-      }
-      
-      // Validate PaymentPlanLines
-      if (projectData.paymentPlanLines.length === 0) {
-        throw new Error('At least one PaymentPlanLine is required');
-      }
-      
-      // Validate each PaymentPlanLine has valid numeric values
-      for (let i = 0; i < projectData.paymentPlanLines.length; i++) {
-        const line = projectData.paymentPlanLines[i];
-        if (!line.year || isNaN(line.year) || line.year < 2000 || line.year > 2100) {
-          throw new Error(`PaymentPlanLine ${i + 1}: Invalid year (${line.year})`);
-        }
-        if (!line.amount || isNaN(line.amount) || line.amount <= 0) {
-          throw new Error(`PaymentPlanLine ${i + 1}: Invalid amount (${line.amount})`);
-        }
-        if (!line.currency) {
-          throw new Error(`PaymentPlanLine ${i + 1}: Currency is required`);
-        }
-        if (!line.paymentType) {
-          throw new Error(`PaymentPlanLine ${i + 1}: Payment type is required`);
-        }
+
+      // Show warning if payment plan exceeds budget but allow continuation
+      if (validationResult.warning) {
+        console.log('Project validation warning:', validationResult.warning);
+        // We could show this as a toast warning here if needed
       }
       
       // Log validation results

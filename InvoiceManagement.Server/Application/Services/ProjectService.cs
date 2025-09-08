@@ -79,6 +79,39 @@ namespace InvoiceManagement.Server.Application.Services
             }
         }
 
+        /// <summary>
+        /// Calculates the total amount from all PaymentPlanLines for a project
+        /// </summary>
+        public async Task<decimal> GetTotalPaymentPlanAmountAsync(int projectId)
+        {
+            var project = await _context.Projects
+                .Include(p => p.PaymentPlanLines)
+                .FirstOrDefaultAsync(p => p.Id == projectId);
+            
+            if (project?.PaymentPlanLines == null)
+                return 0;
+            
+            return project.PaymentPlanLines.Sum(line => line.Amount);
+        }
+
+        /// <summary>
+        /// Validates that PaymentPlanLines don't exceed the project budget
+        /// </summary>
+        public async Task<bool> ValidatePaymentPlanAgainstBudgetAsync(int projectId, decimal? newBudget = null)
+        {
+            var project = await _context.Projects
+                .Include(p => p.PaymentPlanLines)
+                .FirstOrDefaultAsync(p => p.Id == projectId);
+            
+            if (project == null)
+                return false;
+            
+            var budget = newBudget ?? project.Budget ?? 0;
+            var totalPaymentPlan = project.PaymentPlanLines?.Sum(line => line.Amount) ?? 0;
+            
+            return totalPaymentPlan <= budget;
+        }
+
         public async Task<Project> CreateProjectAsync(Project project)
         {
             // Load the Section and ProjectManager
@@ -90,11 +123,22 @@ namespace InvoiceManagement.Server.Application.Services
             if (projectManager == null)
                 throw new Exception($"Project Manager with ID {project.ProjectManagerId} not found.");
 
+            // Validate that PaymentPlanLines don't exceed budget
+            if (project.PaymentPlanLines != null && project.PaymentPlanLines.Any())
+            {
+                var totalPaymentPlan = project.PaymentPlanLines.Sum(line => line.Amount);
+                if (project.Budget.HasValue && totalPaymentPlan > project.Budget.Value)
+                {
+                    throw new Exception($"Total payment plan amount ({totalPaymentPlan:C}) exceeds project budget ({project.Budget.Value:C}). Please adjust the payment plan or increase the budget.");
+                }
+            }
+
             // Generate project number
             project.ProjectNumber = await _projectNumberService.GenerateProjectNumberAsync(project.SectionId);
             
             // Set creation metadata
             project.CreatedAt = DateTime.UtcNow;
+            project.CreatedBy = project.CreatedBy ?? "System"; // Ensure CreatedBy is set
             project.Section = section;
             project.ProjectManager = projectManager;
             
@@ -154,6 +198,16 @@ namespace InvoiceManagement.Server.Application.Services
             if (project.PaymentPlanLines != null)
             {
                 project.PaymentPlanLines.Clear(); // Clear to avoid EF tracking issues
+            }
+            
+            // Validate that PaymentPlanLines don't exceed budget
+            if (paymentPlanLines.Any())
+            {
+                var totalPaymentPlan = paymentPlanLines.Sum(line => line.Amount);
+                if (project.Budget.HasValue && totalPaymentPlan > project.Budget.Value)
+                {
+                    throw new Exception($"Total payment plan amount ({totalPaymentPlan:C}) exceeds project budget ({project.Budget.Value:C}). Please adjust the payment plan or increase the budget.");
+                }
             }
             
             // Update the main project properties

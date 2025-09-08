@@ -11,6 +11,8 @@ import ProjectFormPage from './components/projects/ProjectFormPage';
 import ProjectDetailsPage from './components/projects/ProjectDetailsPage';
 import LPOsList from './components/lpos/LPOsList';
 import ProjectEditPage from './pages/ProjectEditPage';
+import { AuthPage } from './pages/AuthPage';
+import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, PMOrHigherRoute, PMOOrHigherRoute, SecretaryOrHigherRoute, HeadOrAdminRoute } from './components/auth/ProtectedRoute';
@@ -32,78 +34,85 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <MainLayout>
-            <Routes>
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/projects" element={
-                <ProtectedRoute>
-                  <ProjectsList />
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/new" element={
-                <PMOrHigherRoute>
-                  <ProjectFormPage />
-                </PMOrHigherRoute>
-              } />
-              <Route path="/projects/:id" element={
-                <ProtectedRoute>
-                  <ProjectDetailsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="invoices" element={
-                <ProtectedRoute>
-                  <InvoiceList />
-                </ProtectedRoute>
-              } />
-              <Route path="invoices/upload" element={
-                <SecretaryOrHigherRoute>
-                  <InvoiceUploadForm />
-                </SecretaryOrHigherRoute>
-              } />
-              <Route path="invoices/:id" element={
-                <ProtectedRoute>
-                  <InvoiceDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="lpos" element={
-                <ProtectedRoute>
-                  <LPOsList />
-                </ProtectedRoute>
-              } />
-              <Route path="departments" element={
-                <HeadOrAdminRoute>
-                  <SectionsAndUnits />
-                </HeadOrAdminRoute>
-              } />
-              <Route path="reports" element={
-                <ProtectedRoute>
-                  <div className="h-full flex items-center justify-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Reports Page (Coming Soon)
-                    </h1>
-                  </div>
-                </ProtectedRoute>
-              } />
-              <Route path="settings" element={
-                <ProtectedRoute>
-                  <div className="h-full flex items-center justify-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Settings Page (Coming Soon)
-                    </h1>
-                  </div>
-                </ProtectedRoute>
-              } />
-              <Route path="/projects/edit/:id" element={
-                <PMOrHigherRoute>
-                  <ProjectEditPage />
-                </PMOrHigherRoute>
-              } />
-            </Routes>
-          </MainLayout>
+          <Routes>
+            {/* Authentication Routes - No Layout */}
+            <Route path="/auth/*" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordForm />} />
+            
+            {/* Main Application Routes - With Layout */}
+            <Route path="/*" element={
+              <MainLayout>
+                <Routes>
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/projects" element={
+                    <ProtectedRoute>
+                      <ProjectsList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/projects/new" element={
+                    <PMOrHigherRoute>
+                      <ProjectFormPage />
+                    </PMOrHigherRoute>
+                  } />
+                  <Route path="/projects/:id" element={
+                    <ProtectedRoute>
+                      <ProjectDetailsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="invoices" element={
+                    <ProtectedRoute>
+                      <InvoiceList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="invoices/upload" element={
+                    <SecretaryOrHigherRoute>
+                      <InvoiceUploadForm />
+                    </SecretaryOrHigherRoute>
+                  } />
+                  <Route path="invoices/:id" element={
+                    <ProtectedRoute>
+                      <InvoiceDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="lpos" element={
+                    <ProtectedRoute>
+                      <LPOsList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="departments" element={
+                    <HeadOrAdminRoute>
+                      <SectionsAndUnits />
+                    </HeadOrAdminRoute>
+                  } />
+                  <Route path="reports" element={
+                    <ProtectedRoute>
+                      <div className="h-full flex items-center justify-center">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                          Reports Page (Coming Soon)
+                        </h1>
+                      </div>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="settings" element={
+                    <ProtectedRoute>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        Settings Page (Coming Soon)
+                      </div>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/projects/edit/:id" element={
+                    <PMOrHigherRoute>
+                      <ProjectEditPage />
+                    </PMOrHigherRoute>
+                  } />
+                </Routes>
+              </MainLayout>
+            } />
+          </Routes>
         </Router>
         <Toaster />
       </AuthProvider>

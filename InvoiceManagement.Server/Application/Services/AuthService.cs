@@ -1,11 +1,12 @@
-using System.Security.Cryptography;
 using System.Text;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using InvoiceManagement.Server.Application.DTOs;
 using InvoiceManagement.Server.Application.Interfaces;
 using InvoiceManagement.Server.Domain.Entities;
 using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Domain.Enums;
+using BCrypt.Net;
 
 namespace InvoiceManagement.Server.Application.Services
 {
@@ -13,11 +14,15 @@ namespace InvoiceManagement.Server.Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IJwtService _jwtService;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(ApplicationDbContext context, IJwtService jwtService)
+        public AuthService(ApplicationDbContext context, IJwtService jwtService, IEmailService emailService, IConfiguration configuration)
         {
             _context = context;
             _jwtService = jwtService;
+            _emailService = emailService;
+            _configuration = configuration;
         }
 
         public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
@@ -155,6 +160,18 @@ namespace InvoiceManagement.Server.Application.Services
                 _context.AppUsers.Add(newUser);
                 await _context.SaveChangesAsync();
 
+                // Send welcome email
+                try
+                {
+                    var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "http://localhost:3000";
+                    await _emailService.SendWelcomeEmailAsync(request.Email, request.Username);
+                }
+                catch (Exception emailEx)
+                {
+                    // Log email error but don't fail signup
+                    Console.WriteLine($"Welcome email failed: {emailEx.Message}");
+                }
+
                 return new SignupResponseDto
                 {
                     Success = true,
@@ -227,9 +244,26 @@ namespace InvoiceManagement.Server.Application.Services
             if (user == null)
                 return false;
 
-            // Hash the provided password and compare with stored hash
-            var hashedPassword = HashPassword(password);
-            return user.PasswordHash == hashedPassword;
+            // Verify password using BCrypt or legacy SHA256
+            var isValid = VerifyPassword(password, user.PasswordHash);
+            
+            // If password is valid and it was a legacy hash, upgrade it
+            if (isValid && !user.PasswordHash.StartsWith("$2"))
+            {
+                try
+                {
+                    user.PasswordHash = HashPassword(password);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"Successfully upgraded password hash for user: {username}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to upgrade password hash for user {username}: {ex.Message}");
+                    // Don't fail the login, just log the error
+                }
+            }
+            
+            return isValid;
         }
 
         public async Task<AppUser?> GetUserByUsernameAsync(string username)
@@ -255,9 +289,214 @@ namespace InvoiceManagement.Server.Application.Services
 
         private string HashPassword(string password)
         {
-            using var sha256 = SHA256.Create();
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashedBytes);
+            // Use BCrypt with work factor 12 (good balance of security vs performance)
+            return BCrypt.Net.BCrypt.HashPassword(password, BCrypt.Net.BCrypt.GenerateSalt(12));
+        }
+
+        private bool VerifyPassword(string password, string hash)
+        {
+            try
+            {
+                // First try bcrypt verification
+                return BCrypt.Net.BCrypt.Verify(password, hash);
+            }
+            catch (BCrypt.Net.SaltParseException)
+            {
+                // Handle legacy SHA256 hashes during migration
+                try
+                {
+                    using var sha256 = SHA256.Create();
+                    var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                    var sha256Hash = Convert.ToBase64String(hashedBytes);
+                    
+                    if (sha256Hash == hash)
+                    {
+                        // Legacy password is correct, upgrade to bcrypt
+                        Console.WriteLine($"Upgrading password hash for user from SHA256 to bcrypt");
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // If SHA256 verification fails, return false
+                }
+                
+                return false;
+            }
+        }
+
+        // Helper method to reset a user's password (for development/testing)
+        public async Task<bool> ResetUserPasswordAsync(string username, string newPassword)
+        {
+            try
+            {
+                var user = await GetUserByUsernameAsync(username);
+                if (user == null)
+                    return false;
+
+                user.PasswordHash = HashPassword(newPassword);
+                await _context.SaveChangesAsync();
+                
+                Console.WriteLine($"Password reset successfully for user: {username}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to reset password for user {username}: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Generate a secure random token
+        private string GenerateResetToken()
+        {
+            var randomBytes = new byte[32];
+            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomBytes);
+            }
+            return Convert.ToBase64String(randomBytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
+        }
+
+        // Send password reset email using email service
+        private async Task SendPasswordResetEmailAsync(string email, string token)
+        {
+            try
+            {
+                var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.EMAIL == email);
+                if (user != null)
+                {
+                    var resetUrl = $"{_configuration["AppSettings:BaseUrl"] ?? "http://localhost:3000"}/reset-password";
+                    await _emailService.SendPasswordResetEmailAsync(email, user.User_Name, token, resetUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send password reset email: {ex.Message}");
+                // Don't fail the operation, just log the error
+            }
+        }
+
+        // Forgot password - send reset email
+        public async Task<ForgotPasswordResponse> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.EMAIL == email);
+                if (user == null)
+                {
+                    // Don't reveal if email exists or not (security best practice)
+                    return new ForgotPasswordResponse
+                    {
+                        Success = true,
+                        Message = "If an account with that email exists, a password reset link has been sent."
+                    };
+                }
+
+                // Generate reset token
+                var token = GenerateResetToken();
+                var expiresAt = DateTime.UtcNow.AddHours(24); // Token expires in 24 hours
+
+                // Save reset token
+                var resetToken = new PasswordResetToken
+                {
+                    Email = email,
+                    Token = token,
+                    ExpiresAt = expiresAt,
+                    UserId = user.User_Seq
+                };
+
+                _context.PasswordResetTokens.Add(resetToken);
+                await _context.SaveChangesAsync();
+
+                // Send reset email
+                await SendPasswordResetEmailAsync(email, token);
+
+                return new ForgotPasswordResponse
+                {
+                    Success = true,
+                    Message = "If an account with that email exists, a password reset link has been sent."
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Forgot password error: {ex.Message}");
+                return new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "An error occurred while processing your request."
+                };
+            }
+        }
+
+        // Reset password using token
+        public async Task<ResetPasswordResponse> ResetPasswordAsync(string token, string newPassword)
+        {
+            try
+            {
+                var resetToken = await _context.PasswordResetTokens
+                    .FirstOrDefaultAsync(t => t.Token == token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
+
+                if (resetToken == null)
+                {
+                    return new ResetPasswordResponse
+                    {
+                        Success = false,
+                        Message = "Invalid or expired reset token."
+                    };
+                }
+
+                // Find user by email
+                var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.EMAIL == resetToken.Email);
+                if (user == null)
+                {
+                    return new ResetPasswordResponse
+                    {
+                        Success = false,
+                        Message = "User not found."
+                    };
+                }
+
+                // Update password
+                user.PasswordHash = HashPassword(newPassword);
+                
+                // Mark token as used
+                resetToken.IsUsed = true;
+                resetToken.UsedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return new ResetPasswordResponse
+                {
+                    Success = true,
+                    Message = "Password has been reset successfully. You can now login with your new password."
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Reset password error: {ex.Message}");
+                return new ResetPasswordResponse
+                {
+                    Success = false,
+                    Message = "An error occurred while resetting your password."
+                };
+            }
+        }
+
+        // Validate reset token
+        public async Task<bool> ValidateResetTokenAsync(string token)
+        {
+            try
+            {
+                var resetToken = await _context.PasswordResetTokens
+                    .FirstOrDefaultAsync(t => t.Token == token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow);
+
+                return resetToken != null;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

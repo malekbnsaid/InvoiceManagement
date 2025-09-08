@@ -19,6 +19,8 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { invoiceService } from '../../services/invoiceService';
 import { useToast } from '../ui/use-toast';
+import { SecretaryOrHigher } from '../shared/RoleGuard';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface InvoiceFile {
   id: string;
@@ -45,7 +47,25 @@ const InvoiceUploadForm: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentTab, setCurrentTab] = useState('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
-    const { toast } = useToast();
+  const { toast } = useToast();
+  const { canUploadInvoice } = usePermissions();
+
+  // Show access denied message if user doesn't have permission
+  if (!canUploadInvoice) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600 text-center max-w-md">
+              You don't have permission to upload invoices. Only users with Secretary role or higher can upload invoices.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement> | { target: { files: FileList } }) => {
     const files = event.target.files;

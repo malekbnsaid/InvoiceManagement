@@ -12,6 +12,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using InvoiceManagement.Server.Infrastructure.Middleware;
+using InvoiceManagement.Server.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,26 @@ builder.Services.AddScoped<IVendorService, VendorService>();
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICookieAuthService, CookieAuthService>();
+builder.Services.AddScoped<IRateLimitingService, RateLimitingService>();
+
+// Register email services - use SMTP for testing
+var outlookConfig = builder.Configuration.GetSection("Outlook");
+
+if (!string.IsNullOrEmpty(outlookConfig["Username"]) && 
+    !string.IsNullOrEmpty(outlookConfig["Password"]) &&
+    !outlookConfig["Username"]!.Contains("YOUR_") &&
+    !outlookConfig["Password"]!.Contains("YOUR_"))
+{
+    Console.WriteLine("Registering SmtpEmailService for Outlook");
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+}
+else
+{
+    Console.WriteLine("No email service configured, using MockEmailService for development");
+    Console.WriteLine("To enable email: Update Outlook settings in appsettings.Development.json");
+    builder.Services.AddScoped<IEmailService, MockEmailService>();
+}
 
 // Register repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -72,26 +93,45 @@ builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS
+// Add CORS with environment-specific policies
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp",
-        builder =>
-        {
-            builder.WithOrigins(
-                    "https://localhost:5173", 
-                    "http://localhost:5173",
-                    "https://localhost:3000",
-                    "http://localhost:3000",
-                    "https://localhost:5174",
-                    "http://localhost:5174",
-                    "https://localhost:8080",
-                    "http://localhost:8080"
-                )
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
-        });
+    if (builder.Environment.IsDevelopment())
+    {
+        // Development: Allow multiple local origins
+        options.AddPolicy("AllowReactApp",
+            builder =>
+            {
+                builder.WithOrigins(
+                        "https://localhost:5173", 
+                        "http://localhost:5173",
+                        "https://localhost:3000",
+                        "http://localhost:3000",
+                        "https://localhost:5174",
+                        "http://localhost:5174",
+                        "https://localhost:8080",
+                        "http://localhost:8080"
+                    )
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+            });
+    }
+    else
+    {
+        // Production: Restrict to specific domains
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? new[] { "https://yourdomain.com" }; // Replace with your actual domain
+        
+        options.AddPolicy("AllowReactApp",
+            builder =>
+            {
+                builder.WithOrigins(allowedOrigins)
+                       .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                       .WithHeaders("Content-Type", "Authorization")
+                       .AllowCredentials();
+            });
+    }
 });
 
 // Add JWT Authentication
@@ -158,8 +198,14 @@ app.UseHttpsRedirection();
 // Enable CORS
 app.UseCors("AllowReactApp");
 
+// Add security headers middleware
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 // Add DevBypass middleware before authentication
 app.UseDevBypass();
+
+// Add Cookie Authentication middleware before standard authentication
+app.UseCookieAuth();
 
 // Enable Authentication and Authorization
 app.UseAuthentication();

@@ -747,6 +747,44 @@ namespace InvoiceManagement.Server.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PaymentPlanLine", b =>
                 {
                     b.Property<int>("Id")
@@ -1256,6 +1294,15 @@ namespace InvoiceManagement.Server.Migrations
                         .HasForeignKey("ERPEmployeeId1");
 
                     b.Navigation("ERPEmployee");
+                });
+
+            modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("InvoiceManagement.Server.Domain.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InvoiceManagement.Server.Domain.Entities.PaymentPlanLine", b =>

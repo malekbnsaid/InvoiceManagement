@@ -41,11 +41,14 @@ export interface SignupResponse {
 }
 
 class AuthService {
-  private tokenKey = 'auth_token';
-  private refreshTokenKey = 'refresh_token';
   private userKey = 'user_info';
+  private tokenKey = 'access_token';
+  private refreshTokenKey = 'refresh_token';
 
   constructor() {
+    // Clear expired tokens on startup
+    this.clearExpiredTokens();
+    
     // Initialize DevBypass on service creation if enabled
     if (this.isDevBypass()) {
       this.initializeDevBypass();
@@ -57,6 +60,30 @@ class AuthService {
     // Temporarily disabled for testing real authentication
     console.log('🔐 AuthService: DevBypass temporarily disabled for testing');
     return false;
+  }
+
+  // Clear expired tokens on startup
+  private clearExpiredTokens(): void {
+    console.log('🔐 AuthService: Clearing expired tokens on startup');
+    
+    const token = this.getToken();
+    const refreshToken = this.getRefreshToken();
+    
+    if (token && this.isTokenExpired(token)) {
+      console.log('🔐 AuthService: Clearing expired access token');
+      localStorage.removeItem(this.tokenKey);
+    }
+    
+    if (refreshToken && this.isRefreshTokenExpired(refreshToken)) {
+      console.log('🔐 AuthService: Clearing expired refresh token');
+      localStorage.removeItem(this.refreshTokenKey);
+    }
+    
+    // If both tokens are expired, clear user info too
+    if ((!token || this.isTokenExpired(token)) && (!refreshToken || this.isRefreshTokenExpired(refreshToken))) {
+      console.log('🔐 AuthService: All tokens expired, clearing user info');
+      localStorage.removeItem(this.userKey);
+    }
   }
 
   // Initialize dev bypass if enabled
@@ -102,9 +129,35 @@ class AuthService {
     try {
       console.log('🔐 AuthService: Attempting login to:', '/auth/login');
       const response = await api.post<LoginResponse>('/auth/login', credentials);
-      this.setTokens(response.data.token, response.data.refreshToken);
-      this.setUser(response.data.user);
-      return response.data;
+      
+      // Extract token and user info from response body
+      if (response.data && response.data.user) {
+        this.setUser(response.data.user);
+        
+        // Store token in localStorage for persistence
+        if (response.data.token) {
+          localStorage.setItem(this.tokenKey, response.data.token);
+          console.log('🔐 AuthService: Token stored in localStorage');
+        } else {
+          console.log('🔐 AuthService: No token found in response body');
+        }
+        
+        // Store refresh token if available
+        if (response.data.refreshToken) {
+          localStorage.setItem(this.refreshTokenKey, response.data.refreshToken);
+          console.log('🔐 AuthService: Refresh token stored in localStorage');
+        }
+        
+        // Return the response data
+        return {
+          token: response.data.token || 'cookie-stored',
+          refreshToken: response.data.refreshToken || 'cookie-stored',
+          expiresAt: response.data.expiresAt || new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          user: response.data.user
+        };
+      }
+      
+      throw new Error('Invalid login response');
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -130,15 +183,28 @@ class AuthService {
     }
 
     try {
-      const refreshToken = this.getRefreshToken();
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
+      console.log('🔐 AuthService: Attempting to refresh token via cookies');
+      
+      // With cookie-based auth, we just need to call the refresh endpoint
+      // The backend will handle the refresh token from cookies
+      const response = await api.post<LoginResponse>('/auth/refresh');
+      
+      if (response.data && response.data.user) {
+        console.log('🔐 AuthService: Token refreshed successfully');
+        
+        // Update stored tokens and user info
+        if (response.data.token) {
+          localStorage.setItem(this.tokenKey, response.data.token);
+        }
+        if (response.data.refreshToken) {
+          localStorage.setItem(this.refreshTokenKey, response.data.refreshToken);
+        }
+        
+        this.setUser(response.data.user);
+        return response.data;
       }
-
-      const response = await api.post<LoginResponse>('/auth/refresh', { refreshToken });
-      this.setTokens(response.data.token, response.data.refreshToken);
-      this.setUser(response.data.user);
-      return response.data;
+      
+      throw new Error('Invalid refresh response');
     } catch (error) {
       console.error('Token refresh failed:', error);
       this.logout();
@@ -148,25 +214,52 @@ class AuthService {
 
   // Logout user
   logout(): void {
+    // Clear all stored data
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.userKey);
+    // Cookies are cleared by the backend
   }
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
     console.log('🔐 AuthService: isAuthenticated called');
     console.log('🔐 AuthService: DevBypass enabled:', this.isDevBypass());
-    console.log('🔐 AuthService: Token exists:', !!this.getToken());
     
     if (this.isDevBypass()) {
       console.log('🔐 AuthService: DevBypass enabled, returning true');
       return true;
     }
     
-    const hasToken = !!this.getToken();
-    console.log('🔐 AuthService: No DevBypass, returning:', hasToken);
-    return hasToken;
+    // Check if we have a user (this indicates successful authentication)
+    const user = this.getUser();
+    if (!user) {
+      console.log('🔐 AuthService: No user found, returning false');
+      return false;
+    }
+    
+    // Check if we have a valid token (either real token or cookie-stored)
+    const token = this.getToken();
+    if (!token) {
+      console.log('🔐 AuthService: No token found, returning false');
+      return false;
+    }
+    
+    // If token is 'cookie-stored', it means we're using cookie-based auth
+    if (token === 'cookie-stored') {
+      console.log('🔐 AuthService: Cookie-based token found, returning true');
+      return true;
+    }
+    
+    // Check if real token is expired
+    if (this.isTokenExpired(token)) {
+      console.log('🔐 AuthService: Token is expired, clearing and returning false');
+      this.logout();
+      return false;
+    }
+    
+    console.log('🔐 AuthService: Valid token found, returning true');
+    return true;
   }
 
   // Get current user info
@@ -181,17 +274,59 @@ class AuthService {
     }
   }
 
-  // Get current token
+  // Get current token from localStorage
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);
   }
 
-  // Get refresh token
+  // Get refresh token from localStorage
   getRefreshToken(): string | null {
     return localStorage.getItem(this.refreshTokenKey);
   }
 
-  // Set tokens
+  // Check if token is expired
+  private isTokenExpired(token: string): boolean {
+    try {
+      // Decode JWT token to check expiration
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      if (payload.exp && payload.exp < currentTime) {
+        console.log('🔐 AuthService: Token expired at:', new Date(payload.exp * 1000));
+        console.log('🔐 AuthService: Current time:', new Date(currentTime * 1000));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('🔐 AuthService: Error checking token expiration:', error);
+      // If we can't decode the token, assume it's invalid
+      return true;
+    }
+  }
+
+  // Check if refresh token is expired
+  private isRefreshTokenExpired(refreshToken: string): boolean {
+    try {
+      // Decode JWT token to check expiration
+      const payload = JSON.parse(atob(refreshToken.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      if (payload.exp && payload.exp < currentTime) {
+        console.log('🔐 AuthService: Refresh token expired at:', new Date(payload.exp * 1000));
+        console.log('🔐 AuthService: Current time:', new Date(currentTime * 1000));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('🔐 AuthService: Error checking refresh token expiration:', error);
+      // If we can't decode the token, assume it's invalid
+      return true;
+    }
+  }
+
+  // Set tokens in localStorage
   private setTokens(token: string, refreshToken: string): void {
     localStorage.setItem(this.tokenKey, token);
     localStorage.setItem(this.refreshTokenKey, refreshToken);

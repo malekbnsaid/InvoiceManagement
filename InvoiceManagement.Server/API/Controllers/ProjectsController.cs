@@ -128,7 +128,123 @@ namespace InvoiceManagement.Server.API.Controllers
                     validationErrors.Add("Name", new List<string> { "The Name field is required." });
                 }
 
-                // Validate date fields
+                // Validate budget with business rules
+                if (project.Budget.HasValue)
+                {
+                    if (project.Budget.Value < 1000)
+                    {
+                        validationErrors.Add("Budget", new List<string> { "Minimum budget is $1,000. Projects under this amount should be handled as expenses." });
+                    }
+                    if (project.Budget.Value > 100000000) // $100M
+                    {
+                        validationErrors.Add("Budget", new List<string> { "Maximum budget is $100,000,000. Please contact administration for larger projects." });
+                    }
+                }
+
+                // Validate payment plan lines if provided
+                if (project.PaymentPlanLines != null && project.PaymentPlanLines.Any())
+                {
+                    var currentYear = DateTime.Now.Year;
+                    var totalPaymentPlan = 0m;
+                    
+                    for (int i = 0; i < project.PaymentPlanLines.Count; i++)
+                    {
+                        var line = project.PaymentPlanLines.ElementAt(i);
+                        var lineErrors = new List<string>();
+                        
+                        // Validate year
+                        if (line.Year < currentYear)
+                        {
+                            lineErrors.Add("Cannot create payments for past years");
+                        }
+                        if (line.Year > currentYear + 10)
+                        {
+                            lineErrors.Add("Cannot create payments more than 10 years in the future");
+                        }
+                        
+                        // Validate amount
+                        if (line.Amount < 100)
+                        {
+                            lineErrors.Add("Each payment must be at least $100");
+                        }
+                        if (line.Amount > 5000000)
+                        {
+                            lineErrors.Add("Individual payments cannot exceed $5,000,000");
+                        }
+                        
+                        if (lineErrors.Any())
+                        {
+                            validationErrors.Add($"PaymentPlanLines[{i}]", lineErrors);
+                        }
+                        
+                        totalPaymentPlan += line.Amount;
+                    }
+                    
+                    // Check currency consistency
+                    var currencies = project.PaymentPlanLines.Select(p => p.Currency).Distinct().ToList();
+                    if (currencies.Count > 1)
+                    {
+                        validationErrors.Add("PaymentPlanLines", new List<string> { "All payment plan lines must use the same currency." });
+                    }
+                    
+                    // Check payment plan vs budget variance (warning, not error)
+                    if (project.Budget.HasValue && totalPaymentPlan > 0)
+                    {
+                        var variance = Math.Abs(totalPaymentPlan - project.Budget.Value) / project.Budget.Value;
+                        if (variance > 0.5) // 50% variance
+                        {
+                            Console.WriteLine($"Warning: Payment plan variance is {variance:P1} - this may need review");
+                        }
+                    }
+
+                    // Validate project duration vs payment plan alignment
+                    if (project.ExpectedStart.HasValue && project.ExpectedEnd.HasValue)
+                    {
+                        var projectDuration = project.ExpectedEnd.Value - project.ExpectedStart.Value;
+                        var projectMonths = projectDuration.TotalDays / 30.44; // Average days per month
+                        var uniquePaymentYears = project.PaymentPlanLines.Select(p => p.Year).Distinct().Count();
+                        
+                        // Critical: Short projects with multi-year payment plans
+                        if (projectMonths < 6 && uniquePaymentYears > 1)
+                        {
+                            validationErrors.Add("PaymentPlanLines", new List<string> 
+                            { 
+                                $"Project duration ({Math.Round(projectMonths)} months) is too short for a {uniquePaymentYears}-year payment plan. Short projects should have single-year payments." 
+                            });
+                        }
+                        
+                        // Warning: Medium projects with very long payment plans
+                        if (projectMonths < 12 && uniquePaymentYears > 2)
+                        {
+                            Console.WriteLine($"Warning: Project duration ({Math.Round(projectMonths)} months) seems short for a {uniquePaymentYears}-year payment plan");
+                        }
+                        
+                        // Warning: Very long projects with single-year payments
+                        if (projectMonths > 24 && uniquePaymentYears == 1)
+                        {
+                            Console.WriteLine($"Warning: Project duration ({Math.Round(projectMonths / 12)} years) is long but payment plan is only for 1 year");
+                        }
+                        
+                        // Check if payment years align with project timeline
+                        var projectStartYear = project.ExpectedStart.Value.Year;
+                        var projectEndYear = project.ExpectedEnd.Value.Year;
+                        var paymentYearsOutsideProject = project.PaymentPlanLines
+                            .Where(p => p.Year < projectStartYear || p.Year > projectEndYear)
+                            .Select(p => p.Year)
+                            .Distinct()
+                            .ToList();
+                            
+                        if (paymentYearsOutsideProject.Any())
+                        {
+                            validationErrors.Add("PaymentPlanLines", new List<string> 
+                            { 
+                                $"Payment plan includes years ({string.Join(", ", paymentYearsOutsideProject)}) outside project timeline ({projectStartYear}-{projectEndYear})." 
+                            });
+                        }
+                    }
+                }
+
+                // Validate date fields with business rules
                 if (project.ExpectedStart.HasValue && project.ExpectedEnd.HasValue)
                 {
                     if (project.ExpectedEnd.Value < project.ExpectedStart.Value)
@@ -136,6 +252,46 @@ namespace InvoiceManagement.Server.API.Controllers
                         Console.WriteLine("Validation Error: Expected end date is before start date");
                         validationErrors.Add("ExpectedEnd", new List<string> { "Expected end date must be after expected start date." });
                     }
+                    else
+                    {
+                        // Check project duration (1 day to 10 years)
+                        var duration = project.ExpectedEnd.Value - project.ExpectedStart.Value;
+                        if (duration.TotalDays < 1)
+                        {
+                            validationErrors.Add("ExpectedEnd", new List<string> { "Project duration must be at least 1 day." });
+                        }
+                        if (duration.TotalDays > 3650) // 10 years
+                        {
+                            validationErrors.Add("ExpectedEnd", new List<string> { "Project duration cannot exceed 10 years. Please break into smaller projects." });
+                        }
+                    }
+                }
+
+                // Validate start date is not in the past
+                if (project.ExpectedStart.HasValue && project.ExpectedStart.Value < DateTime.Today)
+                {
+                    validationErrors.Add("ExpectedStart", new List<string> { "Project start date cannot be in the past." });
+                }
+
+                // Validate end date is not in the past
+                if (project.ExpectedEnd.HasValue && project.ExpectedEnd.Value < DateTime.Today)
+                {
+                    validationErrors.Add("ExpectedEnd", new List<string> { "Project end date cannot be in the past." });
+                }
+
+                // Validate tender date is before start date
+                if (project.TenderDate.HasValue && project.ExpectedStart.HasValue)
+                {
+                    if (project.TenderDate.Value >= project.ExpectedStart.Value)
+                    {
+                        validationErrors.Add("TenderDate", new List<string> { "Tender date must be before project start date." });
+                    }
+                }
+
+                // Validate tender date is not in the past
+                if (project.TenderDate.HasValue && project.TenderDate.Value < DateTime.Today)
+                {
+                    validationErrors.Add("TenderDate", new List<string> { "Tender date cannot be in the past." });
                 }
 
                 // Return validation errors if any
@@ -145,6 +301,9 @@ namespace InvoiceManagement.Server.API.Controllers
                     return BadRequest(new { errors = validationErrors });
                 }
 
+                // Set the creator information
+                project.CreatedBy = User.Identity?.Name ?? "System";
+                
                 // Create the project
                 var createdProject = await _projectService.CreateProjectAsync(project);
                 Console.WriteLine($"Project created successfully with ID: {createdProject.Id}");

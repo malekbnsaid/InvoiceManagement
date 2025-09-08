@@ -11,5 +11,9 @@ namespace InvoiceManagement.Server.Application.Interfaces
         Task<bool> ValidateUserAsync(string username, string password);
         Task<AppUser?> GetUserByUsernameAsync(string username);
         Task<bool> UpdateRefreshTokenAsync(int userId, string refreshToken, DateTime expiryTime);
+        Task<bool> ResetUserPasswordAsync(string username, string newPassword);
+        Task<ForgotPasswordResponse> ForgotPasswordAsync(string email);
+        Task<ResetPasswordResponse> ResetPasswordAsync(string token, string newPassword);
+        Task<bool> ValidateResetTokenAsync(string token);
     }
 }

@@ -13,11 +13,8 @@ import { Progress } from '../ui/progress';
 import { projectApi } from '../../services/api/projectApi';
 import { useToast } from '../ui/use-toast';
 import {
-  CalendarIcon,
-  BanknotesIcon,
   ClockIcon,
   FolderIcon,
-  UserIcon,
   CheckCircleIcon,
   XCircleIcon,
   DocumentTextIcon,
@@ -25,6 +22,8 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { CurrencyType } from '../../types/enums';
+import { PMOOrHigher } from '../shared/RoleGuard';
+
 
 interface Project {
   id: number;
@@ -295,8 +294,8 @@ export default function ProjectDetailsPage() {
           label: 'Project Completed',
           icon: CheckCircleIcon,
           status: 'completed',
-          detail: project.cost && project.budget 
-            ? `Final cost: ${project.cost.toLocaleString()} SAR (${((project.cost / project.budget) * 100).toFixed(1)}% of budget)`
+                  detail: project.cost && project.budget
+          ? `Final cost: ${project.cost.toLocaleString()} QAR (${((project.cost / project.budget) * 100).toFixed(1)}% of budget)`
             : undefined
         });
       }
@@ -352,17 +351,19 @@ export default function ProjectDetailsPage() {
           <Badge variant={status.color} className="text-lg px-4 py-2">
             {status.label}
           </Badge>
-          {!project.isApproved && !project.rejectionReason && (
-            <Button 
-              variant="outline"
-              onClick={() => {
-                setIsRejecting(false);
-                setIsApprovalDialogOpen(true);
-              }}
-            >
-              Review Project
-            </Button>
-          )}
+          <PMOOrHigher>
+            {!project.isApproved && !project.rejectionReason && (
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setIsRejecting(false);
+                  setIsApprovalDialogOpen(true);
+                }}
+              >
+                Review Project
+              </Button>
+            )}
+          </PMOOrHigher>
         </div>
       </div>
 
@@ -380,11 +381,11 @@ export default function ProjectDetailsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Budget</p>
-                <p className="text-xl font-semibold">{project.budget?.toLocaleString()} SAR</p>
+                <p className="text-xl font-semibold">{project.budget?.toLocaleString()} QAR</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Current Cost</p>
-                <p className="text-xl font-semibold">{project.cost?.toLocaleString()} SAR</p>
+                <p className="text-xl font-semibold">{project.cost?.toLocaleString()} QAR</p>
               </div>
             </div>
             {progress >= 100 && (
@@ -544,7 +545,8 @@ export default function ProjectDetailsPage() {
       </div>
 
       {/* Approval Dialog */}
-      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+      <PMOOrHigher>
+        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -621,7 +623,8 @@ export default function ProjectDetailsPage() {
             </div>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      </PMOOrHigher>
     </div>
   );
 } 

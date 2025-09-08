@@ -67,7 +67,7 @@ namespace InvoiceManagement.Server.API.Controllers
                 if (!isValidFormat)
                 {
                     System.IO.File.Delete(filePath);
-                    return BadRequest("Invalid invoice format");
+                    return BadRequest("Invalid invoice format. Please ensure the file is a valid invoice document with invoice number, date, total amount, and vendor information.");
                 }
 
                 // Process with OCR

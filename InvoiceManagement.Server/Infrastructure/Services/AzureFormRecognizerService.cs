@@ -776,15 +776,42 @@ namespace InvoiceManagement.Server.Infrastructure.Services.OCR
                 var operation = await _client.AnalyzeDocumentAsync(WaitUntil.Completed, _modelId, stream);
                 var result = operation.Value;
 
-                // Check if the document contains essential invoice fields
-                var essentialFields = new[] { "InvoiceId", "InvoiceDate", "InvoiceTotal", "VendorName" };
-                var hasEssentialFields = result.Documents.Count > 0 && 
-                    essentialFields.Any(field => result.Documents[0].Fields.ContainsKey(field));
-
-                if (!hasEssentialFields)
+                // Check if the document contains essential invoice fields (with flexible field names)
+                var hasEssentialFields = result.Documents.Count > 0;
+                
+                if (hasEssentialFields)
                 {
-                    _logger.LogWarning("Document is missing essential invoice fields");
-                    return false;
+                    var document = result.Documents[0];
+                    var fields = document.Fields.Keys.Select(k => k.ToLowerInvariant()).ToList();
+                    
+                    // Log available fields for debugging
+                    _logger.LogInformation("Available fields: {Fields}", string.Join(", ", fields));
+                    
+                    // Check for invoice number (InvoiceId or InvoiceNumber)
+                    var hasInvoiceNumber = fields.Any(f => f.Contains("invoiceid") || f.Contains("invoicenumber"));
+                    
+                    // Check for invoice date
+                    var hasInvoiceDate = fields.Any(f => f.Contains("invoicedate"));
+                    
+                    // Check for total amount (InvoiceTotal or Total)
+                    var hasTotalAmount = fields.Any(f => f.Contains("invoicetotal") || f.Contains("total"));
+                    
+                    // Check for vendor name
+                    var hasVendorName = fields.Any(f => f.Contains("vendorname") || f.Contains("vendor") || f.Contains("company"));
+                    
+                    // Log validation results
+                    _logger.LogInformation("Validation results - InvoiceNumber: {HasInvoiceNumber}, InvoiceDate: {HasInvoiceDate}, TotalAmount: {HasTotalAmount}, VendorName: {HasVendorName}", 
+                        hasInvoiceNumber, hasInvoiceDate, hasTotalAmount, hasVendorName);
+                    
+                    // Require at least 3 out of 4 essential fields
+                    var essentialFieldCount = new[] { hasInvoiceNumber, hasInvoiceDate, hasTotalAmount, hasVendorName }.Count(x => x);
+                    hasEssentialFields = essentialFieldCount >= 3;
+                    
+                    if (!hasEssentialFields)
+                    {
+                        _logger.LogWarning("Document is missing essential invoice fields. Found {Count}/4 required fields.", essentialFieldCount);
+                        return false;
+                    }
                 }
 
                 _logger.LogInformation("Invoice format validation successful");

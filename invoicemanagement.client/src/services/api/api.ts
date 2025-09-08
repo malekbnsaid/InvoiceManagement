@@ -18,11 +18,15 @@ api.interceptors.request.use(
     console.log('🔐 API: Making request to:', config.method?.toUpperCase(), config.url);
     console.log('🔐 API: Full URL:', (config.baseURL || '') + (config.url || ''));
     
-    // Add auth token to requests
+    // Add auth token to requests (from memory for now)
     const token = authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Enable credentials for cookie-based authentication
+    config.withCredentials = true;
+    
     return config;
   },
   (error) => {
@@ -42,20 +46,29 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Try to refresh the token
-        await authService.refreshToken();
-        const newToken = authService.getToken();
-        
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
+      // Only attempt token refresh if we have a current token
+      const currentToken = authService.getToken();
+      if (currentToken && currentToken !== 'cookie-stored') {
+        try {
+          console.log('🔐 API: Attempting token refresh for 401 error');
+          // Try to refresh the token
+          await authService.refreshToken();
+          const newToken = authService.getToken();
+          
+          if (newToken && newToken !== 'cookie-stored') {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          }
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and let the app handle authentication
+          console.log('🔐 API: Token refresh failed, clearing authentication');
+          authService.logout();
+          // Don't redirect - let the app's routing handle this
+          return Promise.reject(refreshError);
         }
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
+      } else {
+        console.log('🔐 API: No valid token to refresh, clearing authentication');
         authService.logout();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
       }
     }
 

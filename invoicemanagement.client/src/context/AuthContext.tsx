@@ -29,20 +29,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string): Promise<void> => {
     try {
       const response = await authService.login({ username, password });
-      // Update local state to match authService
+      
+      // After successful login, we should be authenticated
+      // Set the user and authentication state directly
       setUser(response.user);
       setIsAuthenticated(true);
       
-      // Also refresh from authService to ensure consistency
-      const currentUser = authService.getUser();
-      const authenticated = authService.isAuthenticated();
-      setUser(currentUser);
-      setIsAuthenticated(authenticated);
-      
-      console.log('🔐 Login successful, user state updated:', currentUser);
+      console.log('🔐 Login successful, user state updated:', response.user);
+      console.log('🔐 Authentication state set to true');
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -51,17 +48,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     authService.logout();
-    // Update local state to match authService
+    
+    // Clear local state directly
     setUser(null);
     setIsAuthenticated(false);
     
-    // Also refresh from authService to ensure consistency
-    const currentUser = authService.getUser();
-    const authenticated = authService.isAuthenticated();
-    setUser(currentUser);
-    setIsAuthenticated(authenticated);
-    
-    console.log('🔐 Logout successful, user state updated:', currentUser);
+    console.log('🔐 Logout successful, user state cleared');
   };
 
   const refreshUser = () => {

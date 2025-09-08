@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { RoleBasedDashboard } from '../components/dashboard/RoleBasedDashboard';
 
 // Mock data for IT department
 const stats = [
@@ -94,6 +95,9 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* Role-based dashboard content */}
+      <RoleBasedDashboard />
+      
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

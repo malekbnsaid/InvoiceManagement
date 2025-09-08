@@ -23,6 +23,10 @@ namespace InvoiceManagement.Server.Application.Interfaces
         Task<decimal> GetTotalProjectSpendAsync(int id);
         Task<bool> UpdateProjectStatusAsync(int id, string status, string updatedBy);
         Task<bool> UpdateProjectCostAsync(int id, decimal newCost, string updatedBy);
+        
+        // Payment plan validation methods
+        Task<decimal> GetTotalPaymentPlanAmountAsync(int projectId);
+        Task<bool> ValidatePaymentPlanAgainstBudgetAsync(int projectId, decimal? newBudget = null);
 
         // Deletion approval methods
         Task<bool> RequestProjectDeletionAsync(int id, string requestedBy);

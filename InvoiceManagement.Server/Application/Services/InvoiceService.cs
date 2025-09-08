@@ -138,27 +138,19 @@ namespace InvoiceManagement.Server.Application.Services
                 await _invoiceRepository.AddAsync(invoice);
                 await _invoiceRepository.SaveChangesAsync();
                 
-                // Now set the InvoiceId on all line items and add them to context
+                // Now save the line items separately to ensure they are treated as new entities
                 if (invoice.LineItems?.Any() == true)
                 {
                     foreach (var lineItem in invoice.LineItems)
                     {
                         lineItem.InvoiceId = invoice.Id;
+                        lineItem.Id = 0; // Ensure EF treats as new entity
                         _context.InvoiceLineItems.Add(lineItem);
                     }
                     
-                    // Save the line items
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation("Saved {Count} line items to database for invoice {InvoiceNumber}", 
+                    _logger.LogInformation("Saved {Count} line items for invoice {InvoiceNumber}", 
                         invoice.LineItems.Count, invoice.InvoiceNumber);
-                    
-                    // Verify the line items were saved by querying them back
-                    var savedLineItems = await _context.InvoiceLineItems
-                        .Where(li => li.InvoiceId == invoice.Id)
-                        .ToListAsync();
-                    
-                    _logger.LogInformation("Verified {SavedCount} line items in database for invoice {InvoiceNumber}", 
-                        savedLineItems.Count, invoice.InvoiceNumber);
                 }
 
                 // Create document attachment if file information is provided

@@ -26,6 +26,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<DepartmentNode> Departments { get; set; } = null!;
         public DbSet<ERPEmployee> ERPEmployees { get; set; } = null!;
         public DbSet<AppUser> AppUsers { get; set; } = null!;
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
         public DbSet<PaymentPlanLine> PaymentPlanLines { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

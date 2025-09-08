@@ -3,11 +3,13 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, FormProvider } from 'react-hook-form';
-import { CalendarIcon, Briefcase, Building2, User, DollarSign, Clock, FileText, CheckCircle2, TrashIcon, Trash2Icon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { CalendarIcon, Briefcase, Building2, User, DollarSign, FileText, CheckCircle2, Trash2Icon, AlertCircle } from 'lucide-react';
 import { CurrencyType } from '../../types/enums';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { DropdownNavProps, DropdownProps } from 'react-day-picker';
+import { ProjectBusinessRules } from '../../services/businessRules';
 
 import { Button } from '../ui/Button';
 import {
@@ -34,12 +36,9 @@ import {
   PopoverTrigger,
 } from '../ui/popover';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { cn } from '../../lib/utils';
-import { projectApi } from '../../services/api/projectApi';
 import { departmentApi } from '../../services/api/departmentApi';
 import { employeeApi } from '../../services/api/employeeApi';
 import { useQuery } from '@tanstack/react-query';
-import { Label } from '../ui/label';
 
 // CSS for form message consistency
 const formMessageStyles = "text-sm font-medium text-destructive mt-1";
@@ -73,43 +72,116 @@ interface PaymentPlanLine {
   projectId?: number;
 }
 
-interface RawPaymentPlanLine {
-  year: number | string;
-  amount: number | string;
-  currency?: CurrencyType;
-  paymentType?: string;
-  description?: string;
-}
 
-// Define the form schema
+// Define the form schema with improved validation
 const formSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
   description: z.string().optional(),
   unitId: z.string().optional(),
   section: z.string().min(1, 'Section is required'),
-  budget: z.string().min(1, 'Budget is required'),
+  budget: z.string()
+    .min(1, 'Budget is required')
+    .refine((val) => {
+      const amount = parseFloat(val);
+      return !isNaN(amount) && amount >= 1000;
+    }, 'Minimum budget is $1,000')
+    .refine((val) => {
+      const amount = parseFloat(val);
+      return !isNaN(amount) && amount <= 100000000; // $100M max
+    }, 'Maximum budget is $100,000,000')
+    .refine((val) => {
+      // Check decimal precision (only 2 decimal places)
+      const decimalPlaces = (val.split('.')[1] || '').length;
+      return decimalPlaces <= 2;
+    }, 'Budget amount can only have up to 2 decimal places'),
   projectManagerId: z.string().min(1, 'Project manager is required'),
-  expectedStart: z.date().nullable(),
-  expectedEnd: z.date().nullable(),
-  tenderDate: z.date().nullable(),
+  expectedStart: z.date()
+    .nullable()
+    .refine((date) => {
+      if (!date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date >= today;
+    }, 'Start date cannot be in the past'),
+  expectedEnd: z.date()
+    .nullable()
+    .refine((date) => {
+      if (!date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date >= today;
+    }, 'End date cannot be in the past'),
+  tenderDate: z.date()
+    .nullable()
+    .refine((date) => {
+      if (!date) return true;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date >= today;
+    }, 'Tender date cannot be in the past'),
   paymentPlanLines: z.array(z.object({
-    year: z.number().min(2000).max(2100),
-    amount: z.number().min(0),
+    year: z.number()
+      .min(new Date().getFullYear(), 'Cannot create payments for past years')
+      .max(new Date().getFullYear() + 10, 'Cannot create payments more than 10 years in the future'),
+    amount: z.number()
+      .min(100, 'Each payment must be at least $100')
+      .max(5000000, 'Individual payments cannot exceed $5,000,000')
+      .refine((val) => {
+        // Check decimal precision (only 2 decimal places)
+        const decimalPlaces = (val.toString().split('.')[1] || '').length;
+        return decimalPlaces <= 2;
+      }, 'Payment amount can only have up to 2 decimal places'),
     currency: z.nativeEnum(CurrencyType),
-    paymentType: z.string().min(1),
+    paymentType: z.string()
+      .min(1, 'Payment type is required')
+      .refine((val) => {
+        const validTypes = ['Annually', 'Semi-Annually', 'Quarterly', 'Monthly', 'One-time'];
+        return validTypes.includes(val);
+      }, 'Invalid payment type. Must be one of: Annually, Semi-Annually, Quarterly, Monthly, One-time'),
     description: z.string().optional(),
     projectId: z.number().optional()
-  })),
+  }))
+  .min(1, 'At least one payment plan line is required'),
   projectNumber: z.string().optional(),
   initialNotes: z.string().optional(),
 }).refine((data) => {
+  // Validate start vs end date
   if (data.expectedStart && data.expectedEnd) {
-    return data.expectedEnd >= data.expectedStart;
+    const duration = data.expectedEnd.getTime() - data.expectedStart.getTime();
+    const days = duration / (1000 * 60 * 60 * 24);
+    
+    if (days < 1) {
+      return false;
+    }
+    
+    if (days > 3650) { // 10 years
+      return false;
+    }
   }
   return true;
 }, {
-  message: "End date must be after start date",
+  message: "Project duration must be between 1 day and 10 years",
   path: ["expectedEnd"],
+}).refine((data) => {
+  // Validate tender date vs start date
+  if (data.tenderDate && data.expectedStart) {
+    return data.tenderDate < data.expectedStart;
+  }
+  return true;
+}, {
+  message: "Tender date must be before project start date",
+  path: ["tenderDate"],
+}).refine((data) => {
+  // Validate currency consistency in payment plan
+  if (data.paymentPlanLines && data.paymentPlanLines.length > 0) {
+    const currencies = data.paymentPlanLines.map(p => p.currency);
+    const uniqueCurrencies = [...new Set(currencies)];
+    return uniqueCurrencies.length === 1;
+  }
+  return true;
+}, {
+  message: "All payment plan lines must use the same currency",
+  path: ["paymentPlanLines"],
 });
 
 // Define the form values type
@@ -121,18 +193,12 @@ interface ProjectFormProps {
   initialData?: FormValues;
 }
 
-// Helper function to ensure payment plan lines are in the correct format
-const normalizePaymentPlanLines = (data: any) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.$values && Array.isArray(data.$values)) return data.$values;
-  return [];
-};
 
 export default function ProjectForm({ onSubmit, isLoading = false, initialData }: ProjectFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
   const { user } = useAuth();
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Initialize form with proper default values
   const form = useForm<FormValues>({
@@ -208,7 +274,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     ? sectionsData.filter((s: Department) => s.parentId?.toString() === sectionValue)
     : [];
 
-  const { data: employeesData, error: employeesError } = useQuery({
+  const { data: employeesData } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
       try {
@@ -231,35 +297,69 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     }
   });
 
-  // Validate current step
+  // Validate current step using business rules
   const validateStep = (step: number): boolean => {
     const values = form.getValues();
+    console.log(`Validating step ${step}:`, values);
+    
     switch (step) {
       case 1:
-        return !!values.name && !!values.section && !!values.projectManagerId;
+        const step1Valid = !!values.name && !!values.section && !!values.projectManagerId;
+        console.log('Step 1 validation:', step1Valid, { name: values.name, section: values.section, projectManagerId: values.projectManagerId });
+        return step1Valid;
       case 2:
-        return !!values.budget;
+        const step2Valid = !!values.expectedStart && !!values.expectedEnd && !!values.budget;
+        console.log('Step 2 validation:', step2Valid, { expectedStart: values.expectedStart, expectedEnd: values.expectedEnd, budget: values.budget });
+        
+        // Additional business rule validation for step 2
+        if (step2Valid) {
+          const budget = parseFloat(values.budget) || 0;
+          const budgetResult = ProjectBusinessRules.validateBudget(budget, user?.role || 'User');
+          if (!budgetResult.valid) {
+            console.log('Step 2 budget validation failed:', budgetResult.message);
+            return false;
+          }
+          
+          const dateResult = ProjectBusinessRules.validateDates({
+            expectedStart: values.expectedStart || undefined,
+            expectedEnd: values.expectedEnd || undefined,
+            tenderDate: values.tenderDate || undefined
+          });
+          if (!dateResult.valid) {
+            console.log('Step 2 date validation failed:', dateResult.message);
+            return false;
+          }
+        }
+        
+        return step2Valid;
       case 3:
-        // Validate PaymentPlanLines
+        // Validate PaymentPlanLines using business rules
         const paymentLines = values.paymentPlanLines || [];
         if (paymentLines.length === 0) return false;
-        return paymentLines.every(line => 
-          line.year && !isNaN(line.year) && 
-          line.amount && !isNaN(line.amount) && 
-          line.currency && 
-          line.paymentType
-        );
+        
+        const budget = parseFloat(values.budget) || 0;
+        const paymentResult = ProjectBusinessRules.validatePaymentPlan(paymentLines, budget);
+        
+        console.log('Step 3 validation - Payment plan result:', paymentResult);
+        
+        // Allow step 3 to proceed even with warnings (payment plan can exceed budget)
+        if (!paymentResult.valid) {
+          console.log('Step 3 validation failed:', paymentResult.message);
+          return false;
+        }
+        
+        // Show warning if payment plan exceeds budget but allow continuation
+        if (paymentResult.warning) {
+          console.log('Step 3 warning:', paymentResult.warning);
+          // We'll show this warning in the UI but allow progression
+        }
+        
+        return true;
       default:
         return false;
     }
   };
 
-  // Handle next step
-  const nextStep = () => {
-    if (currentStep < totalSteps && validateStep(currentStep)) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
 
   const prevStep = () => {
     if (currentStep > 1) {
@@ -282,7 +382,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       {
         year: new Date().getFullYear(),
         amount: 0,
-        currency: CurrencyType.SAR,
+        currency: CurrencyType.QAR,
         paymentType: 'Annually',
         description: ''
       }
@@ -297,6 +397,67 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       currentLines.filter((_, i) => i !== index)
     );
   };
+
+  // Check for validation warnings
+  const checkValidationWarnings = useCallback(() => {
+    const values = form.getValues();
+    const warnings: string[] = [];
+    
+    // Check budget validation
+    if (values.budget) {
+      const budget = parseFloat(values.budget) || 0;
+      const budgetResult = ProjectBusinessRules.validateBudget(budget, user?.role || 'User');
+      if (budgetResult.warning) {
+        warnings.push(budgetResult.warning);
+      }
+    }
+    
+    // Check payment plan validation
+    if (values.paymentPlanLines && values.paymentPlanLines.length > 0) {
+      const budget = parseFloat(values.budget) || 0;
+      const paymentResult = ProjectBusinessRules.validatePaymentPlan(values.paymentPlanLines, budget);
+      if (paymentResult.warning) {
+        warnings.push(paymentResult.warning);
+      }
+    }
+    
+    // Check date validation
+    if (values.expectedStart || values.expectedEnd || values.tenderDate) {
+      const dateResult = ProjectBusinessRules.validateDates({
+        expectedStart: values.expectedStart || undefined,
+        expectedEnd: values.expectedEnd || undefined,
+        tenderDate: values.tenderDate || undefined
+      });
+      if (dateResult.warning) {
+        warnings.push(dateResult.warning);
+      }
+    }
+    
+    // Check project duration vs payment plan alignment
+    if (values.expectedStart && values.expectedEnd && values.paymentPlanLines && values.paymentPlanLines.length > 0) {
+      const durationResult = ProjectBusinessRules.validateProjectDurationAlignment({
+        expectedStart: values.expectedStart,
+        expectedEnd: values.expectedEnd,
+        paymentPlanLines: values.paymentPlanLines,
+        budget: parseFloat(values.budget) || 0,
+        userRole: user?.role || 'User'
+      });
+      if (durationResult.warning) {
+        warnings.push(durationResult.warning);
+      }
+    }
+    
+    setValidationWarnings(warnings);
+  }, [form, user?.role]);
+
+  // Update warnings when form values change
+  React.useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      console.log('Form field changed:', name, type, value);
+      checkValidationWarnings();
+    });
+    return () => subscription.unsubscribe();
+  }, [checkValidationWarnings]);
 
   // Handle form submission
   const handleFormSubmit = async (event: React.FormEvent) => {
@@ -332,9 +493,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
             year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
             amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
             currency: line.currency || CurrencyType.QAR,
-            paymentType: line.paymentType || 'Annually',
-            description: line.description || ''
-          }))
+          paymentType: line.paymentType || 'Annually',
+          description: line.description || ''
+        }))
       };
 
       console.log('Transformed form data for update:', formData);
@@ -493,18 +654,18 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   render={({ field }) => (
                     <FormItem>
                                               <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
-                          <Building2 className="h-4 w-4 text-primary" />
-                          Unit (Optional)
-                        </FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                            disabled={!sectionValue}
-                          >
+                        <Building2 className="h-4 w-4 text-primary" />
+                        Unit (Optional)
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                          disabled={!sectionValue}
+                        >
                             <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
-                              <SelectValue placeholder="Select unit (optional)" />
-                            </SelectTrigger>
+                            <SelectValue placeholder="Select unit (optional)" />
+                          </SelectTrigger>
                           <SelectContent>
                             {filteredUnits.map((unit: Department) => (
                               <SelectItem key={unit.id} value={unit.id.toString()}>
@@ -526,17 +687,17 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   render={({ field }) => (
                     <FormItem>
                                               <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
-                          <User className="h-4 w-4 text-primary" />
-                          Project Manager
-                        </FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                          >
+                        <User className="h-4 w-4 text-primary" />
+                        Project Manager
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                        >
                             <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
-                              <SelectValue placeholder="Select project manager" />
-                            </SelectTrigger>
+                            <SelectValue placeholder="Select project manager" />
+                          </SelectTrigger>
                           <SelectContent>
                             {employeesData?.map((employee: Employee) => (
                               <SelectItem key={employee.id} value={employee.id.toString()}>
@@ -558,16 +719,16 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   render={({ field }) => (
                     <FormItem>
                                               <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
-                          <FileText className="h-4 w-4 text-primary" />
-                          Description (Optional)
-                        </FormLabel>
-                        <FormControl>
-                                                  <Textarea 
+                        <FileText className="h-4 w-4 text-primary" />
+                        Description (Optional)
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea 
                           placeholder="Enter project description (optional)" 
                           className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white" 
                           {...field} 
                         />
-                        </FormControl>
+                      </FormControl>
                       <FormMessage className={formMessageStyles} />
                     </FormItem>
                   )}
@@ -602,41 +763,112 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Expected Start Date
                         </FormLabel>
+                        <div className="relative">
+                          <Input
+                            value={field.value ? format(field.value, "MM/dd/yyyy") : ""}
+                            placeholder="MM/DD/YYYY"
+                            className="bg-background pr-10"
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              if (!isNaN(date.getTime())) {
+                                field.onChange(date);
+                                if (field.name === "expectedStart") {
+                                  const endDate = form.getValues("expectedEnd");
+                                  if (endDate && date && endDate < date) {
+                                    form.setValue("expectedEnd", null);
+                                  }
+                                }
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                // Open calendar popup
+                              }
+                            }}
+                          />
                         <Popover>
                           <PopoverTrigger asChild>
-                            <FormControl>
                               <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
-                                  !field.value && "text-muted-foreground"
-                                )}
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
                               >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                <CalendarIcon className="size-3.5" />
+                                <span className="sr-only">Select date</span>
                               </Button>
-                            </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto overflow-hidden p-0"
+                              align="end"
+                              alignOffset={-8}
+                              sideOffset={10}
+                            >
                             <Calendar
                               mode="single"
                               selected={field.value ?? undefined}
-                              onSelect={(date) => {
+                                onSelect={(date: Date | undefined) => {
                                 field.onChange(date ?? null);
+                                  if (field.name === "expectedStart") {
                                 const endDate = form.getValues("expectedEnd");
                                 if (endDate && date && endDate < date) {
                                   form.setValue("expectedEnd", null);
-                                }
-                              }}
-                              disabled={(date) => date < new Date("1900-01-01")}
-                              initialFocus
+                                    }
+                                  }
+                                }}
+                                className="rounded-md border p-2"
+                                classNames={{
+                                  month_caption: "mx-0",
+                                }}
+                                captionLayout="dropdown"
+                                defaultMonth={field.value ?? new Date()}
+                                startMonth={new Date(1980, 6)}
+                                hideNavigation
+                                components={{
+                                  DropdownNav: (props: DropdownNavProps) => {
+                                    return (
+                                      <div className="flex w-full items-center gap-2">
+                                        {props.children}
+                                      </div>
+                                    )
+                                  },
+                                  Dropdown: (props: DropdownProps) => {
+                                    return (
+                                      <Select
+                                        value={String(props.value)}
+                                        onValueChange={(value) => {
+                                          if (props.onChange) {
+                                            const event = {
+                                              target: {
+                                                value: String(value),
+                                              },
+                                            } as React.ChangeEvent<HTMLSelectElement>
+                                            props.onChange(event)
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                                          {props.options?.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={String(option.value)}
+                                              disabled={option.disabled}
+                                            >
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  },
+                                }}
                             />
                           </PopoverContent>
                         </Popover>
+                        </div>
                         <FormMessage className={formMessageStyles} />
                       </FormItem>
                     )}
@@ -652,38 +884,100 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Expected End Date
                         </FormLabel>
+                        <div className="relative">
+                          <Input
+                            value={field.value ? format(field.value, "MM/dd/yyyy") : ""}
+                            placeholder="MM/DD/YYYY"
+                            className="bg-background pr-10"
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              if (!isNaN(date.getTime())) {
+                                field.onChange(date);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                // Open calendar popup
+                              }
+                            }}
+                          />
                         <Popover>
                           <PopoverTrigger asChild>
-                            <FormControl>
                               <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
-                                  !field.value && "text-muted-foreground"
-                                )}
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
                               >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                <CalendarIcon className="size-3.5" />
+                                <span className="sr-only">Select date</span>
                               </Button>
-                            </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto overflow-hidden p-0"
+                              align="end"
+                              alignOffset={-8}
+                              sideOffset={10}
+                            >
                             <Calendar
                               mode="single"
                               selected={field.value ?? undefined}
-                              onSelect={field.onChange}
-                              disabled={(date) => {
-                                const startDate = form.getValues("expectedStart");
-                                return Boolean(date < new Date("1900-01-01") || (startDate && date < startDate));
-                              }}
-                              initialFocus
+                                onSelect={(date: Date | undefined) => {
+                                  field.onChange(date ?? null);
+                                }}
+                                className="rounded-md border p-2"
+                                classNames={{
+                                  month_caption: "mx-0",
+                                }}
+                                captionLayout="dropdown"
+                                defaultMonth={field.value ?? new Date()}
+                                startMonth={new Date(1980, 6)}
+                                hideNavigation
+                                components={{
+                                  DropdownNav: (props: DropdownNavProps) => {
+                                    return (
+                                      <div className="flex w-full items-center gap-2">
+                                        {props.children}
+                                      </div>
+                                    )
+                                  },
+                                  Dropdown: (props: DropdownProps) => {
+                                    return (
+                                      <Select
+                                        value={String(props.value)}
+                                        onValueChange={(value) => {
+                                          if (props.onChange) {
+                                            const event = {
+                                              target: {
+                                                value: String(value),
+                                              },
+                                            } as React.ChangeEvent<HTMLSelectElement>
+                                            props.onChange(event)
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                                          {props.options?.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={String(option.value)}
+                                              disabled={option.disabled}
+                                            >
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  },
+                                }}
                             />
                           </PopoverContent>
                         </Popover>
+                        </div>
                         <FormMessage className={formMessageStyles} />
                       </FormItem>
                     )}
@@ -699,35 +993,100 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           <CalendarIcon className="h-4 w-4 text-primary" />
                           Tender Date
                         </FormLabel>
+                        <div className="relative">
+                          <Input
+                            value={field.value ? format(field.value, "MM/dd/yyyy") : ""}
+                            placeholder="MM/DD/YYYY"
+                            className="bg-background pr-10"
+                            onChange={(e) => {
+                              const date = new Date(e.target.value);
+                              if (!isNaN(date.getTime())) {
+                                field.onChange(date);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                // Open calendar popup
+                              }
+                            }}
+                          />
                         <Popover>
                           <PopoverTrigger asChild>
-                            <FormControl>
                               <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal py-2 px-3 border hover:border-primary/50 transition-all duration-200",
-                                  !field.value && "text-muted-foreground"
-                                )}
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1/2 right-2 size-6 -translate-y-1/2"
                               >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                <CalendarIcon className="size-3.5" />
+                                <span className="sr-only">Select date</span>
                               </Button>
-                            </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto overflow-hidden p-0"
+                              align="end"
+                              alignOffset={-8}
+                              sideOffset={10}
+                            >
                             <Calendar
                               mode="single"
                               selected={field.value ?? undefined}
-                              onSelect={field.onChange}
-                              disabled={(date) => date < new Date("1900-01-01")}
-                              initialFocus
+                                onSelect={(date: Date | undefined) => {
+                                  field.onChange(date ?? null);
+                                }}
+                                className="rounded-md border p-2"
+                                classNames={{
+                                  month_caption: "mx-0",
+                                }}
+                                captionLayout="dropdown"
+                                defaultMonth={field.value ?? new Date()}
+                                startMonth={new Date(1980, 6)}
+                                hideNavigation
+                                components={{
+                                  DropdownNav: (props: DropdownNavProps) => {
+                                    return (
+                                      <div className="flex w-full items-center gap-2">
+                                        {props.children}
+                                      </div>
+                                    )
+                                  },
+                                  Dropdown: (props: DropdownProps) => {
+                                    return (
+                                      <Select
+                                        value={String(props.value)}
+                                        onValueChange={(value) => {
+                                          if (props.onChange) {
+                                            const event = {
+                                              target: {
+                                                value: String(value),
+                                              },
+                                            } as React.ChangeEvent<HTMLSelectElement>
+                                            props.onChange(event)
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-8 w-fit font-medium first:grow">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[min(26rem,var(--radix-select-content-available-height))]">
+                                          {props.options?.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={String(option.value)}
+                                              disabled={option.disabled}
+                                            >
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  },
+                                }}
                             />
                           </PopoverContent>
                         </Popover>
+                        </div>
                         <FormMessage className={formMessageStyles} />
                       </FormItem>
                     )}
@@ -753,6 +1112,22 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           />
                         </FormControl>
                         <FormMessage className={formMessageStyles} />
+                        {/* Show budget-specific warnings */}
+                        {(() => {
+                          const budget = parseFloat(field.value) || 0;
+                          const budgetResult = ProjectBusinessRules.validateBudget(budget, user?.role || 'User');
+                          if (budgetResult.warning) {
+                            return (
+                              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                                <p className="text-amber-700 text-xs flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {budgetResult.warning}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </FormItem>
                     )}
                   />
@@ -772,6 +1147,184 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     >
                       + Add Payment Line
                     </Button>
+                  </div>
+                  
+                  {/* Budget Summary */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                    <div className="grid grid-cols-4 gap-4 text-sm">
+                      <div className="text-center">
+                        <p className="text-gray-600 font-medium">Project Budget</p>
+                        <p className="text-lg font-bold text-blue-700">
+                          {form.watch('budget') ? ProjectBusinessRules.formatCurrency(parseFloat(form.watch('budget'))) : '0 QAR'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-600 font-medium">Total Payment Plan (Project)</p>
+                        <p className={`text-lg font-bold ${
+                          (() => {
+                            const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
+                              amount: parseFloat(line.amount?.toString()) || 0,
+                              paymentType: line.paymentType,
+                              currency: line.currency,
+                              year: line.year,
+                              description: line.description
+                            }));
+                            const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
+                              paymentLines, 
+                              form.watch('expectedStart'), 
+                              form.watch('expectedEnd')
+                            );
+                            const budget = parseFloat(form.watch('budget')) || 0;
+                            return totalPaymentPlan > budget ? 'text-amber-600' : 'text-green-600';
+                          })()
+                        }`}>
+                          {(() => {
+                            const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
+                              amount: parseFloat(line.amount?.toString()) || 0,
+                              paymentType: line.paymentType,
+                              currency: line.currency,
+                              year: line.year,
+                              description: line.description
+                            }));
+                            const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
+                              paymentLines, 
+                              form.watch('expectedStart'), 
+                              form.watch('expectedEnd')
+                            );
+                            return ProjectBusinessRules.formatCurrency(totalPaymentPlan);
+                          })()}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-600 font-medium">Variance</p>
+                        <p className={`text-lg font-bold ${
+                          (() => {
+                            const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
+                              amount: parseFloat(line.amount?.toString()) || 0,
+                              paymentType: line.paymentType,
+                              currency: line.currency,
+                              year: line.year,
+                              description: line.description
+                            }));
+                            const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
+                              paymentLines, 
+                              form.watch('expectedStart'), 
+                              form.watch('expectedEnd')
+                            );
+                            const budget = parseFloat(form.watch('budget')) || 0;
+                            const variance = budget - totalPaymentPlan;
+                            return variance < 0 ? 'text-amber-600' : 'text-green-600';
+                          })()
+                        }`}>
+                          {(() => {
+                            const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
+                              amount: parseFloat(line.amount?.toString()) || 0,
+                              paymentType: line.paymentType,
+                              currency: line.currency,
+                              year: line.year,
+                              description: line.description
+                            }));
+                            const totalPaymentPlan = ProjectBusinessRules.calculateTotalProjectPaymentPlan(
+                              paymentLines, 
+                              form.watch('expectedStart'), 
+                              form.watch('expectedEnd')
+                            );
+                            const budget = parseFloat(form.watch('budget')) || 0;
+                            const variance = budget - totalPaymentPlan;
+                            const percentage = budget > 0 ? ((Math.abs(variance) / budget) * 100).toFixed(1) : '0';
+                            return `${variance >= 0 ? '+' : ''}${ProjectBusinessRules.formatCurrency(variance)} (${percentage}%)`;
+                          })()}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-600 font-medium">Duration vs Payments</p>
+                        <p className={`text-lg font-bold ${
+                          (() => {
+                            const startDate = form.watch('expectedStart');
+                            const endDate = form.watch('expectedEnd');
+                            const paymentLines = form.watch('paymentPlanLines') || [];
+                            
+                            if (!startDate || !endDate || paymentLines.length === 0) {
+                              return 'text-gray-500';
+                            }
+                            
+                            const projectDuration = endDate.getTime() - startDate.getTime();
+                            const projectMonths = projectDuration / (1000 * 60 * 60 * 24 * 30.44);
+                            const paymentYears = [...new Set(paymentLines.map(p => p.year))].length;
+                            
+                            if (projectMonths < 6 && paymentYears > 1) {
+                              return 'text-red-600';
+                            } else if (projectMonths < 12 && paymentYears > 2) {
+                              return 'text-amber-600';
+                            } else if (projectMonths > 24 && paymentYears === 1) {
+                              return 'text-amber-600';
+                            }
+                            return 'text-green-600';
+                          })()
+                        }`}>
+                          {(() => {
+                            const startDate = form.watch('expectedStart');
+                            const endDate = form.watch('expectedEnd');
+                            const paymentLines = form.watch('paymentPlanLines') || [];
+                            
+                            if (!startDate || !endDate || paymentLines.length === 0) {
+                              return 'N/A';
+                            }
+                            
+                            const projectDuration = endDate.getTime() - startDate.getTime();
+                            const projectMonths = Math.round(projectDuration / (1000 * 60 * 60 * 24 * 30.44));
+                            const paymentYears = [...new Set(paymentLines.map(p => p.year))].length;
+                            
+                            return `${projectMonths}m / ${paymentYears}y`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Show validation warnings */}
+                    {validationWarnings.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <h4 className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          Validation Warnings ({validationWarnings.length})
+                        </h4>
+                        {validationWarnings.map((warning, index) => (
+                          <div key={index} className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                            <p className="text-amber-700 text-sm">
+                              {warning}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Payment Calculation Breakdown */}
+                    {form.watch('paymentPlanLines') && form.watch('paymentPlanLines').length > 0 && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <h5 className="text-sm font-medium text-blue-800 mb-2">Payment Calculation Breakdown:</h5>
+                        {form.watch('paymentPlanLines').map((line: any, index: number) => {
+                          const amount = parseFloat(line.amount?.toString()) || 0;
+                          const annualAmount = ProjectBusinessRules.calculateAnnualPaymentAmount(amount, line.paymentType);
+                          return (
+                            <div key={index} className="text-xs text-blue-700 mb-1">
+                              {line.paymentType}: {ProjectBusinessRules.formatCurrency(amount)} × {line.paymentType === 'Monthly' ? '12' : line.paymentType === 'Quarterly' ? '4' : line.paymentType === 'Semi-Annually' ? '2' : '1'} = {ProjectBusinessRules.formatCurrency(annualAmount)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
+                    {/* Debug section - remove in production */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="mt-3 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
+                        <strong>Debug Info:</strong>
+                        <br />Warnings: {validationWarnings.length}
+                        <br />Budget: {form.watch('budget')}
+                        <br />Start: {form.watch('expectedStart')?.toLocaleDateString()}
+                        <br />End: {form.watch('expectedEnd')?.toLocaleDateString()}
+                        <br />Payments: {form.watch('paymentPlanLines')?.length || 0}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Ensure paymentPlanLines is always an array */}
@@ -835,6 +1388,26 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                               />
                             </FormControl>
                             <FormMessage />
+                            {/* Show warning if this amount would cause total to exceed budget */}
+                            {(() => {
+                              const currentAmount = parseFloat(line.amount?.toString()) || 0;
+                              const otherLinesTotal = (form.getValues('paymentPlanLines') || [])
+                                .filter((_, i) => i !== index)
+                                .reduce((sum, l) => sum + (parseFloat(l.amount?.toString()) || 0), 0);
+                              const totalWithCurrent = otherLinesTotal + currentAmount;
+                              const budget = parseFloat(form.getValues('budget')) || 0;
+                              
+                              if (totalWithCurrent > budget && budget > 0) {
+                                const variance = totalWithCurrent - budget;
+                                const percentage = ((variance / budget) * 100).toFixed(1);
+                                return (
+                                  <p className="text-xs text-amber-600 mt-1">
+                                    ℹ️ Total will exceed budget by {ProjectBusinessRules.formatCurrency(variance)} ({percentage}%)
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
                           </FormItem>
                         )}
                       />
@@ -885,7 +1458,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                               <SelectContent>
                                 <SelectItem value="Monthly">Monthly</SelectItem>
                                 <SelectItem value="Quarterly">Quarterly</SelectItem>
+                                <SelectItem value="Semi-Annually">Semi-Annually</SelectItem>
                                 <SelectItem value="Annually">Annually</SelectItem>
+                                <SelectItem value="One-time">One-time</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -950,16 +1525,16 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                   render={({ field }) => (
                     <FormItem>
                                               <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
-                          <FileText className="h-4 w-4 text-primary" />
-                          Additional Notes
-                        </FormLabel>
-                        <FormControl>
-                                                  <Textarea 
+                        <FileText className="h-4 w-4 text-primary" />
+                        Additional Notes
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea 
                           placeholder="Enter any additional project notes or documentation requirements" 
                           className="min-h-[120px] focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50 text-gray-900 bg-white" 
                           {...field} 
                         />
-                        </FormControl>
+                      </FormControl>
                       <FormMessage className={formMessageStyles} />
                     </FormItem>
                   )}

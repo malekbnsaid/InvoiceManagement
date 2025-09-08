@@ -91,7 +91,7 @@ export default function ProjectList() {
                 <TableCell>
                   {project.budget?.toLocaleString('en-US', {
                     style: 'currency',
-                    currency: 'SAR',
+                    currency: 'QAR',
                   })}
                 </TableCell>
                 <TableCell className="text-right">

@@ -3,6 +3,8 @@ import { ReactNode, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { LoadingPage } from '../ui/LoadingPage';
+import { usePermissions } from '../../hooks/usePermissions';
 import {
   LayoutDashboard, 
   FileText, 
@@ -70,20 +72,29 @@ const navItems: NavItem[] = [
   },
 ];
 
-const actionItems: NavItem[] = [
-  {
-    name: 'New Project',
-    path: '/projects/new',
-    icon: <PlusCircle className="h-5 w-5" />,
-    action: true
-  },
-  {
-    name: 'Upload Invoice',
-    path: '/invoices/upload',
-    icon: <PlusCircle className="h-5 w-5" />,
-    action: true
+const getActionItems = (canCreateProject: boolean, canUploadInvoice: boolean): NavItem[] => {
+  const items: NavItem[] = [];
+  
+  if (canCreateProject) {
+    items.push({
+      name: 'New Project',
+      path: '/projects/new',
+      icon: <PlusCircle className="h-5 w-5" />,
+      action: true
+    });
   }
-];
+  
+  if (canUploadInvoice) {
+    items.push({
+      name: 'Upload Invoice',
+      path: '/invoices/upload',
+      icon: <PlusCircle className="h-5 w-5" />,
+      action: true
+    });
+  }
+  
+  return items;
+};
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -95,7 +106,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const [darkMode, setDarkMode] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
+  const { canCreateProject, canUploadInvoice } = usePermissions();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -104,6 +116,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   const getCurrentPageName = () => {
     const currentPath = location.pathname;
+    const actionItems = getActionItems(canCreateProject, canUploadInvoice);
     const currentItem = [...navItems, ...actionItems].find(item => item.path === currentPath);
     
     if (currentItem) {
@@ -127,6 +140,16 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     
     return 'Dashboard';
   };
+
+  // Show loading if still initializing
+  if (isLoading) {
+    return (
+      <LoadingPage 
+        message="Loading dashboard..." 
+        showSpinner={true}
+      />
+    );
+  }
 
   return (
     <div className={`flex h-screen bg-gray-50 dark:bg-gray-900 ${darkMode ? 'dark' : ''}`}>
@@ -198,7 +221,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                     Quick Actions
                   </h3>
                   <div className="space-y-1">
-                    {actionItems.map((item) => (
+                    {getActionItems(canCreateProject, canUploadInvoice).map((item) => (
                       <Link
                         key={item.name}
                         to={item.path}
@@ -314,7 +337,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               </h3>
             )}
             <div className="space-y-1 px-3">
-              {actionItems.map((item) => (
+              {getActionItems(canCreateProject, canUploadInvoice).map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}
@@ -369,13 +392,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <button 
-                className="p-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg"
-                onClick={() => navigate('/projects/new')}
-              >
-                <span className="sr-only">New Project</span>
-                <PlusCircle className="h-6 w-6" />
-              </button>
+              {canCreateProject && (
+                <button 
+                  className="p-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg"
+                  onClick={() => navigate('/projects/new')}
+                >
+                  <span className="sr-only">New Project</span>
+                  <PlusCircle className="h-6 w-6" />
+                </button>
+              )}
               <button className="p-1 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white relative">
                 <Bell className="h-6 w-6" />
                 <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>

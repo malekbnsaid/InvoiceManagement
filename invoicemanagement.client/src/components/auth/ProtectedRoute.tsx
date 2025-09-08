@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
-import { AuthContainer } from './AuthContainer';
+import { LoadingPage } from '../ui/LoadingPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,26 +16,33 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   fallback 
 }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   console.log('🔐 ProtectedRoute: Render state:', { isAuthenticated, user, isLoading });
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      console.log('🔐 ProtectedRoute: Not authenticated, redirecting to /auth');
+      navigate('/auth');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Show loading while initializing auth
   if (isLoading) {
     console.log('🔐 ProtectedRoute: Showing loading spinner');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Initializing...</p>
-        </div>
-      </div>
+      <LoadingPage 
+        message="Initializing..." 
+        showSpinner={true}
+      />
     );
   }
 
-  // If not authenticated, show auth container
+  // If not authenticated, don't render anything (will redirect)
   if (!isAuthenticated) {
-    console.log('🔐 ProtectedRoute: Not authenticated, showing auth container');
-    return <AuthContainer onAuthSuccess={() => window.location.reload()} />;
+    console.log('🔐 ProtectedRoute: Not authenticated, waiting for redirect');
+    return null;
   }
 
   console.log('🔐 ProtectedRoute: Authenticated, showing protected content');
