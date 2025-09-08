@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -70,10 +70,6 @@ interface PaymentPlanLine {
   description: string;
 }
 
-interface APIResponse<T> {
-  $values?: T[];
-  [key: string]: any;
-}
 
 interface ProjectDetails extends Omit<Project, 'projectManager' | 'section'> {
   paymentPlanLines: Array<{
@@ -103,7 +99,6 @@ interface ProjectDetails extends Omit<Project, 'projectManager' | 'section'> {
 export default function ProjectDetailsPage() {
   const { id } = useParams();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   
   // State for approval dialog
@@ -112,7 +107,7 @@ export default function ProjectDetailsPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const { data: project, isLoading, error } = useQuery({
+  const { data: project, isLoading } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
       const response = await projectApi.getById(parseInt(id!)) as unknown as ProjectDetails;
@@ -186,6 +181,7 @@ export default function ProjectDetailsPage() {
       setIsApprovalDialogOpen(false);
     },
     onError: (error: unknown) => {
+      console.error('Approval mutation error:', error);
       toast({
         title: "Error",
         description: "Failed to update project approval status. Please try again.",
@@ -311,13 +307,6 @@ export default function ProjectDetailsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">Error loading project details. Please try again later.</div>
-      </div>
-    );
-  }
 
   if (!project) {
     return (
@@ -544,85 +533,194 @@ export default function ProjectDetailsPage() {
         </Card>
       </div>
 
-      {/* Approval Dialog */}
+      {/* Enhanced Approval Dialog */}
       <PMOOrHigher>
         <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {isRejecting ? 'Reject Project' : 'Approve Project'}
-            </DialogTitle>
-            <DialogDescription>
-              {isRejecting 
-                ? 'Please provide a reason for rejecting this project.'
-                : 'Please enter the PO number to approve this project.'}
-            </DialogDescription>
-          </DialogHeader>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full ${isRejecting ? 'bg-red-100' : 'bg-green-100'}`}>
+                  {isRejecting ? (
+                    <XCircleIcon className="h-6 w-6 text-red-600" />
+                  ) : (
+                    <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                  )}
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-semibold">
+                    {isRejecting ? 'Reject Project' : 'Approve Project'}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600">
+                    {isRejecting 
+                      ? 'Please provide a detailed reason for rejecting this project.'
+                      : 'Review the project details and enter the PO number to approve.'}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {!isRejecting && (
-              <div className="space-y-2">
-                <Label htmlFor="poNumber">PO Number</Label>
-                <Input
-                  id="poNumber"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  placeholder="Enter PO number"
-                  className="col-span-3"
-                />
+            {/* Project Summary Card */}
+            {project && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 border border-blue-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <DocumentTextIcon className="h-5 w-5 text-blue-600" />
+                  Project Summary
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium text-gray-700">Project:</span>
+                      <p className="text-gray-900 font-semibold">{project.name}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Project Number:</span>
+                      <p className="text-gray-900">{project.projectNumber}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Manager:</span>
+                      <p className="text-gray-900">{project.projectManager.employeeName}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium text-gray-700">Budget:</span>
+                      <p className="text-gray-900 font-semibold">
+                        {project.budget ? `QAR ${project.budget.toLocaleString()}` : 'Not set'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Duration:</span>
+                      <p className="text-gray-900">
+                        {project.expectedStart && project.expectedEnd 
+                          ? `${format(new Date(project.expectedStart), 'MMM dd, yyyy')} - ${format(new Date(project.expectedEnd), 'MMM dd, yyyy')}`
+                          : 'Not set'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Section:</span>
+                      <p className="text-gray-900">{project.section.sectionName}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-            
-            {isRejecting && (
-              <div className="space-y-2">
-                <Label htmlFor="rejectionReason">Rejection Reason</Label>
-                <Textarea
-                  id="rejectionReason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Enter reason for rejection"
-                  rows={4}
-                />
-              </div>
-            )}
-          </div>
 
-          <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (isRejecting) {
-                  setIsRejecting(false);
-                } else {
-                  setIsApprovalDialogOpen(false);
-                }
-              }}
-            >
-              {isRejecting ? 'Back to Approval' : 'Cancel'}
-            </Button>
-            <div className="flex gap-2">
+            {/* Form Section */}
+            <div className="space-y-6">
               {!isRejecting && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setIsRejecting(true)}
-                >
-                  Reject
-                </Button>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <Label htmlFor="poNumber" className="text-base font-medium">
+                      Purchase Order Number
+                    </Label>
+                  </div>
+                  <Input
+                    id="poNumber"
+                    value={poNumber}
+                    onChange={(e) => setPoNumber(e.target.value)}
+                    placeholder="Enter PO number (e.g., PO-2024-001)"
+                    className="h-12 text-base border-2 focus:border-green-500 focus:ring-green-500"
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    This PO number will be associated with the approved project.
+                  </p>
+                </div>
               )}
+              
+              {isRejecting && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <Label htmlFor="rejectionReason" className="text-base font-medium">
+                      Rejection Reason
+                    </Label>
+                  </div>
+                  <Textarea
+                    id="rejectionReason"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Please provide a detailed reason for rejecting this project. This will help the project manager understand what needs to be improved."
+                    rows={5}
+                    className="border-2 focus:border-red-500 focus:ring-red-500 resize-none"
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    This reason will be shared with the project manager and team.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (isRejecting) {
+                      setIsRejecting(false);
+                      setRejectionReason('');
+                    } else {
+                      setIsApprovalDialogOpen(false);
+                      setPoNumber('');
+                    }
+                  }}
+                  className="flex-1 sm:flex-none"
+                  disabled={approvalMutation.isLoading}
+                >
+                  <ArrowPathIcon className="h-4 w-4 mr-2" />
+                  {isRejecting ? 'Back to Approval' : 'Cancel'}
+                </Button>
+                
+                {!isRejecting && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsRejecting(true)}
+                    className="flex-1 sm:flex-none"
+                    disabled={approvalMutation.isLoading}
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-2" />
+                    Reject Project
+                  </Button>
+                )}
+              </div>
+              
               <Button
                 variant={isRejecting ? "destructive" : "default"}
                 onClick={() => handleApproval(!isRejecting)}
-                disabled={approvalMutation.isLoading}
+                disabled={approvalMutation.isLoading || (!isRejecting && !poNumber.trim()) || (isRejecting && !rejectionReason.trim())}
+                className={`flex-1 sm:flex-none min-w-[140px] ${
+                  isRejecting 
+                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
               >
-                {approvalMutation.isLoading
-                  ? "Processing..."
-                  : isRejecting
-                  ? "Confirm Rejection"
-                  : "Approve Project"}
+                {approvalMutation.isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {isRejecting ? (
+                      <>
+                        <XCircleIcon className="h-4 w-4" />
+                        Confirm Rejection
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="h-4 w-4" />
+                        Approve Project
+                      </>
+                    )}
+                  </div>
+                )}
               </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </PMOOrHigher>
     </div>
