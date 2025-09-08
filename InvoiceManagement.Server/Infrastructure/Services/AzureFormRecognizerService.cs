@@ -398,11 +398,39 @@ namespace InvoiceManagement.Server.Infrastructure.Services.OCR
                     _logger.LogWarning("Failed to extract invoice number from document");
                 }
 
-                // If we have no currency but see $ in content, default to USD
-                if (!ocrResult.Currency.HasValue && result.Content.Contains("$"))
+                // If we have no currency, try to detect from content
+                if (!ocrResult.Currency.HasValue)
                 {
-                    ocrResult.Currency = CurrencyType.USD;
-                    _logger.LogInformation("Set currency to USD based on $ symbol in content");
+                    // Check for QAR first (since it's common in the region)
+                    if (result.Content.Contains("QAR", StringComparison.OrdinalIgnoreCase) || 
+                        result.Content.Contains("ر.ق", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ocrResult.Currency = CurrencyType.QAR;
+                        _logger.LogInformation("Set currency to QAR based on QAR symbol in content");
+                    }
+                    // Check for other currencies
+                    else if (result.Content.Contains("€", StringComparison.OrdinalIgnoreCase) || 
+                             result.Content.Contains("EUR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ocrResult.Currency = CurrencyType.EUR;
+                        _logger.LogInformation("Set currency to EUR based on € symbol in content");
+                    }
+                    else if (result.Content.Contains("£", StringComparison.OrdinalIgnoreCase) || 
+                             result.Content.Contains("GBP", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ocrResult.Currency = CurrencyType.GBP;
+                        _logger.LogInformation("Set currency to GBP based on £ symbol in content");
+                    }
+                    // Default to USD only if $ is found
+                    else if (result.Content.Contains("$"))
+                    {
+                        ocrResult.Currency = CurrencyType.USD;
+                        _logger.LogInformation("Set currency to USD based on $ symbol in content");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No currency detected in content, leaving as null");
+                    }
                 }
 
                 return Task.FromResult(ocrResult);

@@ -408,28 +408,33 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       }
     }
     
-    // Check date validation
-    if (values.expectedStart || values.expectedEnd || values.tenderDate) {
-      console.log('Checking date validation for:', {
-        expectedStart: values.expectedStart,
-        expectedEnd: values.expectedEnd,
-        tenderDate: values.tenderDate
-      });
-      const dateResult = ProjectBusinessRules.validateDates({
-        expectedStart: values.expectedStart || undefined,
-        expectedEnd: values.expectedEnd || undefined,
-        tenderDate: values.tenderDate || undefined
-      });
-      console.log('Date validation result:', dateResult);
-      if (dateResult.warning) {
-        console.log('Date validation warning:', dateResult.warning);
-        warnings.push(dateResult.warning);
+      // Check date validation
+      if (values.expectedStart || values.expectedEnd || values.tenderDate) {
+        console.log('Checking date validation for:', {
+          expectedStart: values.expectedStart,
+          expectedEnd: values.expectedEnd,
+          tenderDate: values.tenderDate
+        });
+        const dateResult = ProjectBusinessRules.validateDates({
+          expectedStart: values.expectedStart || undefined,
+          expectedEnd: values.expectedEnd || undefined,
+          tenderDate: values.tenderDate || undefined
+        });
+        console.log('Date validation result:', dateResult);
+        if (dateResult.warning) {
+          console.log('Date validation warning:', dateResult.warning);
+          warnings.push(dateResult.warning);
+        }
+        if (dateResult.message) {
+          console.log('Date validation message (error):', dateResult.message);
+          warnings.push(`Error: ${dateResult.message}`);
+        }
+        // Check if validation failed (not just warnings)
+        if (!dateResult.valid) {
+          console.log('Date validation failed with error:', dateResult.message);
+          // Don't add to warnings, this is a blocking error
+        }
       }
-      if (dateResult.message) {
-        console.log('Date validation message (error):', dateResult.message);
-        warnings.push(`Error: ${dateResult.message}`);
-      }
-    }
     
     // Check project duration vs payment plan alignment
     if (values.expectedStart && values.expectedEnd && values.paymentPlanLines && values.paymentPlanLines.length > 0) {
@@ -448,7 +453,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     // Test warning removed
     
     console.log('All collected warnings:', warnings);
+    console.log('Setting validation warnings to state:', warnings);
     setValidationWarnings(warnings);
+    console.log('Validation warnings state updated');
   }, [form, user?.role]);
 
   // Update warnings when form values change
@@ -460,10 +467,15 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     return () => subscription.unsubscribe();
   }, [checkValidationWarnings]);
 
-  // Also check warnings when current step changes to step 2
+  // Debug logging for validation warnings
   React.useEffect(() => {
-    if (currentStep === 2) {
-      console.log('Step 2 activated, checking validation warnings');
+    console.log('Validation warnings state changed:', validationWarnings);
+  }, [validationWarnings]);
+
+  // Also check warnings when current step changes to step 2 or 3
+  React.useEffect(() => {
+    if (currentStep === 2 || currentStep === 3) {
+      console.log(`Step ${currentStep} activated, checking validation warnings`);
       checkValidationWarnings();
     }
   }, [currentStep, checkValidationWarnings]);
@@ -481,6 +493,20 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     try {
       const values = form.getValues();
       console.log('Form values before submission:', values);
+
+      // Check for any validation errors that should prevent saving
+      if (values.expectedStart || values.expectedEnd || values.tenderDate) {
+        const dateResult = ProjectBusinessRules.validateDates({
+          expectedStart: values.expectedStart || undefined,
+          expectedEnd: values.expectedEnd || undefined,
+          tenderDate: values.tenderDate || undefined
+        });
+        if (!dateResult.valid) {
+          console.log('Form submission blocked by date validation error:', dateResult.message);
+          toast.error(dateResult.message || 'Date validation failed');
+          return;
+        }
+      }
 
       // Handle step navigation
       if (currentStep < totalSteps) {
@@ -500,6 +526,10 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         budget: values.budget ? values.budget.toString() : '', // Ensure budget is string
         section: values.section,
         projectManagerId: values.projectManagerId,
+        // Keep Date objects for validation, convert to ISO strings only for API
+        expectedStart: values.expectedStart,
+        expectedEnd: values.expectedEnd,
+        tenderDate: values.tenderDate,
         paymentPlanLines: (values.paymentPlanLines || [])
           .filter(line => line.year && line.amount && line.currency && line.paymentType)
           .map(line => ({
@@ -832,6 +862,10 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 className="rounded-md border p-2"
                                 classNames={{
                                   month_caption: "mx-0",
+                                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700 rounded-md font-medium",
+                                  day_today: "bg-gray-100 text-gray-900 font-medium",
+                                  day_outside: "text-gray-400 opacity-50",
+                                  day: "hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors"
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
@@ -941,6 +975,10 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 className="rounded-md border p-2"
                                 classNames={{
                                   month_caption: "mx-0",
+                                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700 rounded-md font-medium",
+                                  day_today: "bg-gray-100 text-gray-900 font-medium",
+                                  day_outside: "text-gray-400 opacity-50",
+                                  day: "hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors"
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
@@ -1059,6 +1097,10 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                                 className="rounded-md border p-2"
                                 classNames={{
                                   month_caption: "mx-0",
+                                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 focus:bg-blue-700 rounded-md font-medium",
+                                  day_today: "bg-gray-100 text-gray-900 font-medium",
+                                  day_outside: "text-gray-400 opacity-50",
+                                  day: "hover:bg-gray-100 hover:text-gray-900 rounded-md transition-colors"
                                 }}
                                 captionLayout="dropdown"
                                 defaultMonth={field.value ?? new Date()}
@@ -1293,7 +1335,7 @@ form.watch('expectedEnd') || undefined
                             return 'text-green-600';
                           })()
                         }`}>
-                          {(() => {
+                    {(() => {
                             const startDate = form.watch('expectedStart');
                             const endDate = form.watch('expectedEnd');
                             const paymentLines = form.watch('paymentPlanLines') || [];
@@ -1308,8 +1350,8 @@ form.watch('expectedEnd') || undefined
                             
                             return `${projectMonths}m / ${paymentYears}y`;
                           })()}
-                        </p>
-                      </div>
+                            </p>
+                          </div>
                     </div>
                     
                     {/* Show validation warnings */}

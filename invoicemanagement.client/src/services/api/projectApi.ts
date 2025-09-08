@@ -4,13 +4,18 @@ import { api } from './api';
 // Format dates to UTC ISO string
 const formatDate = (date: Date | string | null) => {
   if (!date) return null;
+  console.log('formatDate input:', date, 'type:', typeof date);
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toISOString();
+  const result = dateObj.toISOString();
+  console.log('formatDate output:', result);
+  return result;
 };
 
 // Transform project data for API
 const transformProjectForApi = (project: any): Partial<Project> => {
   console.log('Transforming project data for API:', project);
+  console.log('TenderDate before transformation:', project.tenderDate, 'type:', typeof project.tenderDate);
+  
   const transformed = {
     ...project,
     expectedStart: formatDate(project.expectedStart),
@@ -29,7 +34,9 @@ const transformProjectForApi = (project: any): Partial<Project> => {
       description: line.description || ''
     }))
   };
+  
   console.log('Transformed project data:', transformed);
+  console.log('TenderDate after transformation:', transformed.tenderDate, 'type:', typeof transformed.tenderDate);
   return transformed;
 };
 

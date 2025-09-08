@@ -271,15 +271,20 @@ export default function ProjectFormPage() {
       console.log('PaymentPlanLines count:', projectData.paymentPlanLines.length);
       console.log('PaymentPlanLines validation passed');
 
-      // Remove any potential circular references and undefined values
-      const cleanProjectData = JSON.parse(JSON.stringify(projectData, (key, value) => 
-        value === undefined ? null : value
-      ));
-      
+      // Convert Date objects to ISO strings for API
+      const apiProjectData = {
+        ...projectData,
+        expectedStart: projectData.expectedStart ? projectData.expectedStart.toISOString() : undefined,
+        expectedEnd: projectData.expectedEnd ? projectData.expectedEnd.toISOString() : undefined,
+        tenderDate: projectData.tenderDate ? projectData.tenderDate.toISOString() : undefined,
+      };
+
       // Log the final data being sent to the API
-      console.log('Final data being sent to API:', cleanProjectData);
+      console.log('Final data being sent to API:', apiProjectData);
+      console.log('TenderDate type:', typeof apiProjectData.tenderDate);
+      console.log('TenderDate value:', apiProjectData.tenderDate);
       
-      await createProject.mutateAsync(cleanProjectData);
+      await createProject.mutateAsync(apiProjectData);
     } catch (err: unknown) {
       console.error('Error in handleSubmit:', err);
       let errorMessage = 'An error occurred while submitting the project request.';

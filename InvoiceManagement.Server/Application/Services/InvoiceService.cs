@@ -138,6 +138,9 @@ namespace InvoiceManagement.Server.Application.Services
                 await _invoiceRepository.AddAsync(invoice);
                 await _invoiceRepository.SaveChangesAsync();
                 
+                _logger.LogInformation("Invoice saved successfully with ID: {InvoiceId}, Number: {InvoiceNumber}", 
+                    invoice.Id, invoice.InvoiceNumber);
+                
                 // Now save the line items separately to ensure they are treated as new entities
                 if (invoice.LineItems?.Any() == true)
                 {
@@ -225,7 +228,24 @@ namespace InvoiceManagement.Server.Application.Services
 
         public async Task<IEnumerable<Invoice>> GetAllAsync()
         {
-            return await _invoiceRepository.GetAllAsync();
+            var invoices = await _context.Invoices
+                .Include(i => i.LineItems)
+                .Include(i => i.Vendor)
+                .Include(i => i.Project)
+                .Include(i => i.LPO)
+                .Include(i => i.StatusHistories)
+                .Include(i => i.Attachments)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+                
+            _logger.LogInformation("Retrieved {Count} invoices from database", invoices.Count);
+            foreach (var invoice in invoices.Take(5)) // Log first 5 invoices
+            {
+                _logger.LogInformation("Invoice: ID={Id}, Number={Number}, Vendor={Vendor}, Date={Date}, Value={Value}", 
+                    invoice.Id, invoice.InvoiceNumber, invoice.VendorName, invoice.InvoiceDate, invoice.InvoiceValue);
+            }
+            
+            return invoices;
         }
 
         public async Task<Invoice> UpdateAsync(int id, Invoice invoice)

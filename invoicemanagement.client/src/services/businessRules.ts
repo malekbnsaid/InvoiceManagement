@@ -369,7 +369,15 @@ export class ProjectBusinessRules {
     if (data.tenderDate && data.expectedStart) {
       const tenderDateUTC = new Date(data.tenderDate.getFullYear(), data.tenderDate.getMonth(), data.tenderDate.getDate());
       const startDateUTC = new Date(data.expectedStart.getFullYear(), data.expectedStart.getMonth(), data.expectedStart.getDate());
+      console.log('Tender date validation check:', {
+        tenderDate: data.tenderDate,
+        tenderDateUTC: tenderDateUTC,
+        startDate: data.expectedStart,
+        startDateUTC: startDateUTC,
+        isTenderAfterStart: tenderDateUTC >= startDateUTC
+      });
       if (tenderDateUTC >= startDateUTC) {
+        console.log('Tender date validation failed: tender date is on or after start date');
         return { 
           valid: false, 
           message: "Tender date must be before project start date." 

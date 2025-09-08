@@ -228,7 +228,8 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 "guide", "pos", "view", "support", "maintenance", "consulting", "training", 
                 "license", "subscription", "hosting", "storage", "backup", "security", 
                 "monitoring", "reporting", "integration", "development", "testing", 
-                "deployment", "migration", "item", "product", "charge", "cost"
+                "deployment", "migration", "item", "product", "charge", "cost", "milestone",
+                "invoice", "intranet", "annual", "period"
             };
 
             var hasServiceKeyword = serviceKeywords.Any(keyword => lowerLine.Contains(keyword));
@@ -257,7 +258,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 return false;
 
             // Check if line contains currency symbols and numbers
-            var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥");
+            var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥") ||
+                             line.Contains("QAR", StringComparison.OrdinalIgnoreCase) || 
+                             line.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) ||
+                             line.Contains("USD", StringComparison.OrdinalIgnoreCase) ||
+                             line.Contains("EUR", StringComparison.OrdinalIgnoreCase);
             var hasNumbers = Regex.IsMatch(line, @"\d");
             
             return hasCurrency && hasNumbers;
@@ -284,6 +289,23 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                     _logger.LogDebug("Found valid line item group starting at position {Position}", i);
                     return i;
                 }
+                
+                // Try netways format: Item, Description1, Description2, Quantity, Unit Price, Total (6-line group)
+                if (i <= endIndex - 5)
+                {
+                    var itemLine = lines[i];
+                    var descLine1 = lines[i + 1];
+                    var descLine2 = lines[i + 2];
+                    var qtyLine = lines[i + 3];
+                    var priceLine = lines[i + 4];
+                    var totalLine2 = lines[i + 5];
+                    
+                    if (IsValidNetwaysLineItemGroup(itemLine, descLine1, descLine2, qtyLine, priceLine, totalLine2))
+                    {
+                        _logger.LogDebug("Found valid netways line item group starting at position {Position}", i);
+                        return i;
+                    }
+                }
             }
             
             return -1; // No valid group found
@@ -306,7 +328,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 return false;
             
             // Unit price line should contain currency and numbers
-            if (!unitPriceLine.Contains("€") && !unitPriceLine.Contains("$") && !unitPriceLine.Contains("£"))
+            if (!unitPriceLine.Contains("€") && !unitPriceLine.Contains("$") && !unitPriceLine.Contains("£") &&
+                !unitPriceLine.Contains("QAR", StringComparison.OrdinalIgnoreCase) && 
+                !unitPriceLine.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) &&
+                !unitPriceLine.Contains("USD", StringComparison.OrdinalIgnoreCase) &&
+                !unitPriceLine.Contains("EUR", StringComparison.OrdinalIgnoreCase))
                 return false;
             if (!Regex.IsMatch(unitPriceLine, @"\d"))
                 return false;
@@ -316,7 +342,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 return false;
             
             // Total line should contain currency and numbers
-            if (!totalLine.Contains("€") && !totalLine.Contains("$") && !totalLine.Contains("£"))
+            if (!totalLine.Contains("€") && !totalLine.Contains("$") && !totalLine.Contains("£") &&
+                !totalLine.Contains("QAR", StringComparison.OrdinalIgnoreCase) && 
+                !totalLine.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) &&
+                !totalLine.Contains("USD", StringComparison.OrdinalIgnoreCase) &&
+                !totalLine.Contains("EUR", StringComparison.OrdinalIgnoreCase))
                 return false;
             if (!Regex.IsMatch(totalLine, @"\d"))
                 return false;
@@ -344,7 +374,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 return false;
             
             // Unit price line should contain currency and numbers
-            if (!unitPriceLine.Contains("€") && !unitPriceLine.Contains("$") && !unitPriceLine.Contains("£"))
+            if (!unitPriceLine.Contains("€") && !unitPriceLine.Contains("$") && !unitPriceLine.Contains("£") &&
+                !unitPriceLine.Contains("QAR", StringComparison.OrdinalIgnoreCase) && 
+                !unitPriceLine.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) &&
+                !unitPriceLine.Contains("USD", StringComparison.OrdinalIgnoreCase) &&
+                !unitPriceLine.Contains("EUR", StringComparison.OrdinalIgnoreCase))
                 return false;
             if (!Regex.IsMatch(unitPriceLine, @"\d"))
                 return false;
@@ -354,7 +388,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                 return false;
             
             // Total line should contain currency and numbers
-            if (!totalLine.Contains("€") && !totalLine.Contains("$") && !totalLine.Contains("£"))
+            if (!totalLine.Contains("€") && !totalLine.Contains("$") && !totalLine.Contains("£") &&
+                !totalLine.Contains("QAR", StringComparison.OrdinalIgnoreCase) && 
+                !totalLine.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) &&
+                !totalLine.Contains("USD", StringComparison.OrdinalIgnoreCase) &&
+                !totalLine.Contains("EUR", StringComparison.OrdinalIgnoreCase))
                 return false;
             if (!Regex.IsMatch(totalLine, @"\d"))
                 return false;
@@ -436,7 +474,12 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                     if (line.Contains("Service Description", StringComparison.OrdinalIgnoreCase) ||
                         (line.Contains("Amount", StringComparison.OrdinalIgnoreCase) && 
                          line.Contains("without", StringComparison.OrdinalIgnoreCase) &&
-                         line.Contains("VAT", StringComparison.OrdinalIgnoreCase)))
+                         line.Contains("VAT", StringComparison.OrdinalIgnoreCase)) ||
+                        line.Contains("Item", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Description", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Qty", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Unit Price", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Total", StringComparison.OrdinalIgnoreCase))
                     {
                         tableStartIndex = i;
                         _logger.LogInformation("Found table header at line {Index}: {Line}", i, line);
@@ -482,7 +525,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                         line.Contains("T3", StringComparison.OrdinalIgnoreCase) ||
                         line.Contains("G1", StringComparison.OrdinalIgnoreCase) ||
                         line.Contains("G2", StringComparison.OrdinalIgnoreCase) ||
-                        line.Contains("G3", StringComparison.OrdinalIgnoreCase))
+                        line.Contains("G3", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Milestone", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Invoice", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Maintenance", StringComparison.OrdinalIgnoreCase) ||
+                        line.Contains("Support", StringComparison.OrdinalIgnoreCase))
                     {
                         dataStartIndex = i;
                         _logger.LogInformation("Found data start at line {Index}: {Line}", i, line);
@@ -574,37 +621,81 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                     
                     lineIndex = groupStart;
                     
-                    var descriptionLine = lines[lineIndex];
-                    var unitPriceLine = lines[lineIndex + 1];
-                    var quantityLine = lines[lineIndex + 2];
-                    var totalLine = lines[lineIndex + 3];
-                    
-                    _logger.LogInformation("Processing lines {Start}-{End}: Desc='{Desc}', Price='{Price}', Qty='{Qty}', Total='{Total}'", 
-                        lineIndex, lineIndex + 3, descriptionLine, unitPriceLine, quantityLine, totalLine);
-                    
-                    // Validate that we have a proper 4-line structure
-                    if (!IsValidWMACCESSStructure(descriptionLine, unitPriceLine, quantityLine, totalLine))
+                    // Check if this is a netways format (6-line group)
+                    if (lineIndex <= lines.Count - 6 && IsValidNetwaysLineItemGroup(
+                        lines[lineIndex], lines[lineIndex + 1], lines[lineIndex + 2], 
+                        lines[lineIndex + 3], lines[lineIndex + 4], lines[lineIndex + 5]))
                     {
-                        _logger.LogWarning("Invalid 4-line structure at position {Position}, moving to next line", lineIndex);
-                        _logger.LogDebug("Validation failed - Desc: '{Desc}', Price: '{Price}', Qty: '{Qty}', Total: '{Total}'", 
-                            descriptionLine, unitPriceLine, quantityLine, totalLine);
-                        lineIndex += 1;
-                        continue;
-                    }
-                    
-                    // Try to parse the 4-line group as a line item
-                    var lineItem = ParseMultiLineTableItem(descriptionLine, unitPriceLine, quantityLine, totalLine);
-                    if (lineItem != null && IsValidLineItem(lineItem))
-                    {
-                        lineItems.Add(lineItem);
-                        _logger.LogInformation("Extracted line item: {Description}, Qty: {Quantity}, Price: {Price}, Amount: {Amount}",
-                            lineItem.Description, lineItem.Quantity, lineItem.UnitPrice, lineItem.Amount);
-                        lineIndex += 4; // Successfully parsed 4 lines, move to next group
+                        var itemLine = lines[lineIndex];
+                        var descLine1 = lines[lineIndex + 1];
+                        var descLine2 = lines[lineIndex + 2];
+                        var qtyLine = lines[lineIndex + 3];
+                        var priceLine = lines[lineIndex + 4];
+                        var totalLine = lines[lineIndex + 5];
+                        
+                        _logger.LogInformation("Processing netways format lines {Start}-{End}: Item='{Item}', Desc1='{Desc1}', Desc2='{Desc2}', Qty='{Qty}', Price='{Price}', Total='{Total}'", 
+                            lineIndex, lineIndex + 5, itemLine, descLine1, descLine2, qtyLine, priceLine, totalLine);
+                        
+                        // Parse netways format: Item, Description1, Description2, Quantity, Unit Price, Total
+                        var fullDescription = $"{descLine1} {descLine2}";
+                        
+                        var lineItem = new InvoiceLineItemDto
+                        {
+                            Description = CleanDescription(fullDescription),
+                            Quantity = ParseDecimal(qtyLine),
+                            UnitPrice = ParseCurrency(priceLine),
+                            Amount = ParseCurrency(totalLine),
+                            ConfidenceScore = 0.8 // High confidence for netways format
+                        };
+                        
+                        if (IsValidLineItem(lineItem))
+                        {
+                            lineItems.Add(lineItem);
+                            _logger.LogInformation("Extracted netways line item: {Description}, Qty: {Quantity}, Price: {Price}, Amount: {Amount}",
+                                lineItem.Description, lineItem.Quantity, lineItem.UnitPrice, lineItem.Amount);
+                            lineIndex += 6; // Successfully parsed 6 lines, move to next group
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Invalid netways line item at position {Position}, moving to next line", lineIndex);
+                            lineIndex += 1;
+                        }
                     }
                     else
                     {
-                        _logger.LogWarning("Could not parse lines {Start}-{End} as line item, moving to next line", lineIndex, lineIndex + 3);
-                        lineIndex += 1; // Move to next line and try to find a new group
+                        // Try standard 4-line format
+                        var descriptionLine = lines[lineIndex];
+                        var unitPriceLine = lines[lineIndex + 1];
+                        var quantityLine = lines[lineIndex + 2];
+                        var totalLine = lines[lineIndex + 3];
+                        
+                        _logger.LogInformation("Processing standard format lines {Start}-{End}: Desc='{Desc}', Price='{Price}', Qty='{Qty}', Total='{Total}'", 
+                            lineIndex, lineIndex + 3, descriptionLine, unitPriceLine, quantityLine, totalLine);
+                        
+                        // Validate that we have a proper 4-line structure
+                        if (!IsValidWMACCESSStructure(descriptionLine, unitPriceLine, quantityLine, totalLine))
+                        {
+                            _logger.LogWarning("Invalid 4-line structure at position {Position}, moving to next line", lineIndex);
+                            _logger.LogDebug("Validation failed - Desc: '{Desc}', Price: '{Price}', Qty: '{Qty}', Total: '{Total}'", 
+                                descriptionLine, unitPriceLine, quantityLine, totalLine);
+                            lineIndex += 1;
+                            continue;
+                        }
+                        
+                        // Try to parse the 4-line group as a line item
+                        var lineItem = ParseMultiLineTableItem(descriptionLine, unitPriceLine, quantityLine, totalLine);
+                        if (lineItem != null && IsValidLineItem(lineItem))
+                        {
+                            lineItems.Add(lineItem);
+                            _logger.LogInformation("Extracted line item: {Description}, Qty: {Quantity}, Price: {Price}, Amount: {Amount}",
+                                lineItem.Description, lineItem.Quantity, lineItem.UnitPrice, lineItem.Amount);
+                            lineIndex += 4; // Successfully parsed 4 lines, move to next group
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Invalid line item at position {Position}, moving to next line", lineIndex);
+                            lineIndex += 1;
+                        }
                     }
                 }
 
@@ -855,11 +946,25 @@ namespace InvoiceManagement.Server.Application.Services.OCR
             }
             
             // If still no line items, try currency-based extraction (most permissive)
-                if (!lineItems.Any())
-                {
+            if (!lineItems.Any())
+            {
                 _logger.LogWarning("Ultra-basic extraction failed, trying currency-based extraction");
                 lineItems = ExtractCurrencyBasedLineItems(rawText);
-                }
+            }
+            
+            // If still no line items, try netways-specific extraction
+            if (!lineItems.Any())
+            {
+                _logger.LogWarning("Currency-based extraction failed, trying netways-specific extraction");
+                lineItems = ExtractNetwaysLineItems(rawText);
+            }
+            
+            // If still no line items, try general pattern extraction
+            if (!lineItems.Any())
+            {
+                _logger.LogWarning("Netways-specific extraction failed, trying general pattern extraction");
+                lineItems = ExtractGeneralPatternLineItems(rawText);
+            }
                 
             _logger.LogInformation("Fallback extraction found {Count} line items", lineItems.Count);
                 return lineItems;
@@ -1130,18 +1235,19 @@ namespace InvoiceManagement.Server.Application.Services.OCR
             foreach (var line in lines)
             {
                 if (IsLikelyDescription(line) && ContainsNumbers(line))
-                        {
-                            var lineItem = new InvoiceLineItemDto
-                            {
+                {
+                    var lineItem = new InvoiceLineItemDto
+                    {
                         Description = CleanDescription(line),
-                                Quantity = 1,
+                        Quantity = 1,
                         UnitPrice = 0,
                         Amount = 0,
                         ConfidenceScore = 0.5 // Lower confidence for simple extraction
                     };
 
-                    // Try to extract any number as amount
-                    var numberMatch = Regex.Match(line, @"([€$£¥]?\s*\d+(?:,\d{3})*(?:\.\d{2})?)");
+                    // Try to extract any number as amount - look for QAR, USD, EUR, etc.
+                    var currencyPattern = @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)";
+                    var numberMatch = Regex.Match(line, currencyPattern, RegexOptions.IgnoreCase);
                     if (numberMatch.Success)
                     {
                         lineItem.Amount = ParseCurrency(numberMatch.Value);
@@ -1150,7 +1256,7 @@ namespace InvoiceManagement.Server.Application.Services.OCR
 
                     if (IsValidLineItem(lineItem))
                     {
-                            lineItems.Add(lineItem);
+                        lineItems.Add(lineItem);
                     }
                 }
             }
@@ -1171,7 +1277,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
             // Look for any line that contains a currency symbol and a number
             foreach (var line in lines)
             {
-                var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥");
+                var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥") ||
+                                 line.Contains("QAR", StringComparison.OrdinalIgnoreCase) || 
+                                 line.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) ||
+                                 line.Contains("USD", StringComparison.OrdinalIgnoreCase) ||
+                                 line.Contains("EUR", StringComparison.OrdinalIgnoreCase);
                 var hasNumbers = Regex.IsMatch(line, @"\d");
                 
                 if (hasCurrency && hasNumbers && line.Length > 5 && line.Length < 100)
@@ -1185,13 +1295,14 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                         ConfidenceScore = 0.3 // Very low confidence for ultra-basic extraction
                     };
 
-                    // Try to extract any number as amount
-                    var numberMatch = Regex.Match(line, @"([€$£¥]?\s*\d+(?:,\d{3})*(?:\.\d{2})?)");
+                    // Try to extract any number as amount - look for QAR, USD, EUR, etc.
+                    var currencyPattern = @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)";
+                    var numberMatch = Regex.Match(line, currencyPattern, RegexOptions.IgnoreCase);
                     if (numberMatch.Success)
                     {
                         lineItem.Amount = ParseCurrency(numberMatch.Value);
-                                lineItem.UnitPrice = lineItem.Amount;
-                            }
+                        lineItem.UnitPrice = lineItem.Amount;
+                    }
 
                             if (IsValidLineItem(lineItem))
                             {
@@ -1216,7 +1327,11 @@ namespace InvoiceManagement.Server.Application.Services.OCR
             // Look for any line that contains a currency symbol
             foreach (var line in lines)
             {
-                var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥");
+                var hasCurrency = line.Contains("€") || line.Contains("$") || line.Contains("£") || line.Contains("¥") ||
+                                 line.Contains("QAR", StringComparison.OrdinalIgnoreCase) || 
+                                 line.Contains("ر.ق", StringComparison.OrdinalIgnoreCase) ||
+                                 line.Contains("USD", StringComparison.OrdinalIgnoreCase) ||
+                                 line.Contains("EUR", StringComparison.OrdinalIgnoreCase);
                 
                 if (hasCurrency && line.Length > 3 && line.Length < 150)
                 {
@@ -1229,8 +1344,9 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                         ConfidenceScore = 0.2 // Lowest confidence for currency-based extraction
                     };
 
-                    // Try to extract any number as amount
-                    var numberMatch = Regex.Match(line, @"([€$£¥]?\s*\d+(?:,\d{3})*(?:\.\d{2})?)");
+                    // Try to extract any number as amount - look for QAR, USD, EUR, etc.
+                    var currencyPattern = @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)";
+                    var numberMatch = Regex.Match(line, currencyPattern, RegexOptions.IgnoreCase);
                     if (numberMatch.Success)
                     {
                         lineItem.Amount = ParseCurrency(numberMatch.Value);
@@ -1242,6 +1358,187 @@ namespace InvoiceManagement.Server.Application.Services.OCR
                         lineItems.Add(lineItem);
                     }
                 }
+            }
+
+            return lineItems;
+        }
+
+        private List<InvoiceLineItemDto> ExtractNetwaysLineItems(string rawText)
+        {
+            var lineItems = new List<InvoiceLineItemDto>();
+            
+            try
+            {
+                // Split text into lines
+                var lines = rawText.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim())
+                    .Where(line => !string.IsNullOrEmpty(line))
+                    .ToList();
+
+                _logger.LogInformation("ExtractNetwaysLineItems: Processing {LineCount} lines", lines.Count);
+
+                // Look for the pattern: Item, Description, Qty, Unit Price, Total
+                for (int i = 0; i < lines.Count - 4; i++)
+                {
+                    var line1 = lines[i];     // Item
+                    var line2 = lines[i + 1]; // Description
+                    var line3 = lines[i + 2]; // Qty
+                    var line4 = lines[i + 3]; // Unit Price
+                    var line5 = lines[i + 4]; // Total
+
+                    // Check if this looks like a netways line item
+                    if (IsNetwaysLineItemPattern(line1, line2, line3, line4, line5))
+                    {
+                        var lineItem = new InvoiceLineItemDto
+                        {
+                            Description = CleanDescription(line2),
+                            Quantity = ParseDecimal(line3),
+                            UnitPrice = ParseCurrency(line4),
+                            Amount = ParseCurrency(line5),
+                            ConfidenceScore = 0.8 // High confidence for netways format
+                        };
+
+                        if (IsValidLineItem(lineItem))
+                        {
+                            lineItems.Add(lineItem);
+                            _logger.LogInformation("Extracted netways line item: {Description}, Qty: {Quantity}, Price: {Price}, Amount: {Amount}",
+                                lineItem.Description, lineItem.Quantity, lineItem.UnitPrice, lineItem.Amount);
+                        }
+                    }
+                }
+
+                _logger.LogInformation("ExtractNetwaysLineItems: Found {Count} line items", lineItems.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ExtractNetwaysLineItems");
+            }
+
+            return lineItems;
+        }
+
+        private bool IsNetwaysLineItemPattern(string item, string description, string qty, string unitPrice, string total)
+        {
+            // Check if this looks like a netways line item pattern
+            var hasItemKeyword = item.Contains("Milestone", StringComparison.OrdinalIgnoreCase) ||
+                                item.Contains("Item", StringComparison.OrdinalIgnoreCase) ||
+                                item.Contains("Invoice", StringComparison.OrdinalIgnoreCase);
+            
+            var hasDescription = !string.IsNullOrEmpty(description) && 
+                                (description.Contains("Maintenance", StringComparison.OrdinalIgnoreCase) ||
+                                 description.Contains("Support", StringComparison.OrdinalIgnoreCase) ||
+                                 description.Contains("Invoice", StringComparison.OrdinalIgnoreCase));
+            
+            var hasQty = Regex.IsMatch(qty, @"^\d+$");
+            
+            var hasUnitPrice = Regex.IsMatch(unitPrice, @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*\d+(?:,\d{3})*(?:\.\d{2})?", RegexOptions.IgnoreCase);
+            
+            var hasTotal = Regex.IsMatch(total, @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*\d+(?:,\d{3})*(?:\.\d{2})?", RegexOptions.IgnoreCase);
+
+            return hasItemKeyword && hasDescription && hasQty && hasUnitPrice && hasTotal;
+        }
+
+        private bool IsValidNetwaysLineItemGroup(string itemLine, string descLine1, string descLine2, string qtyLine, string priceLine, string totalLine)
+        {
+            // Check if this looks like a netways line item group
+            var hasItemKeyword = itemLine.Contains("Milestone", StringComparison.OrdinalIgnoreCase) ||
+                                itemLine.Contains("Item", StringComparison.OrdinalIgnoreCase) ||
+                                itemLine.Contains("Invoice", StringComparison.OrdinalIgnoreCase);
+            
+            var hasDescription1 = !string.IsNullOrEmpty(descLine1) && 
+                                (descLine1.Contains("Maintenance", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine1.Contains("Support", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine1.Contains("Invoice", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine1.Contains("Intranet", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine1.Contains("period", StringComparison.OrdinalIgnoreCase));
+            
+            var hasDescription2 = !string.IsNullOrEmpty(descLine2) && 
+                                (descLine2.Contains("till", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine2.Contains("period", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine2.Contains("2023", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine2.Contains("Aug", StringComparison.OrdinalIgnoreCase) ||
+                                 descLine2.Contains("May", StringComparison.OrdinalIgnoreCase));
+            
+            var hasQty = Regex.IsMatch(qtyLine, @"^\d+$");
+            
+            var hasUnitPrice = Regex.IsMatch(priceLine, @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*\d+(?:,\d{3})*(?:\.\d{2})?", RegexOptions.IgnoreCase);
+            
+            var hasTotal = Regex.IsMatch(totalLine, @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*\d+(?:,\d{3})*(?:\.\d{2})?", RegexOptions.IgnoreCase);
+
+            _logger.LogDebug("Netways validation: Item='{Item}' (hasKeyword={HasItem}), Desc1='{Desc1}' (hasDesc1={HasDesc1}), Desc2='{Desc2}' (hasDesc2={HasDesc2}), Qty='{Qty}' (hasQty={HasQty}), Price='{Price}' (hasPrice={HasPrice}), Total='{Total}' (hasTotal={HasTotal})",
+                itemLine, hasItemKeyword, descLine1, hasDescription1, descLine2, hasDescription2, qtyLine, hasQty, priceLine, hasUnitPrice, totalLine, hasTotal);
+
+            return hasItemKeyword && hasDescription1 && hasDescription2 && hasQty && hasUnitPrice && hasTotal;
+        }
+
+        private List<InvoiceLineItemDto> ExtractGeneralPatternLineItems(string rawText)
+        {
+            var lineItems = new List<InvoiceLineItemDto>();
+            
+            try
+            {
+                // Split text into lines
+                var lines = rawText.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim())
+                    .Where(line => !string.IsNullOrEmpty(line))
+                    .ToList();
+
+                _logger.LogInformation("ExtractGeneralPatternLineItems: Processing {LineCount} lines", lines.Count);
+
+                // Look for lines that contain both description and amount
+                foreach (var line in lines)
+                {
+                    // Skip obvious header/footer lines
+                    if (IsHeaderFooterLine(line) || IsHeaderLine(line))
+                        continue;
+
+                    // Look for lines that contain currency amounts
+                    var currencyPattern = @"(QAR|USD|EUR|GBP|€|$|£|¥|ر\.ق|د\.إ)?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)";
+                    var matches = Regex.Matches(line, currencyPattern, RegexOptions.IgnoreCase);
+                    
+                    if (matches.Count > 0)
+                    {
+                        // Extract the largest amount (likely the total)
+                        decimal maxAmount = 0;
+                        string amountText = "";
+                        
+                        foreach (Match match in matches)
+                        {
+                            var amount = ParseCurrency(match.Value);
+                            if (amount > maxAmount)
+                            {
+                                maxAmount = amount;
+                                amountText = match.Value;
+                            }
+                        }
+
+                        // Check if this line looks like a line item
+                        if (maxAmount > 0 && IsLikelyDescription(line) && line.Length > 10)
+                        {
+                            var lineItem = new InvoiceLineItemDto
+                            {
+                                Description = CleanDescription(line),
+                                Quantity = 1, // Default quantity
+                                UnitPrice = maxAmount,
+                                Amount = maxAmount,
+                                ConfidenceScore = 0.4 // Medium confidence for general pattern
+                            };
+
+                            if (IsValidLineItem(lineItem))
+                            {
+                                lineItems.Add(lineItem);
+                                _logger.LogInformation("Extracted general pattern line item: {Description}, Amount: {Amount}",
+                                    lineItem.Description, lineItem.Amount);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("ExtractGeneralPatternLineItems: Found {Count} line items", lineItems.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ExtractGeneralPatternLineItems");
             }
 
             return lineItems;
