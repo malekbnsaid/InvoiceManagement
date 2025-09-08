@@ -1348,7 +1348,7 @@ form.watch('expectedEnd') || undefined
                           let projectMonths = 0;
                           if (startDate && endDate) {
                             const duration = endDate.getTime() - startDate.getTime();
-                            projectMonths = Math.ceil(duration / (1000 * 60 * 60 * 24 * 30.44));
+                            projectMonths = Math.round(duration / (1000 * 60 * 60 * 24 * 30.44));
                           }
                           
                           // Calculate payment count for display

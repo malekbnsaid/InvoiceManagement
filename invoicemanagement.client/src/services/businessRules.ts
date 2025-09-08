@@ -564,7 +564,7 @@ export class ProjectBusinessRules {
 
     // Calculate project duration in months
     const projectDuration = projectEnd.getTime() - projectStart.getTime();
-    const projectMonths = Math.ceil(projectDuration / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
+    const projectMonths = Math.round(projectDuration / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
 
     // Calculate how many payments fit in the project duration
     let paymentCount = 0;
