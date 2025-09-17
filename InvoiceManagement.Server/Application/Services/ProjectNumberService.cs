@@ -21,7 +21,7 @@ namespace InvoiceManagement.Server.Application.Services
             _departmentService = departmentService;
         }
 
-        public async Task<string> GenerateProjectNumberAsync(int sectionId)
+        public async Task<string> GenerateProjectNumberAsync(int sectionId, DateTime? projectStartDate = null)
         {
             // Get section abbreviation from the DepartmentHierarchy
             string? sectionAbbreviation = await _departmentService.GetSectionAbbreviationAsync(sectionId);
@@ -31,20 +31,25 @@ namespace InvoiceManagement.Server.Application.Services
                 throw new Exception($"Section with ID {sectionId} not found or has no abbreviation.");
             }
             
-            // Get current month and year
-            var currentDate = DateTime.UtcNow;
-            int month = currentDate.Month;
-            int year = currentDate.Year;
+            // Use project start date if provided, otherwise use current date
+            var referenceDate = projectStartDate ?? DateTime.UtcNow;
+            int year = referenceDate.Year;
             
-            // Count existing projects in this section for this month/year to determine sequence number
+            // Debug logging
+            Console.WriteLine($"ProjectNumberService: sectionId={sectionId}, projectStartDate={projectStartDate}, referenceDate={referenceDate}, year={year}");
+            
+            // Count existing projects in this section for this year to determine serial number
+            // We count all projects for this section in this year (regardless of month)
             int count = await _context.Projects
                 .Where(p => p.SectionId == sectionId && 
-                           p.CreatedAt.Month == month && 
-                           p.CreatedAt.Year == year)
+                           p.ExpectedStart.HasValue &&
+                           p.ExpectedStart.Value.Year == year)
                 .CountAsync();
             
-            // Format: SECTION-ABBR/MONTH/YEAR/SEQUENCE
-            string projectNumber = $"{sectionAbbreviation}/{month}/{year}/{count + 1}";
+            // Format: SECTION-ABBR/SERIAL/YEAR
+            string projectNumber = $"{sectionAbbreviation}/{count + 1}/{year}";
+            
+            Console.WriteLine($"ProjectNumberService: Generated project number: {projectNumber}");
             
             return projectNumber;
         }

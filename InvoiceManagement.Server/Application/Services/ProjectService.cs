@@ -133,8 +133,8 @@ namespace InvoiceManagement.Server.Application.Services
                 }
             }
 
-            // Generate project number
-            project.ProjectNumber = await _projectNumberService.GenerateProjectNumberAsync(project.SectionId);
+            // Generate project number using the project's expected start date
+            project.ProjectNumber = await _projectNumberService.GenerateProjectNumberAsync(project.SectionId, project.ExpectedStart);
             
             // Set creation metadata
             project.CreatedAt = DateTime.UtcNow;

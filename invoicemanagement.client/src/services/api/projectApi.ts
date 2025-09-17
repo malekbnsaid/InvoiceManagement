@@ -77,6 +77,7 @@ interface ProjectApi {
   getCompletion: (id: number) => Promise<number>;
   updateApprovalStatus: (id: number, data: { isApproved: boolean; poNumber?: string; rejectionReason?: string; approvedBy?: string; approvalDate?: string }) => Promise<void>;
   getProjectsBySection: (sectionId: number) => Promise<Project[]>;
+  getProjectNumberPreview: (sectionId: number, startDate?: Date) => Promise<string>;
   getProjectsByManager: (managerId: number) => Promise<Project[]>;
   getProjectBudget: (id: number) => Promise<number>;
   getProjectSpend: (id: number) => Promise<number>;
@@ -277,6 +278,28 @@ export const projectApi: ProjectApi = {
       }
     } catch (error) {
       console.error(`Error updating approval status for project ${id}:`, error);
+      throw error;
+    }
+  },
+
+  getProjectNumberPreview: async (sectionId: number, startDate?: Date) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('sectionId', sectionId.toString());
+      if (startDate) {
+        // Format date as YYYY-MM-DD to avoid timezone issues
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, '0');
+        const day = String(startDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        console.log(`Frontend: Original date: ${startDate}, Formatted: ${dateString}, Month: ${startDate.getMonth() + 1}`);
+        params.append('startDate', dateString);
+      }
+      
+      const response = await api.get(`/Projects/preview-number?${params.toString()}`);
+      return response.data.projectNumber;
+    } catch (error) {
+      console.error('Error getting project number preview:', error);
       throw error;
     }
   },

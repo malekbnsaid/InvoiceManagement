@@ -264,11 +264,10 @@ export class ProjectBusinessRules {
         isPast: startDateUTC < todayUTC
       });
       if (startDateUTC < todayUTC) {
-        console.log('Start date is in the past, returning error');
-        return { 
-          valid: false, 
-          message: "Project start date cannot be in the past." 
-        };
+        console.log('Start date is in the past, adding warning');
+        const warning = `Project start date (${data.expectedStart.toLocaleDateString()}) is in the past. This may be for historical project entry.`;
+        console.log('Adding past date warning:', warning);
+        warnings.push(warning);
       }
 
       // Warn if start date is not a business day
@@ -285,10 +284,9 @@ export class ProjectBusinessRules {
     if (data.expectedEnd) {
       const endDateUTC = new Date(data.expectedEnd.getFullYear(), data.expectedEnd.getMonth(), data.expectedEnd.getDate());
       if (endDateUTC < todayUTC) {
-        return { 
-          valid: false, 
-          message: "Project end date cannot be in the past." 
-        };
+        const warning = `Project end date (${data.expectedEnd.toLocaleDateString()}) is in the past. This may be for historical project entry.`;
+        console.log('Adding past end date warning:', warning);
+        warnings.push(warning);
       }
 
       // Check if end date is before start date

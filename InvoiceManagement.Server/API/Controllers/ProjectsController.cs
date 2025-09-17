@@ -18,6 +18,7 @@ namespace InvoiceManagement.Server.API.Controllers
     public class ProjectsController : ControllerBase
     {
         private readonly IProjectService _projectService;
+        private readonly IProjectNumberService _projectNumberService;
         private readonly ApplicationDbContext _context;
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
@@ -25,9 +26,10 @@ namespace InvoiceManagement.Server.API.Controllers
             WriteIndented = true
         };
 
-        public ProjectsController(IProjectService projectService, ApplicationDbContext context)
+        public ProjectsController(IProjectService projectService, IProjectNumberService projectNumberService, ApplicationDbContext context)
         {
             _projectService = projectService;
+            _projectNumberService = projectNumberService;
             _context = context;
         }
 
@@ -59,6 +61,21 @@ namespace InvoiceManagement.Server.API.Controllers
                 return NotFound();
 
             return Ok(project);
+        }
+
+        // GET: api/Projects/preview-number
+        [HttpGet("preview-number")]
+        public async Task<ActionResult<string>> GetProjectNumberPreview([FromQuery] int sectionId, [FromQuery] DateTime? startDate = null)
+        {
+            try
+            {
+                var projectNumber = await _projectNumberService.GenerateProjectNumberAsync(sectionId, startDate);
+                return Ok(new { projectNumber });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         // POST: api/Projects
@@ -152,10 +169,10 @@ namespace InvoiceManagement.Server.API.Controllers
                         var line = project.PaymentPlanLines.ElementAt(i);
                         var lineErrors = new List<string>();
                         
-                        // Validate year
-                        if (line.Year < currentYear)
+                        // Validate year (allow past years for historical projects)
+                        if (line.Year < 2000)
                         {
-                            lineErrors.Add("Cannot create payments for past years");
+                            lineErrors.Add("Year must be 2000 or later");
                         }
                         if (line.Year > currentYear + 10)
                         {
@@ -267,17 +284,9 @@ namespace InvoiceManagement.Server.API.Controllers
                     }
                 }
 
-                // Validate start date is not in the past
-                if (project.ExpectedStart.HasValue && project.ExpectedStart.Value < DateTime.Today)
-                {
-                    validationErrors.Add("ExpectedStart", new List<string> { "Project start date cannot be in the past." });
-                }
-
-                // Validate end date is not in the past
-                if (project.ExpectedEnd.HasValue && project.ExpectedEnd.Value < DateTime.Today)
-                {
-                    validationErrors.Add("ExpectedEnd", new List<string> { "Project end date cannot be in the past." });
-                }
+                // Note: Past date validation removed - now handled as warnings only
+                // The client-side validation will show warnings for dates in the past
+                // This allows creation of historical projects
 
                 // Validate tender date is before start date
                 if (project.TenderDate.HasValue && project.ExpectedStart.HasValue)

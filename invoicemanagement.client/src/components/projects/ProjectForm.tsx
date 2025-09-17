@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { DropdownNavProps, DropdownProps } from 'react-day-picker';
 import { ProjectBusinessRules } from '../../services/businessRules';
+import { projectApi } from '../../services/api/projectApi';
 
 import { Button } from '../ui/Button';
 import {
@@ -94,33 +95,12 @@ const formSchema = z.object({
       return decimalPlaces <= 2;
     }, 'Budget amount can only have up to 2 decimal places'),
   projectManagerId: z.string().min(1, 'Project manager is required'),
-  expectedStart: z.date()
-    .nullable()
-    .refine((date) => {
-      if (!date) return true;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return date >= today;
-    }, 'Start date cannot be in the past'),
-  expectedEnd: z.date()
-    .nullable()
-    .refine((date) => {
-      if (!date) return true;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return date >= today;
-    }, 'End date cannot be in the past'),
-  tenderDate: z.date()
-    .nullable()
-    .refine((date) => {
-      if (!date) return true;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return date >= today;
-    }, 'Tender date cannot be in the past'),
+  expectedStart: z.date().nullable(),
+  expectedEnd: z.date().nullable(),
+  tenderDate: z.date().nullable(),
   paymentPlanLines: z.array(z.object({
     year: z.number()
-      .min(new Date().getFullYear(), 'Cannot create payments for past years')
+      .min(2000, 'Year must be 2000 or later')
       .max(new Date().getFullYear() + 10, 'Cannot create payments more than 10 years in the future'),
     amount: z.number()
       .min(100, 'Each payment must be at least $100')
@@ -194,6 +174,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [showEndDateSuggestion, setShowEndDateSuggestion] = useState(false);
   const [suggestedEndDate, setSuggestedEndDate] = useState<Date | null>(null);
+  const [isGeneratingProjectNumber, setIsGeneratingProjectNumber] = useState(false);
 
   // Initialize form with proper default values
   const form = useForm<FormValues>({
@@ -243,25 +224,47 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       : []
   , [sectionsData]);
 
-  // Update project number when section changes
-  const updateProjectNumber = useCallback((sectionId: string) => {
-    const section = sections.find((s: Department) => s.id.toString() === sectionId);
-    if (section?.sectionAbbreviation) {
-      const date = new Date();
-      const projectNumber = `${section.sectionAbbreviation}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  // Update project number when section or start date changes
+  const updateProjectNumber = useCallback(async (sectionId: string, startDate?: Date | null) => {
+    if (!sectionId) return;
+    
+    setIsGeneratingProjectNumber(true);
+    try {
+      const projectNumber = await projectApi.getProjectNumberPreview(
+        parseInt(sectionId), 
+        startDate || undefined
+      );
       form.setValue('projectNumber', projectNumber, {
         shouldValidate: false,
         shouldDirty: true,
         shouldTouch: true
       });
+    } catch (error) {
+      console.error('Error generating project number preview:', error);
+      // Fallback to basic format if API fails
+    const section = sections.find((s: Department) => s.id.toString() === sectionId);
+    if (section?.sectionAbbreviation) {
+        const date = startDate || new Date();
+        const projectNumber = `${section.sectionAbbreviation}/${date.getMonth() + 1}/${date.getFullYear()}/[N]`;
+      form.setValue('projectNumber', projectNumber, {
+        shouldValidate: false,
+        shouldDirty: true,
+        shouldTouch: true
+      });
+      }
+    } finally {
+      setIsGeneratingProjectNumber(false);
     }
   }, [sections, form.setValue]);
 
+  // Watch for section and start date changes
+  const startDateValue = form.watch('expectedStart');
+
   useEffect(() => {
     if (sectionValue && sections.length > 0) {
-      updateProjectNumber(sectionValue);
+      updateProjectNumber(sectionValue, startDateValue);
     }
-  }, [sectionValue, sections.length, updateProjectNumber]);
+  }, [sectionValue, startDateValue, sections.length, updateProjectNumber]);
 
   // Filter units by selected section
   const filteredUnits: Department[] = sectionValue && sectionsData
@@ -600,8 +603,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
             year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
             amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
             currency: line.currency || CurrencyType.QAR,
-            description: line.description || ''
-          }))
+          description: line.description || ''
+        }))
       };
 
       console.log('Transformed form data for update:', formData);
@@ -709,7 +712,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             onValueChange={(value) => {
                               field.onChange(value);
                               form.setValue('unitId', '');
-                              updateProjectNumber(value);
+                              updateProjectNumber(value, startDateValue);
                             }}
                             value={field.value || ""}
                           >
@@ -739,15 +742,24 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         <FormLabel className="flex items-center gap-2 font-semibold text-gray-700">
                           <FileText className="h-4 w-4 text-primary" />
                           Project Number
+                          {isGeneratingProjectNumber && (
+                            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                          )}
                         </FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
                             disabled 
+                            placeholder={isGeneratingProjectNumber ? "Generating..." : "Will be generated automatically"}
                             className="bg-gray-100 border border-gray-200 text-gray-600 font-mono py-2 px-3"
                           />
                         </FormControl>
                         <FormMessage className={formMessageStyles} />
+                        {!isGeneratingProjectNumber && field.value && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✅ Preview: {field.value}
+                          </p>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -1461,7 +1473,7 @@ form.watch('expectedEnd') || undefined
                             <div key={index} className="text-xs text-blue-700 mb-1">
                               Yearly: {ProjectBusinessRules.formatCurrency(amount)} × {paymentCount} payments = {ProjectBusinessRules.formatCurrency(projectAmount)} 
                               {projectMonths > 0 && ` (${projectMonths} month project)`}
-                            </div>
+                  </div>
                           );
                         })}
                       </div>
@@ -1496,7 +1508,7 @@ form.watch('expectedEnd') || undefined
                       </div>
                     </div>
                   )}
-
+                  
                   {/* Ensure paymentPlanLines is always an array */}
                   {Array.isArray(form.watch('paymentPlanLines')) && form.watch('paymentPlanLines').map((line: PaymentPlanLine, index: number) => (
                     <div key={index} className="grid grid-cols-4 gap-4 items-start bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:border-primary/50 hover:shadow-md transition-all duration-300">
@@ -1506,30 +1518,30 @@ form.watch('expectedEnd') || undefined
                         render={({ field }) => {
                           const isDuplicate = checkForDuplicateYears(index, field.value);
                           return (
-                            <FormItem>
-                              <FormLabel className="font-semibold text-gray-700">Year</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={2000}
-                                  max={2100}
-                                  {...field}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === '') {
-                                      field.onChange(new Date().getFullYear());
-                                    } else {
-                                      const parsed = parseInt(value);
-                                      if (!isNaN(parsed)) {
-                                        field.onChange(parsed);
-                                      }
+                          <FormItem>
+                            <FormLabel className="font-semibold text-gray-700">Year</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={2000}
+                                max={2100}
+                                {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '') {
+                                    field.onChange(new Date().getFullYear());
+                                  } else {
+                                    const parsed = parseInt(value);
+                                    if (!isNaN(parsed)) {
+                                      field.onChange(parsed);
                                     }
-                                  }}
+                                  }
+                                }}
                                   className={`focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white ${
                                     isDuplicate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
                                   }`}
-                                />
-                              </FormControl>
+                              />
+                            </FormControl>
                               {isDuplicate && (
                                 <p className="text-xs text-red-600 mt-1">
                                   ⚠️ This year is already used in another payment line
@@ -1540,8 +1552,8 @@ form.watch('expectedEnd') || undefined
                                   ✅ Year {field.value} is available
                                 </p>
                               )}
-                              <FormMessage />
-                            </FormItem>
+                            <FormMessage />
+                          </FormItem>
                           );
                         }}
                       />
