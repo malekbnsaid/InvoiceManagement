@@ -54,7 +54,6 @@ interface Project {
     year: number;
     amount: number;
     currency: CurrencyType;
-    paymentType: string;
     description: string;
   }>;
   invoices: Array<any>;
@@ -66,7 +65,6 @@ interface PaymentPlanLine {
   year: number;
   amount: number;
   currency: CurrencyType;
-  paymentType: string;
   description: string;
 }
 
@@ -76,7 +74,6 @@ interface ProjectDetails extends Omit<Project, 'projectManager' | 'section'> {
     year: number;
     amount: number;
     currency: CurrencyType;
-    paymentType: string;
     description: string;
   }>;
   invoices: any[];
@@ -128,7 +125,6 @@ export default function ProjectDetailsPage() {
           year: Number(line.year),
           amount: Number(line.amount),
           currency: line.currency,
-          paymentType: line.paymentType || 'Annually',
           description: line.description || ''
         })),
         invoices: getArrayData(response.invoices),
@@ -517,7 +513,7 @@ export default function ProjectDetailsPage() {
                         <td className="py-2">{line.year}</td>
                         <td className="py-2">{line.amount.toLocaleString()}</td>
                         <td className="py-2">{line.currency}</td>
-                        <td className="py-2">{line.paymentType}</td>
+                        <td className="py-2">Yearly</td>
                         <td className="py-2">{line.description || '-'}</td>
                       </tr>
                     ))}

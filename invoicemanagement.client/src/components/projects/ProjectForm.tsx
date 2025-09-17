@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { CalendarIcon, Briefcase, Building2, User, DollarSign, FileText, CheckCircle2, Trash2Icon, AlertCircle } from 'lucide-react';
+import { CalendarIcon, Briefcase, Building2, User, DollarSign, FileText, CheckCircle2, Trash2Icon, AlertCircle, AlertTriangle } from 'lucide-react';
 import { CurrencyType } from '../../types/enums';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -67,7 +67,6 @@ interface PaymentPlanLine {
   year: number;
   amount: number;
   currency: CurrencyType;
-  paymentType: string;
   description?: string;
   projectId?: number;
 }
@@ -132,12 +131,6 @@ const formSchema = z.object({
         return decimalPlaces <= 2;
       }, 'Payment amount can only have up to 2 decimal places'),
     currency: z.nativeEnum(CurrencyType),
-    paymentType: z.string()
-      .min(1, 'Payment type is required')
-      .refine((val) => {
-        const validTypes = ['Annually', 'Semi-Annually', 'Quarterly', 'Monthly', 'One-time'];
-        return validTypes.includes(val);
-      }, 'Invalid payment type. Must be one of: Annually, Semi-Annually, Quarterly, Monthly, One-time'),
     description: z.string().optional(),
     projectId: z.number().optional()
   }))
@@ -199,6 +192,8 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   const totalSteps = 3;
   const { user } = useAuth();
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [showEndDateSuggestion, setShowEndDateSuggestion] = useState(false);
+  const [suggestedEndDate, setSuggestedEndDate] = useState<Date | null>(null);
 
   // Initialize form with proper default values
   const form = useForm<FormValues>({
@@ -216,7 +211,6 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         year: new Date().getFullYear(),
         amount: 0,
         currency: CurrencyType.QAR,
-        paymentType: 'Annually',
         description: ''
       }],
       projectNumber: initialData?.projectNumber || '',
@@ -340,16 +334,26 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     exit: { opacity: 0, x: -50, transition: { duration: 0.3 } }
   };
 
-  // Update the addPaymentLine function
+  // Update the addPaymentLine function with smart year selection
   const addPaymentLine = () => {
     const currentLines = form.getValues('paymentPlanLines') || [];
+    
+    // Find the next available year
+    const currentYear = new Date().getFullYear();
+    const usedYears = currentLines.map(line => line.year).sort((a, b) => b - a);
+    
+    // Start from current year and find the next available year
+    let nextYear = currentYear;
+    while (usedYears.includes(nextYear)) {
+      nextYear++;
+    }
+    
     form.setValue('paymentPlanLines', [
       ...currentLines,
       {
-        year: new Date().getFullYear(),
+        year: nextYear,
         amount: 0,
         currency: CurrencyType.QAR,
-        paymentType: 'Annually',
         description: ''
       }
     ]);
@@ -378,6 +382,65 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         break;
     }
   };
+
+  // Check if project end date should be extended based on payment years
+  const checkEndDateSuggestion = useCallback(() => {
+    const formData = form.getValues();
+    const paymentLines = formData.paymentPlanLines || [];
+    const expectedEnd = formData.expectedEnd;
+    
+    if (paymentLines.length === 0 || !expectedEnd) {
+      setShowEndDateSuggestion(false);
+      setSuggestedEndDate(null);
+      return;
+    }
+    
+    // Find the latest payment year
+    const latestPaymentYear = Math.max(...paymentLines.map(line => line.year));
+    const currentEndYear = expectedEnd.getFullYear();
+    
+    // If latest payment year is after the current end year, show suggestion
+    if (latestPaymentYear > currentEndYear) {
+      const suggestedDate = new Date(expectedEnd);
+      suggestedDate.setFullYear(latestPaymentYear);
+      setSuggestedEndDate(suggestedDate);
+      setShowEndDateSuggestion(true);
+    } else {
+      setShowEndDateSuggestion(false);
+      setSuggestedEndDate(null);
+    }
+  }, [form]);
+
+  // Apply the suggested end date
+  const applySuggestedEndDate = useCallback(() => {
+    if (suggestedEndDate) {
+      form.setValue('expectedEnd', suggestedEndDate);
+      setShowEndDateSuggestion(false);
+      setSuggestedEndDate(null);
+    }
+  }, [form, suggestedEndDate]);
+
+  // Check for duplicate years in payment lines
+  const checkForDuplicateYears = useCallback((currentIndex: number, year: number) => {
+    const paymentLines = form.getValues('paymentPlanLines') || [];
+    const duplicateIndex = paymentLines.findIndex((line, index) => 
+      index !== currentIndex && line.year === year
+    );
+    return duplicateIndex !== -1;
+  }, [form]);
+
+  // Get next available year for suggestions
+  const getNextAvailableYear = useCallback(() => {
+    const currentLines = form.getValues('paymentPlanLines') || [];
+    const currentYear = new Date().getFullYear();
+    const usedYears = currentLines.map(line => line.year).sort((a, b) => a - b);
+    
+    let nextYear = currentYear;
+    while (usedYears.includes(nextYear)) {
+      nextYear++;
+    }
+    return nextYear;
+  }, [form]);
 
   // Check for validation warnings
   const checkValidationWarnings = useCallback(() => {
@@ -463,9 +526,10 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     const subscription = form.watch((value, { name, type }) => {
       console.log('Form field changed:', name, type, value);
       checkValidationWarnings();
+      checkEndDateSuggestion();
     });
     return () => subscription.unsubscribe();
-  }, [checkValidationWarnings]);
+  }, [checkValidationWarnings, checkEndDateSuggestion]);
 
   // Debug logging for validation warnings
   React.useEffect(() => {
@@ -531,14 +595,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
         expectedEnd: values.expectedEnd,
         tenderDate: values.tenderDate,
         paymentPlanLines: (values.paymentPlanLines || [])
-          .filter(line => line.year && line.amount && line.currency && line.paymentType)
+          .filter(line => line.year && line.amount && line.currency)
           .map(line => ({
             year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
             amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
             currency: line.currency || CurrencyType.QAR,
-          paymentType: line.paymentType || 'Annually',
-          description: line.description || ''
-        }))
+            description: line.description || ''
+          }))
       };
 
       console.log('Transformed form data for update:', formData);
@@ -1220,6 +1283,9 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                     >
                       + Add Payment Line
                     </Button>
+                    <p className="text-xs text-gray-500 text-center max-w-xs mt-2">
+                      💡 Next available year: {getNextAvailableYear()}
+                    </p>
                   </div>
                   
                   {/* Budget Summary */}
@@ -1237,7 +1303,6 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           (() => {
                             const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
                               amount: parseFloat(line.amount?.toString()) || 0,
-                              paymentType: line.paymentType,
                               currency: line.currency,
                               year: line.year,
                               description: line.description
@@ -1254,7 +1319,6 @@ form.watch('expectedEnd') || undefined
                           {(() => {
                             const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
                               amount: parseFloat(line.amount?.toString()) || 0,
-                              paymentType: line.paymentType,
                               currency: line.currency,
                               year: line.year,
                               description: line.description
@@ -1274,7 +1338,6 @@ form.watch('expectedEnd') || undefined
                           (() => {
                             const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
                               amount: parseFloat(line.amount?.toString()) || 0,
-                              paymentType: line.paymentType,
                               currency: line.currency,
                               year: line.year,
                               description: line.description
@@ -1292,7 +1355,6 @@ form.watch('expectedEnd') || undefined
                           {(() => {
                             const paymentLines = (form.watch('paymentPlanLines') || []).map(line => ({
                               amount: parseFloat(line.amount?.toString()) || 0,
-                              paymentType: line.paymentType,
                               currency: line.currency,
                               year: line.year,
                               description: line.description
@@ -1379,9 +1441,8 @@ form.watch('expectedEnd') || undefined
                           const amount = parseFloat(line.amount?.toString()) || 0;
                           const projectAmount = ProjectBusinessRules.calculateProjectPaymentAmount(
                             amount, 
-                            line.paymentType, 
-form.watch('expectedStart') || undefined, 
-form.watch('expectedEnd') || undefined
+                            form.watch('expectedStart') || undefined, 
+                            form.watch('expectedEnd') || undefined
                           );
                           
                           // Calculate project duration for display
@@ -1393,31 +1454,12 @@ form.watch('expectedEnd') || undefined
                             projectMonths = Math.round(duration / (1000 * 60 * 60 * 24 * 30.44));
                           }
                           
-                          // Calculate payment count for display
-                          let paymentCount = 0;
-                          switch (line.paymentType) {
-                            case 'Monthly':
-                              paymentCount = Math.min(projectMonths, 12);
-                              break;
-                            case 'Quarterly':
-                              paymentCount = Math.min(Math.ceil(projectMonths / 3), 4);
-                              break;
-                            case 'Semi-Annually':
-                              paymentCount = Math.min(Math.ceil(projectMonths / 6), 2);
-                              break;
-                            case 'Annually':
-                              paymentCount = projectMonths >= 12 ? 1 : 0;
-                              break;
-                            case 'One-time':
-                              paymentCount = 1;
-                              break;
-                            default:
-                              paymentCount = 1;
-                          }
+                          // Calculate payment count for display (yearly payments)
+                          let paymentCount = 1; // Always 1 for yearly payments
                           
                           return (
                             <div key={index} className="text-xs text-blue-700 mb-1">
-                              {line.paymentType}: {ProjectBusinessRules.formatCurrency(amount)} × {paymentCount} payments = {ProjectBusinessRules.formatCurrency(projectAmount)} 
+                              Yearly: {ProjectBusinessRules.formatCurrency(amount)} × {paymentCount} payments = {ProjectBusinessRules.formatCurrency(projectAmount)} 
                               {projectMonths > 0 && ` (${projectMonths} month project)`}
                             </div>
                           );
@@ -1438,38 +1480,70 @@ form.watch('expectedEnd') || undefined
                     )}
                   </div>
                   
+                  {/* Used Years Summary */}
+                  {form.watch('paymentPlanLines') && form.watch('paymentPlanLines').length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800 font-medium mb-2">📅 Used Years:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {form.watch('paymentPlanLines').map((line: PaymentPlanLine, index: number) => (
+                          <span 
+                            key={index}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-300"
+                          >
+                            {line.year}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Ensure paymentPlanLines is always an array */}
                   {Array.isArray(form.watch('paymentPlanLines')) && form.watch('paymentPlanLines').map((line: PaymentPlanLine, index: number) => (
-                    <div key={index} className="grid grid-cols-5 gap-4 items-start bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:border-primary/50 hover:shadow-md transition-all duration-300">
+                    <div key={index} className="grid grid-cols-4 gap-4 items-start bg-gradient-to-r from-gray-50 to-white p-4 rounded-lg border border-gray-200 hover:border-primary/50 hover:shadow-md transition-all duration-300">
                       <FormField
                         control={form.control}
                         name={`paymentPlanLines.${index}.year`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="font-semibold text-gray-700">Year</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={2000}
-                                max={2100}
-                                {...field}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (value === '') {
-                                    field.onChange(new Date().getFullYear());
-                                  } else {
-                                    const parsed = parseInt(value);
-                                    if (!isNaN(parsed)) {
-                                      field.onChange(parsed);
+                        render={({ field }) => {
+                          const isDuplicate = checkForDuplicateYears(index, field.value);
+                          return (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-gray-700">Year</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={2000}
+                                  max={2100}
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '') {
+                                      field.onChange(new Date().getFullYear());
+                                    } else {
+                                      const parsed = parseInt(value);
+                                      if (!isNaN(parsed)) {
+                                        field.onChange(parsed);
+                                      }
                                     }
-                                  }
-                                }}
-                                className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                                  }}
+                                  className={`focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50 text-gray-900 bg-white ${
+                                    isDuplicate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                                  }`}
+                                />
+                              </FormControl>
+                              {isDuplicate && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  ⚠️ This year is already used in another payment line
+                                </p>
+                              )}
+                              {!isDuplicate && field.value && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  ✅ Year {field.value} is available
+                                </p>
+                              )}
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
 
                       <FormField
@@ -1551,33 +1625,6 @@ form.watch('expectedEnd') || undefined
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name={`paymentPlanLines.${index}.paymentType`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="font-semibold text-gray-700">Payment Type</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || "Annually"}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-1 px-2 border hover:border-primary/50">
-                                  <SelectValue placeholder="Select payment type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Monthly">Monthly</SelectItem>
-                                <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                <SelectItem value="Semi-Annually">Semi-Annually</SelectItem>
-                                <SelectItem value="Annually">Annually</SelectItem>
-                                <SelectItem value="One-time">One-time</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
 
                       <FormField
                         control={form.control}
@@ -1609,6 +1656,45 @@ form.watch('expectedEnd') || undefined
                       />
                     </div>
                   ))}
+                  
+                  {/* End Date Suggestion */}
+                  {showEndDateSuggestion && suggestedEndDate && (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-amber-800">
+                            Project End Date Suggestion
+                          </h4>
+                          <p className="text-sm text-amber-700 mt-1">
+                            Your payment plan extends to {suggestedEndDate.getFullYear()}, but your project ends in {form.getValues('expectedEnd')?.getFullYear()}. 
+                            Would you like to extend the project end date to match your payment schedule?
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowEndDateSuggestion(false)}
+                            className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                          >
+                            Dismiss
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={applySuggestedEndDate}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                          >
+                            Extend to {suggestedEndDate.getFullYear()}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -1712,7 +1798,7 @@ form.watch('expectedEnd') || undefined
                         <div className="space-y-3">
                           {form.watch('paymentPlanLines')?.map((line, index) => (
                             <div key={index} className="flex items-center justify-between text-sm bg-white p-3 rounded border border-gray-100">
-                              <span className="font-medium">{line.year} - {line.paymentType}</span>
+                              <span className="font-medium">{line.year} - Yearly</span>
                               <span className="font-semibold text-primary">{line.amount} {line.currency}</span>
                             </div>
                           ))}

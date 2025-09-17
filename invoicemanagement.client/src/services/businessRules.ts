@@ -10,7 +10,6 @@ export interface PaymentPlanLine {
   year: number;
   amount: number;
   currency: CurrencyType;
-  paymentType: string;
   description?: string;
 }
 
@@ -107,7 +106,7 @@ export class ProjectBusinessRules {
     return { valid: true };
   }
 
-  // Payment plan validation rules
+  // Payment plan validation rules (yearly payments only)
   static validatePaymentPlan(payments: PaymentPlanLine[], budget: number, projectStart?: Date, projectEnd?: Date): ValidationResult {
     if (payments.length === 0) {
       return { 
@@ -116,30 +115,23 @@ export class ProjectBusinessRules {
       };
     }
 
-    // Validate payment types and amounts
+    // Validate payment amounts (yearly payments)
     for (let i = 0; i < payments.length; i++) {
       const payment = payments[i];
-      const paymentType = PAYMENT_TYPES[payment.paymentType as keyof typeof PAYMENT_TYPES];
       
-      if (!paymentType) {
+      // Check minimum amount for yearly payments
+      if (payment.amount < 1000) {
         return { 
           valid: false, 
-          message: `Payment plan line ${i + 1}: Invalid payment type "${payment.paymentType}". Valid types are: ${Object.keys(PAYMENT_TYPES).join(', ')}.` 
+          message: `Payment plan line ${i + 1}: Amount ${this.formatCurrency(payment.amount)} is below minimum for yearly payments (${this.formatCurrency(1000)}).` 
         };
       }
 
-      // Check amount against payment type limits
-      if (payment.amount < paymentType.minAmount) {
+      // Check maximum amount for yearly payments
+      if (payment.amount > 10000000) {
         return { 
           valid: false, 
-          message: `Payment plan line ${i + 1}: Amount ${this.formatCurrency(payment.amount)} is below minimum for ${payment.paymentType} (${this.formatCurrency(paymentType.minAmount)}).` 
-        };
-      }
-
-      if (payment.amount > paymentType.maxAmount) {
-        return { 
-          valid: false, 
-          message: `Payment plan line ${i + 1}: Amount ${this.formatCurrency(payment.amount)} exceeds maximum for ${payment.paymentType} (${this.formatCurrency(paymentType.maxAmount)}).` 
+          message: `Payment plan line ${i + 1}: Amount ${this.formatCurrency(payment.amount)} exceeds maximum for yearly payments (${this.formatCurrency(10000000)}).` 
         };
       }
     }
@@ -198,10 +190,6 @@ export class ProjectBusinessRules {
     const totalPaymentPlan = projectStart && projectEnd 
       ? this.calculateTotalProjectPaymentPlan(payments, projectStart, projectEnd)
       : payments.reduce((sum, line) => {
-          const paymentType = PAYMENT_TYPES[line.paymentType as keyof typeof PAYMENT_TYPES];
-          if (paymentType) {
-            return sum + (line.amount * paymentType.frequency);
-          }
           return sum + line.amount;
         }, 0);
     
@@ -560,66 +548,29 @@ export class ProjectBusinessRules {
     };
   }
 
-  // Calculate payment amount based on project duration and payment type
-  static calculateProjectPaymentAmount(amount: number, paymentType: string, projectStart?: Date, projectEnd?: Date): number {
-    const paymentTypeInfo = PAYMENT_TYPES[paymentType as keyof typeof PAYMENT_TYPES];
-    if (!paymentTypeInfo) return amount;
-
-    // If no project dates, calculate annual amount
-    if (!projectStart || !projectEnd) {
-      return amount * paymentTypeInfo.frequency;
-    }
-
-    // Calculate project duration in months
-    const projectDuration = projectEnd.getTime() - projectStart.getTime();
-    const projectMonths = Math.round(projectDuration / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
-
-    // Calculate how many payments fit in the project duration
-    let paymentCount = 0;
-    
-    switch (paymentType) {
-      case 'Monthly':
-        paymentCount = Math.min(projectMonths, 12); // Max 12 months in a year
-        break;
-      case 'Quarterly':
-        paymentCount = Math.min(Math.ceil(projectMonths / 3), 4); // Max 4 quarters in a year
-        break;
-      case 'Semi-Annually':
-        paymentCount = Math.min(Math.ceil(projectMonths / 6), 2); // Max 2 semi-annual in a year
-        break;
-      case 'Annually':
-        paymentCount = projectMonths >= 12 ? 1 : 0; // Only if project is 12+ months
-        break;
-      case 'One-time':
-        paymentCount = 1; // Always 1 payment regardless of duration
-        break;
-      default:
-        paymentCount = 1;
-    }
-
-    return amount * paymentCount;
+  // Calculate payment amount for yearly payments (simplified)
+  static calculateProjectPaymentAmount(amount: number, _projectStart?: Date, _projectEnd?: Date): number {
+    // For yearly payments, the amount is always the same regardless of project duration
+    return amount;
   }
 
   // Calculate total project payment plan based on actual project duration
   static calculateTotalProjectPaymentPlan(payments: PaymentPlanLine[], projectStart?: Date, projectEnd?: Date): number {
     return payments.reduce((sum, line) => {
-      return sum + this.calculateProjectPaymentAmount(line.amount, line.paymentType, projectStart, projectEnd);
+      return sum + this.calculateProjectPaymentAmount(line.amount, projectStart, projectEnd);
     }, 0);
   }
 
-  // Calculate annual payment amount based on payment type (for annual budgeting)
-  static calculateAnnualPaymentAmount(amount: number, paymentType: string): number {
-    const paymentTypeInfo = PAYMENT_TYPES[paymentType as keyof typeof PAYMENT_TYPES];
-    if (paymentTypeInfo) {
-      return amount * paymentTypeInfo.frequency;
-    }
+  // Calculate annual payment amount for yearly payments (simplified)
+  static calculateAnnualPaymentAmount(amount: number): number {
+    // For yearly payments, the amount is always the same
     return amount;
   }
 
   // Calculate total annual payment plan (for annual budgeting)
   static calculateTotalAnnualPaymentPlan(payments: PaymentPlanLine[]): number {
     return payments.reduce((sum, line) => {
-      return sum + this.calculateAnnualPaymentAmount(line.amount, line.paymentType);
+      return sum + this.calculateAnnualPaymentAmount(line.amount);
     }, 0);
   }
 

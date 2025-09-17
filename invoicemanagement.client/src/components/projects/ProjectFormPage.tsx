@@ -27,7 +27,6 @@ interface PaymentPlanLine {
   year: number;
   amount: number;
   currency: CurrencyType;
-  paymentType: string;
   description?: string;
 }
 
@@ -179,7 +178,7 @@ export default function ProjectFormPage() {
         tenderDate: data.tenderDate,
         paymentPlanLines: (data.paymentPlanLines || [])
           .filter(line => {
-            const isValid = line.year && line.amount && line.currency && line.paymentType;
+            const isValid = line.year && line.amount && line.currency;
             if (!isValid) {
               console.log('Filtering out invalid PaymentPlanLine:', line);
             }
@@ -190,7 +189,6 @@ export default function ProjectFormPage() {
               year: line.year && !isNaN(line.year) ? line.year : new Date().getFullYear(),
               amount: line.amount && !isNaN(line.amount) ? line.amount : 0,
               currency: line.currency,
-              paymentType: line.paymentType,
               description: line.description || '',
               project: undefined // Explicitly set Project to undefined to satisfy validation
             };
