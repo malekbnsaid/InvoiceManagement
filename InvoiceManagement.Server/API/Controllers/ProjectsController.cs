@@ -288,11 +288,8 @@ namespace InvoiceManagement.Server.API.Controllers
                     }
                 }
 
-                // Validate tender date is not in the past
-                if (project.TenderDate.HasValue && project.TenderDate.Value < DateTime.Today)
-                {
-                    validationErrors.Add("TenderDate", new List<string> { "Tender date cannot be in the past." });
-                }
+                // Note: Tender date validation removed - now handled as warning only
+                // The client-side validation will show warnings for tender dates in the past
 
                 // Return validation errors if any
                 if (validationErrors.Any())

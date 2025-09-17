@@ -358,9 +358,9 @@ export const RoleBasedDashboard: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">
             Welcome back, {user?.username}!
           </h2>
-          <p className="text-gray-600">
+          <div className="text-gray-600">
             Here's what you can do with your <Badge variant="secondary">{user?.role}</Badge> role
-          </p>
+          </div>
         </div>
       </div>
 

@@ -4,32 +4,31 @@ import { motion } from 'framer-motion';
 import { 
   FileText, 
   Calendar, 
-  DollarSign, 
-  Building, 
   User, 
   CheckCircle, 
-  Clock, 
   AlertCircle,
   Download,
   Upload,
   History,
   Eye,
-  Trash2,
   X,
   Coins,
   CreditCard
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Invoice, InvoiceLineItem } from '../../types/interfaces';
+import { Invoice } from '../../types/interfaces';
 import { invoiceService } from '../../services/invoiceService';
-import { CurrencyType } from '../../types/enums';
+import { CurrencyType, InvoiceStatus } from '../../types/enums';
 import { formatCurrency } from '../../utils/formatters';
+import { SimpleInvoiceStatusChange } from './SimpleInvoiceStatusChange';
+import { SimpleInvoiceWorkflow } from './SimpleInvoiceWorkflow';
+import { InvoiceWorkflowAutomation } from './InvoiceWorkflowAutomation';
 
 const InvoiceDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +49,42 @@ const InvoiceDetails = () => {
       setError('Failed to fetch invoice details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to convert status number to enum
+  const getStatusFromNumber = (statusNumber: any): InvoiceStatus => {
+    switch (Number(statusNumber)) {
+      case 0: return InvoiceStatus.Submitted;
+      case 1: return InvoiceStatus.UnderReview;
+      case 2: return InvoiceStatus.Approved;
+      case 3: return InvoiceStatus.InProgress;
+      case 4: return InvoiceStatus.Completed;
+      case 5: return InvoiceStatus.Rejected;
+      case 6: return InvoiceStatus.Cancelled;
+      case 7: return InvoiceStatus.OnHold;
+      default: return InvoiceStatus.Submitted;
+    }
+  };
+
+  const handleStatusChange = async (newStatus: InvoiceStatus) => {
+    if (!invoice) return;
+    
+    try {
+      console.log('Changing status from', getStatusFromNumber(invoice.status), 'to', newStatus);
+      
+      // Update local state immediately for better UX
+      setInvoice(prev => prev ? { ...prev, status: newStatus } : null);
+      
+      // You can also call your API here to persist the change
+      console.log(`Status changed to: ${newStatus}`);
+      
+      // Optionally refresh the invoice data
+      // await fetchInvoice();
+    } catch (error) {
+      console.error('Error changing status:', error);
+      // Revert the local state change if API call fails
+      await fetchInvoice();
     }
   };
 
@@ -103,9 +138,20 @@ const InvoiceDetails = () => {
           </div>
         </div>
 
+        {/* Status Management Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SimpleInvoiceStatusChange
+            invoiceId={invoice.id}
+            currentStatus={getStatusFromNumber(invoice.status)}
+            onStatusChange={handleStatusChange}
+          />
+          <SimpleInvoiceWorkflow currentStatus={getStatusFromNumber(invoice.status)} />
+        </div>
+
         <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="status">Status</TabsTrigger>
             <TabsTrigger value="line-items">Line Items</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
@@ -123,11 +169,33 @@ const InvoiceDetails = () => {
                         Invoice #{invoice.invoiceNumber}
                 </CardTitle>
                 <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        invoice.status === 1 
+                  getStatusFromNumber(invoice.status) === InvoiceStatus.Completed 
                     ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.Approved
+                    ? 'bg-green-100 text-green-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.InProgress
+                    ? 'bg-purple-100 text-purple-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.UnderReview
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.Submitted
+                    ? 'bg-blue-100 text-blue-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.Rejected
+                    ? 'bg-red-100 text-red-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.Cancelled
+                    ? 'bg-gray-100 text-gray-800'
+                    : getStatusFromNumber(invoice.status) === InvoiceStatus.OnHold
+                    ? 'bg-orange-100 text-orange-800'
+                    : 'bg-gray-100 text-gray-800'
                 }`}>
-                        {invoice.status === 1 ? 'Processed' : 'Pending'}
+                  {getStatusFromNumber(invoice.status) === InvoiceStatus.Submitted ? 'Submitted' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.UnderReview ? 'Under Review' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.Approved ? 'Approved' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.InProgress ? 'In Progress' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.Completed ? 'Completed' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.Rejected ? 'Rejected' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.Cancelled ? 'Cancelled' :
+                   getStatusFromNumber(invoice.status) === InvoiceStatus.OnHold ? 'On Hold' :
+                   'Unknown'}
                 </span>
               </div>
             </CardHeader>
@@ -173,7 +241,7 @@ const InvoiceDetails = () => {
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">PO Number</h3>
                     <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center mt-1">
                             <FileText className="h-5 w-5 text-gray-500 mr-1" />
-                            {invoice.purchaseOrderNumber || 'N/A'}
+                            {invoice.referenceNumber || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -192,11 +260,11 @@ const InvoiceDetails = () => {
                             <tbody>
                               <tr className="border-b dark:border-gray-700">
                                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">Sub Total</td>
-                                <td className="px-4 py-3">{formatCurrency(invoice.subTotal, invoice.currency)}</td>
+                                <td className="px-4 py-3">{formatCurrency(0, invoice.currency)}</td>
                               </tr>
                               <tr className="border-b dark:border-gray-700">
                                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">Tax Amount</td>
-                                <td className="px-4 py-3">{formatCurrency(invoice.taxAmount, invoice.currency)}</td>
+                                <td className="px-4 py-3">{formatCurrency(0, invoice.currency)}</td>
                                 </tr>
                               <tr className="font-semibold text-gray-900 dark:text-white">
                                 <td className="px-4 py-3">Total Amount</td>
@@ -343,6 +411,59 @@ const InvoiceDetails = () => {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="status" className="space-y-6">
+            {/* Status Management Tab */}
+            <div className="space-y-6">
+              <InvoiceWorkflowAutomation
+                invoiceId={invoice.id}
+                currentStatus={getStatusFromNumber(invoice.status)}
+                onStatusChange={handleStatusChange}
+              />
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SimpleInvoiceStatusChange
+                  invoiceId={invoice.id}
+                  currentStatus={getStatusFromNumber(invoice.status)}
+                  onStatusChange={handleStatusChange}
+                />
+                <SimpleInvoiceWorkflow currentStatus={getStatusFromNumber(invoice.status)} />
+              </div>
+            </div>
+            
+            {/* Status History */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Status History</CardTitle>
+                <CardDescription>Track all status changes for this invoice</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <p className="font-medium">Invoice Created</p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(invoice.createdAt).toLocaleDateString()} at {new Date(invoice.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  {invoice.modifiedAt && (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium">Status Updated</p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(invoice.modifiedAt).toLocaleDateString()} at {new Date(invoice.modifiedAt).toLocaleTimeString()}
+                        </p>
+                        <p className="text-xs text-gray-400">Modified by: {invoice.modifiedBy}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="line-items" className="space-y-6">

@@ -5,6 +5,13 @@ import { api } from './api';
 const formatDate = (date: Date | string | null) => {
   if (!date) return null;
   console.log('formatDate input:', date, 'type:', typeof date);
+  
+  // If it's already an ISO string, return it as is
+  if (typeof date === 'string' && date.includes('T') && date.includes('Z')) {
+    console.log('formatDate output (already ISO string):', date);
+    return date;
+  }
+  
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const result = dateObj.toISOString();
   console.log('formatDate output:', result);

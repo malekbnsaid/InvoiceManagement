@@ -1,13 +1,12 @@
 export enum InvoiceStatus {
-  Draft = 'Draft',
-  PendingApproval = 'PendingApproval',
+  Submitted = 'Submitted',
+  UnderReview = 'UnderReview',
   Approved = 'Approved',
+  InProgress = 'InProgress',
+  Completed = 'Completed',
   Rejected = 'Rejected',
-  Processing = 'Processing',
-  Paid = 'Paid',
   Cancelled = 'Cancelled',
-  OnHold = 'OnHold',
-  Overdue = 'Overdue'
+  OnHold = 'OnHold'
 }
 
 export enum LPOStatus {

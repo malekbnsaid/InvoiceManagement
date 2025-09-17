@@ -33,7 +33,7 @@ namespace InvoiceManagement.Server.Domain.Entities
         public string? TaxRate { get; set; }
         
         // Processing Information
-        public InvoiceStatus Status { get; set; } = InvoiceStatus.Pending;
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Submitted;
         public DateTime? ReceiveDate { get; set; }
         public string? ProcessedBy { get; set; }
         public DateTime? ProcessedDate { get; set; }

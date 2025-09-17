@@ -78,7 +78,7 @@ namespace InvoiceManagement.Server.Application.Services
                     PaymentTerms = ocrResult.PaymentTerms,
 
                     // Processing Information
-                    Status = Domain.Enums.InvoiceStatus.Pending,
+                    Status = Domain.Enums.InvoiceStatus.Submitted,
                     ProcessedDate = DateTime.UtcNow,
                     ProcessedBy = createdBy,
                     ReceiveDate = DateTime.UtcNow,

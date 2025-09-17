@@ -105,11 +105,10 @@ const getStatusText = (status: any) => {
     case '0':
     case '0.0':
       return 'Draft';
-    case 'pendingapproval':
     case 'pending':
     case '1':
     case '1.0':
-      return 'Pending Approval';
+      return 'Pending';
     case 'approved':
     case '2':
     case '2.0':
@@ -118,26 +117,14 @@ const getStatusText = (status: any) => {
     case '3':
     case '3.0':
       return 'Rejected';
-    case 'processing':
+    case 'paid':
     case '4':
     case '4.0':
-      return 'Processing';
-    case 'paid':
-    case '5':
-    case '5.0':
       return 'Paid';
     case 'cancelled':
-    case '6':
-    case '6.0':
+    case '5':
+    case '5.0':
       return 'Cancelled';
-    case 'onhold':
-    case '7':
-    case '7.0':
-      return 'On Hold';
-    case 'overdue':
-    case '8':
-    case '8.0':
-      return 'Overdue';
     default:
       return 'Unknown';
   }
