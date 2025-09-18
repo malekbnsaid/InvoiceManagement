@@ -425,7 +425,7 @@ const InvoiceDetails = () => {
                                       {item.itemNumber || 'N/A'}
                                     </td>
                                     <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
-                                      {item.quantity.toLocaleString()}
+                                      {item.quantity.toLocaleString('en-US')}
                                     </td>
                                     <td className="px-4 py-3 text-gray-900 dark:text-white">
                                       {item.unit || 'N/A'}
@@ -481,7 +481,7 @@ const InvoiceDetails = () => {
                       <div>
                         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</h3>
                         <p className="text-base font-semibold text-gray-900 dark:text-white mt-1">
-                          {new Date(invoice.createdAt).toLocaleString()}
+                          {new Date(invoice.createdAt).toLocaleString('en-US')}
                         </p>
                       </div>
                       <div>
@@ -494,7 +494,7 @@ const InvoiceDetails = () => {
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Modified</h3>
                           <p className="text-base font-semibold text-gray-900 dark:text-white mt-1">
-                            {new Date(invoice.modifiedAt).toLocaleString()}
+                            {new Date(invoice.modifiedAt).toLocaleString('en-US')}
                           </p>
                         </div>
                       )}
@@ -598,7 +598,7 @@ const InvoiceDetails = () => {
                               {item.itemNumber || 'N/A'}
                             </td>
                             <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
-                              {item.quantity.toLocaleString()}
+                              {item.quantity.toLocaleString('en-US')}
                             </td>
                             <td className="px-4 py-3 text-gray-900 dark:text-white">
                               {item.unit || 'N/A'}

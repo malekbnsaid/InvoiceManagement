@@ -167,10 +167,11 @@ interface ProjectFormProps {
   onSubmit: (data: FormValues) => void;
   isLoading?: boolean;
   initialData?: FormValues;
+  isEditMode?: boolean;
 }
 
 
-export default function ProjectForm({ onSubmit, isLoading = false, initialData }: ProjectFormProps) {
+export default function ProjectForm({ onSubmit, isLoading = false, initialData, isEditMode = false }: ProjectFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
   const { user } = useAuth();
@@ -636,11 +637,14 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
       <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-black rounded-t-lg">
         <CardTitle className="text-2xl font-bold  flex items-center gap-3">
           <Briefcase className="h-6 w-6" />
-          Create New Project
+          {isEditMode ? 'Edit Project' : 'Create New Project'}
         </CardTitle>
         <br></br>
         <p className="text-primary-foreground/80 text-sm mt-1 text-black">
-          Fill in the project details below. You can navigate between steps using the progress indicator.
+          {isEditMode 
+            ? 'Update the project details below. You can navigate between steps using the progress indicator.'
+            : 'Fill in the project details below. You can navigate between steps using the progress indicator.'
+          }
         </p>
       </CardHeader>
 
@@ -1914,7 +1918,7 @@ form.watch('expectedEnd') || undefined
                 {isLoading 
                   ? "Processing..." 
                   : currentStep === totalSteps 
-                    ? "Create Project" 
+                    ? (isEditMode ? "Update Project" : "Create Project")
                     : "Next →"
                 }
               </Button>

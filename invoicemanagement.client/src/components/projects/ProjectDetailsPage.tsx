@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
@@ -9,12 +9,9 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Label } from '../ui/label';
-import { Progress } from '../ui/progress';
 import { projectApi } from '../../services/api/projectApi';
 import { useToast } from '../ui/use-toast';
 import {
-  ClockIcon,
-  FolderIcon,
   CheckCircleIcon,
   XCircleIcon,
   DocumentTextIcon,
@@ -24,6 +21,20 @@ import {
 import { CurrencyType } from '../../types/enums';
 import { PMOOrHigher } from '../shared/RoleGuard';
 import { Skeleton } from '../ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { formatCurrency } from '../../utils/formatters';
+import { 
+  Building, 
+  User, 
+  DollarSign, 
+  Calendar, 
+  CheckCircle, 
+  Download, 
+  Edit, 
+  MessageSquare,
+  FileText,
+  Clock
+} from 'lucide-react';
 
 
 interface Project {
@@ -94,8 +105,43 @@ interface ProjectDetails extends Omit<Project, 'projectManager' | 'section'> {
   };
 }
 
+// Helper function to create project timeline from existing dates
+const getProjectTimeline = (project: Project) => {
+  const timeline = [];
+  
+  if (project.expectedStart) {
+    timeline.push({
+      title: "Project Started",
+      date: project.expectedStart,
+      status: project.actualStart ? "completed" : "upcoming",
+      description: "Project initiation phase"
+    });
+  }
+  
+  if (project.expectedEnd) {
+    timeline.push({
+      title: "Project Completion",
+      date: project.expectedEnd,
+      status: project.actualEnd ? "completed" : "upcoming",
+      description: "Project delivery phase"
+    });
+  }
+  
+  if (project.tenderDate) {
+    timeline.push({
+      title: "Tender Date",
+      date: project.tenderDate,
+      status: "completed",
+      description: "Tender submission deadline"
+    });
+  }
+  
+  return timeline.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
 export default function ProjectDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -229,72 +275,6 @@ export default function ProjectDetailsPage() {
     return 0;
   };
 
-  const getProjectStatus = () => {
-    if (!project) return { label: 'Unknown', color: 'secondary' as const };
-    if (project.rejectionReason) return { label: 'Rejected', color: 'danger' as const };
-    if (!project.isApproved) return { label: 'Pending Approval', color: 'warning' as const };
-    if (!project.actualStartDate) return { label: 'Not Started', color: 'secondary' as const };
-    if (project.actualEndDate) return { label: 'Completed', color: 'success' as const };
-    return { label: 'In Progress', color: 'default' as const };
-  };
-
-  const getTimelineStatus = () => {
-    const timeline = [];
-    if (project) {
-      // Project Creation
-      timeline.push({
-        date: project.createdAt,
-        label: 'Project Created',
-        icon: FolderIcon,
-        status: 'completed',
-        detail: `Created by ${project.createdBy}`
-      });
-
-      // Project Approval/Rejection
-      if (project.isApproved) {
-        timeline.push({
-          date: project.approvalDate,
-          label: 'Project Approved',
-          icon: CheckCircleIcon,
-          status: 'completed',
-          detail: `Approved by ${project.approvedBy} | PO: ${project.poNumber}`
-        });
-      } else if (project.rejectionReason) {
-        timeline.push({
-          date: project.modifiedAt,
-          label: 'Project Rejected',
-          icon: XCircleIcon,
-          status: 'error',
-          detail: project.rejectionReason
-        });
-      }
-
-      // Project Start
-      if (project.actualStartDate) {
-        timeline.push({
-          date: project.actualStartDate,
-          label: 'Project Started',
-          icon: ArrowPathIcon,
-          status: 'completed',
-          detail: 'Project work commenced'
-        });
-      }
-
-      // Project Completion (if cost reaches/exceeds budget)
-      if (project.actualEndDate) {
-        timeline.push({
-          date: project.actualEndDate,
-          label: 'Project Completed',
-          icon: CheckCircleIcon,
-          status: 'completed',
-                  detail: project.cost && project.budget
-          ? `Final cost: ${project.cost.toLocaleString()} QAR (${((project.cost / project.budget) * 100).toFixed(1)}% of budget)`
-            : undefined
-        });
-      }
-    }
-    return timeline;
-  };
 
   if (isLoading) {
     return (
@@ -461,34 +441,59 @@ export default function ProjectDetailsPage() {
     );
   }
 
-  const status = getProjectStatus();
   const progress = calculateProgress();
-  const timeline = getTimelineStatus();
 
   return (
+    <div className="min-h-screen bg-gray-50">
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header with Status */}
-      <div className="flex justify-between items-start">
+        {/* Corporate Header */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-3">
         <div>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-gray-500">{project.projectNumber}</span>
+                <h1 className="text-3xl font-semibold text-gray-900">{project.name}</h1>
+                <p className="text-lg text-gray-600 mt-1">{project.projectNumber}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <Badge 
+                  variant={project.isApproved ? "default" : "secondary"}
+                  className="px-3 py-1 text-sm font-medium"
+                >
+                  {project.isApproved ? "Approved" : "Pending Approval"}
+                </Badge>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Building className="h-4 w-4" />
+                  <span className="text-sm">{project.section.sectionName}</span>
+                </div>
             {project.poNumber && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <DocumentTextIcon className="h-4 w-4" />
+                  <Badge variant="outline" className="flex items-center gap-1 px-3 py-1 text-sm">
+                    <FileText className="h-4 w-4" />
                 PO: {project.poNumber}
               </Badge>
             )}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <Badge variant={status.color} className="text-lg px-4 py-2">
-            {status.label}
-          </Badge>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <PMOOrHigher>
+                <Button 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => navigate(`/projects/edit/${id}`)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </PMOOrHigher>
           <PMOOrHigher>
             {!project.isApproved && !project.rejectionReason && (
               <Button 
                 variant="outline"
+                    size="sm"
+                    className="border-orange-300 text-orange-700 hover:bg-orange-50"
                 onClick={() => {
                   setIsRejecting(false);
                   setIsApprovalDialogOpen(true);
@@ -498,80 +503,198 @@ export default function ProjectDetailsPage() {
               </Button>
             )}
           </PMOOrHigher>
+            </div>
         </div>
       </div>
 
-      {/* Project Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Project Progress</span>
-            <span className="text-2xl font-bold">{progress.toFixed(1)}%</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Progress value={progress} className="h-2" />
-            <div className="grid grid-cols-2 gap-4">
+        {/* Corporate Key Metrics Grid with Minimal Colors */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Budget</p>
-                <p className="text-xl font-semibold">{project.budget?.toLocaleString()} QAR</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Status</p>
+                  <p className="text-2xl font-semibold text-gray-900">{project.status}</p>
               </div>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Current Cost</p>
-                <p className="text-xl font-semibold">{project.cost?.toLocaleString()} QAR</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Section</p>
+                  <p className="text-2xl font-semibold text-gray-900">{project.section.sectionAbbreviation}</p>
               </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <Building className="h-5 w-5 text-green-600" />
             </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Manager</p>
+                  <p className="text-lg font-semibold text-gray-900 truncate">
+                    {project.projectManager.employeeName.split(' ')[0]}
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <User className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Budget</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {formatCurrency(project.budget, CurrencyType.QAR)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+      {/* Mobile Navigation Tabs */}
+      <div className="lg:hidden mb-6">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="budget">Budget</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-4">
+            {/* Overview content will be shown here on mobile */}
+          </TabsContent>
+          
+          <TabsContent value="budget" className="space-y-4">
+            {/* Budget content will be shown here on mobile */}
+          </TabsContent>
+          
+          <TabsContent value="timeline" className="space-y-4">
+            {/* Timeline content will be shown here on mobile */}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+        {/* Corporate Budget Display with Minimal Colors */}
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              <DollarSign className="h-5 w-5 text-amber-600" />
+              Budget Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <p className="text-sm font-medium text-blue-700 mb-2">Total Budget</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {formatCurrency(project.budget, CurrencyType.QAR)}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                  <p className="text-sm font-medium text-green-700 mb-2">Current Cost</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {formatCurrency(project.cost, CurrencyType.QAR)}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Budget Usage Visualization */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">Budget Usage</span>
+                  <span className="text-lg font-semibold text-gray-900">{Math.round((project.cost / project.budget) * 100)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full ${
+                      (project.cost / project.budget) > 0.8 ? 'bg-red-500' : 
+                      (project.cost / project.budget) > 0.6 ? 'bg-amber-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min((project.cost / project.budget) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Used: {formatCurrency(project.cost, CurrencyType.QAR)}</span>
+                  <span>Remaining: {formatCurrency(project.budget - project.cost, CurrencyType.QAR)}</span>
+                </div>
+              </div>
+              
             {progress >= 100 && (
-              <div className="flex items-center gap-2 text-amber-500">
-                <ExclamationTriangleIcon className="h-5 w-5" />
-                <span>Project has reached or exceeded budget</span>
+                <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
+                  <div>
+                    <p className="font-medium text-red-800">Budget Alert</p>
+                    <p className="text-sm text-red-700">Project has reached or exceeded budget</p>
+                  </div>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Timeline Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClockIcon className="h-5 w-5" />
+        {/* Corporate Timeline Card with Minimal Colors */}
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              <Clock className="h-5 w-5 text-blue-600" />
             Project Timeline
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <div className="absolute top-0 left-4 h-full w-0.5 bg-gray-200"></div>
-            <div className="space-y-8">
-              {timeline.map((event, index) => (
-                <div key={index} className="relative flex items-start gap-4 group">
-                  <div className={`absolute left-4 w-0.5 h-full ${index === timeline.length - 1 ? 'bg-transparent' : 'bg-gray-200'}`}></div>
-                  <div className={`relative flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
-                    event.status === 'completed' ? 'bg-green-50 border-green-500 group-hover:bg-green-100' :
-                    event.status === 'error' ? 'bg-red-50 border-red-500 group-hover:bg-red-100' :
-                    'bg-gray-50 border-gray-500 group-hover:bg-gray-100'
-                  }`}>
-                    <event.icon className={`h-4 w-4 ${
-                      event.status === 'completed' ? 'text-green-500' :
-                      event.status === 'error' ? 'text-red-500' :
-                      'text-gray-500'
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {getProjectTimeline(project).map((item, index) => (
+                <div key={index} className="flex items-start space-x-4">
+                  <div className="relative flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full border-2 ${
+                      item.status === 'completed' ? 'bg-green-500 border-green-500' : 
+                      item.status === 'upcoming' ? 'bg-blue-500 border-blue-500' : 
+                      'bg-gray-300 border-gray-300'
                     }`} />
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{event.label}</p>
-                      <time className="text-sm text-gray-500">
-                        {format(new Date(event.date), 'PPP')}
-                      </time>
-                    </div>
-                    {event.detail && (
-                      <p className="mt-1 text-sm text-gray-600">{event.detail}</p>
+                    {index < getProjectTimeline(project).length - 1 && (
+                      <div className="absolute top-3 left-1/2 transform -translate-x-1/2 w-0.5 h-8 bg-gray-200"></div>
                     )}
+                  </div>
+                  <div className={`flex-1 rounded-lg p-4 ${
+                    item.status === 'completed' ? 'bg-green-50 border border-green-100' :
+                    item.status === 'upcoming' ? 'bg-blue-50 border border-blue-100' :
+                    'bg-gray-50 border border-gray-100'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{item.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                          <Calendar className="h-3 w-3" />
+                          <span>{format(new Date(item.date), 'MMM dd, yyyy')}</span>
+                    </div>
+                      </div>
+                      {item.status === 'completed' && (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                    )}
+                    </div>
                   </div>
                 </div>
               ))}
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -638,42 +761,93 @@ export default function ProjectDetailsPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Plan */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Payment Plan</CardTitle>
+        {/* Corporate Payment Plan with Minimal Colors */}
+        <Card className="md:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              <Calendar className="h-5 w-5 text-green-600" />
+              Payment Plan
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {Array.isArray(project?.paymentPlanLines) && project.paymentPlanLines.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Year</th>
-                      <th className="text-left py-2">Amount</th>
-                      <th className="text-left py-2">Currency</th>
-                      <th className="text-left py-2">Payment Type</th>
-                      <th className="text-left py-2">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="space-y-4">
                     {project.paymentPlanLines.map((line: PaymentPlanLine, index: number) => (
-                      <tr key={index} className="border-b">
-                        <td className="py-2">{line.year}</td>
-                        <td className="py-2">{line.amount.toLocaleString()}</td>
-                        <td className="py-2">{line.currency}</td>
-                        <td className="py-2">Yearly</td>
-                        <td className="py-2">{line.description || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  <div key={index} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-100">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center border border-green-300">
+                        <span className="text-sm font-semibold text-green-700">{line.year}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{line.description || `Payment for ${line.year}`}</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(line.amount, line.currency)}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="text-xs bg-green-100 text-green-700 border-green-200">
+                      {line.currency}
+                    </Badge>
+                  </div>
+                ))}
+                
+                {/* Total Summary */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-blue-900">Total Planned</p>
+                      <p className="text-sm text-blue-700">{project.paymentPlanLines.length} payments</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-semibold text-gray-900">
+                        {formatCurrency(
+                          project.paymentPlanLines.reduce((sum: number, line: PaymentPlanLine) => sum + line.amount, 0),
+                          project.paymentPlanLines[0]?.currency || CurrencyType.QAR
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
-                No payment plan lines available
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Payment Plan</h3>
+                <p className="text-gray-500">No payment plan lines available for this project</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+        {/* Corporate Project Manager Section with Minimal Colors */}
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
+          <CardHeader className="border-b border-gray-200">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              <User className="h-5 w-5 text-purple-600" />
+              Project Manager
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center border border-purple-200">
+                <span className="text-lg font-semibold text-purple-700">
+                  {project.projectManager.employeeName.charAt(0)}
+                </span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">{project.projectManager.employeeName}</h3>
+                <p className="text-sm text-gray-600">Employee ID: {project.projectManager.employeeNumber}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">Project Manager</Badge>
+                  <Badge variant="outline" className="text-xs">{project.section.sectionName}</Badge>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Contact
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -730,7 +904,7 @@ export default function ProjectDetailsPage() {
                     <div>
                       <span className="font-medium text-gray-700">Budget:</span>
                       <p className="text-gray-900 font-semibold">
-                        {project.budget ? `QAR ${project.budget.toLocaleString()}` : 'Not set'}
+                        {project.budget ? formatCurrency(project.budget, CurrencyType.QAR) : 'Not set'}
                       </p>
                     </div>
                     <div>

@@ -2,7 +2,6 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Project } from '../../types/interfaces';
 import ProjectForm from './ProjectForm';
 import { projectApi } from '../../services/api/projectApi';
 
@@ -144,7 +143,61 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
   });
 
   if (isLoadingProject) {
-    return <div>Loading...</div>;
+    return (
+      <div className="w-full max-w-5xl mx-auto">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+          <div className="space-y-6">
+            {/* Header Skeleton */}
+            <div className="space-y-2">
+              <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 w-96 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            
+            {/* Step Indicator Skeleton */}
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="flex items-center">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                  {index < 2 && (
+                    <div className="w-24 h-1 mx-3 bg-gray-200 rounded animate-pulse"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Form Content Skeleton */}
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-l-4 border-blue-500">
+                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-80 bg-gray-200 rounded animate-pulse mt-2"></div>
+              </div>
+              
+              {/* Form Fields Skeleton */}
+              <div className="space-y-4">
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!project) {
@@ -165,6 +218,7 @@ export default function ProjectEditForm({ projectId, onSuccess }: ProjectEditFor
       onSubmit={handleSubmit}
       isLoading={updateProjectMutation.isLoading}
       initialData={project}
+      isEditMode={true}
     />
   );
 } 

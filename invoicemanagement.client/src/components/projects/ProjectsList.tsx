@@ -18,6 +18,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { projectApi } from '../../services/api/projectApi';
 import { useQuery } from '@tanstack/react-query';
+import { formatCurrency } from '../../utils/formatters';
+import { CurrencyType } from '../../types/enums';
 import ProjectActions from './ProjectActions';
 import { Project } from '../../types/interfaces';
 import { Skeleton, SkeletonGrid } from '../ui/skeleton';
@@ -204,7 +206,7 @@ const ProjectsList = () => {
                     <div className="flex items-center text-sm">
                       <BanknotesIcon className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-gray-700 font-medium mr-1">Budget:</span>
-                      <span className="text-gray-500">{project.budget?.toLocaleString() || ''} QAR</span>
+                      <span className="text-gray-500">{project.budget ? formatCurrency(project.budget, CurrencyType.QAR) : ''}</span>
                     </div>
                     <div className="flex items-center text-sm">
                       <FolderIcon className="h-4 w-4 mr-2 text-gray-500" />
