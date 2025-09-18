@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { CalendarIcon, Briefcase, Building2, User, DollarSign, FileText, CheckCircle2, Trash2Icon, AlertCircle, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Briefcase, Building2, User, DollarSign, FileText, CheckCircle2, Trash2Icon, AlertCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { CurrencyType } from '../../types/enums';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { departmentApi } from '../../services/api/departmentApi';
 import { employeeApi } from '../../services/api/employeeApi';
 import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '../ui/skeleton';
 
 // CSS for form message consistency
 const formMessageStyles = "text-sm font-medium text-destructive mt-1";
@@ -115,7 +116,9 @@ const formSchema = z.object({
     projectId: z.number().optional()
   }))
   .min(1, 'At least one payment plan line is required'),
-  projectNumber: z.string().optional(),
+  projectNumber: z.string()
+    .min(1, 'Project number is required')
+    .regex(/^[A-Z]{2,4}\/\d+\/\d{4}$/, 'Project number must be in format: ABBREVIATION/SERIAL/YEAR (e.g., APP/1/2025)'),
   initialNotes: z.string().optional(),
 }).refine((data) => {
   // Validate start vs end date
@@ -203,7 +206,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
   const sectionValue = form.watch('section');
 
   // Fetch sections and employees with error handling
-  const { data: sectionsData } = useQuery({
+  const { data: sectionsData, isLoading: sectionsLoading } = useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
       try {
@@ -242,20 +245,33 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     } catch (error) {
       console.error('Error generating project number preview:', error);
       // Fallback to basic format if API fails
-    const section = sections.find((s: Department) => s.id.toString() === sectionId);
-    if (section?.sectionAbbreviation) {
+      const section = sections.find((s: Department) => s.id.toString() === sectionId);
+      if (section?.sectionAbbreviation) {
         const date = startDate || new Date();
         const projectNumber = `${section.sectionAbbreviation}/${date.getMonth() + 1}/${date.getFullYear()}/[N]`;
-      form.setValue('projectNumber', projectNumber, {
-        shouldValidate: false,
-        shouldDirty: true,
-        shouldTouch: true
-      });
+        form.setValue('projectNumber', projectNumber, {
+          shouldValidate: false,
+          shouldDirty: true,
+          shouldTouch: true
+        });
       }
     } finally {
       setIsGeneratingProjectNumber(false);
     }
   }, [sections, form.setValue]);
+
+  // Regenerate project number manually
+  const regenerateProjectNumber = useCallback(async () => {
+    const currentSection = form.getValues('section');
+    const currentStartDate = form.getValues('expectedStart');
+    
+    if (currentSection) {
+      await updateProjectNumber(currentSection, currentStartDate);
+      toast.success('Project number regenerated!');
+    } else {
+      toast.error('Please select a section first');
+    }
+  }, [updateProjectNumber, form]);
 
   // Watch for section and start date changes
   const startDateValue = form.watch('expectedStart');
@@ -271,7 +287,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
     ? sectionsData.filter((s: Department) => s.parentId?.toString() === sectionValue)
     : [];
 
-  const { data: employeesData } = useQuery({
+  const { data: employeesData, isLoading: employeesLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
       try {
@@ -708,32 +724,36 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           Section
                         </FormLabel>
                         <FormControl>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              form.setValue('unitId', '');
-                              updateProjectNumber(value, startDateValue);
-                            }}
-                            value={field.value || ""}
-                          >
-                            <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
-                              <SelectValue placeholder="Select section" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sections.map((section: Department) => (
-                                <SelectItem key={section.id} value={section.id.toString()}>
-                                  {section.sectionName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {sectionsLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                form.setValue('unitId', '');
+                                updateProjectNumber(value, startDateValue);
+                              }}
+                              value={field.value || ""}
+                            >
+                              <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
+                                <SelectValue placeholder="Select section" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {sections.map((section: Department) => (
+                                  <SelectItem key={section.id} value={section.id.toString()}>
+                                    {section.sectionName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </FormControl>
                         <FormMessage className={formMessageStyles} />
                       </FormItem>
                     )}
                   />
 
-                  {/* Project Number (Generated) */}
+                  {/* Project Number (Auto-Generated but Editable) */}
                   <FormField
                     control={form.control}
                     name="projectNumber"
@@ -745,21 +765,54 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                           {isGeneratingProjectNumber && (
                             <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                           )}
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                            Auto-generated
+                          </span>
                         </FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
-                            disabled 
-                            placeholder={isGeneratingProjectNumber ? "Generating..." : "Will be generated automatically"}
-                            className="bg-gray-100 border border-gray-200 text-gray-600 font-mono py-2 px-3"
-                          />
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              placeholder={isGeneratingProjectNumber ? "Generating..." : "Will be generated automatically"}
+                              className="font-mono py-2 px-3 pr-20 border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                            />
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                              {isGeneratingProjectNumber ? (
+                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                              ) : field.value && (
+                                <button
+                                  type="button"
+                                  onClick={regenerateProjectNumber}
+                                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 group"
+                                  title="Regenerate project number"
+                                >
+                                  <RefreshCw className="h-3 w-3 text-gray-500 group-hover:text-primary transition-colors duration-200" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </FormControl>
                         <FormMessage className={formMessageStyles} />
-                        {!isGeneratingProjectNumber && field.value && (
-                          <p className="text-xs text-green-600 mt-1">
-                            ✅ Preview: {field.value}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              Auto-generated, but you can edit if needed
+                            </p>
+                            {field.value && !isGeneratingProjectNumber && (
+                              <button
+                                type="button"
+                                onClick={regenerateProjectNumber}
+                                className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors duration-200"
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Regenerate
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Format: ABBREVIATION/SERIAL/YEAR (e.g., APP/1/2025)
                           </p>
-                        )}
+                        </div>
                       </FormItem>
                     )}
                   />
@@ -809,10 +862,13 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                         Project Manager
                       </FormLabel>
                       <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
-                        >
+                        {employeesLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                          >
                             <SelectTrigger className="focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 py-2 px-3 border hover:border-primary/50">
                             <SelectValue placeholder="Select project manager" />
                           </SelectTrigger>
@@ -824,6 +880,7 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData }
                             ))}
                           </SelectContent>
                         </Select>
+                        )}
                       </FormControl>
                       <FormMessage className={formMessageStyles} />
                     </FormItem>

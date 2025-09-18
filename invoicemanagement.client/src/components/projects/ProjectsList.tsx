@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -17,10 +17,10 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { projectApi } from '../../services/api/projectApi';
-import type { QueryObserverResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import ProjectActions from './ProjectActions';
 import { Project } from '../../types/interfaces';
+import { Skeleton, SkeletonGrid } from '../ui/skeleton';
 
 interface ProjectListItem {
   id: number;
@@ -51,7 +51,6 @@ interface APIResponse<T> {
 
 const ProjectsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   // Fetch projects using React Query
   const { data, isLoading, error, refetch } = useQuery({
@@ -71,7 +70,7 @@ const ProjectsList = () => {
     }
   });
 
-  // Filter projects based on search query and status filter
+  // Filter projects based on search query
   const filteredProjects = data?.filter((project: ProjectListItem) => {
     // Search filter
     const matchesSearch = 
@@ -80,16 +79,31 @@ const ProjectsList = () => {
       project.projectManager?.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.section?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Status filter
-    const matchesStatus = statusFilter ? project.status === statusFilter : true;
-    
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
+
+        {/* Search Bar Skeleton */}
+        <div className="relative">
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+
+        {/* Projects Grid Skeleton */}
+        <SkeletonGrid count={6} />
       </div>
     );
   }
@@ -107,8 +121,8 @@ const ProjectsList = () => {
       {/* Header with title and action buttons */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-gray-500">Manage and track IT projects</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Projects</h1>
+          <p className="text-gray-600 mt-1">Manage and track IT projects</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" className="flex items-center gap-1">
@@ -145,15 +159,22 @@ const ProjectsList = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="h-full hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card className="h-full hover:shadow-lg transition-all duration-200 hover:scale-[1.02] border-l-4 border-l-primary">
+              <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg font-semibold">{project.name}</CardTitle>
-                    <CardDescription>{project.projectNumber}</CardDescription>
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-semibold text-gray-900">
+                      {project.name}
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      {project.projectNumber}
+                    </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
+                    <Badge 
+                      variant={project.status === 'In Progress' ? 'default' : 'secondary'}
+                      className="px-2 py-1 text-xs"
+                    >
                       {project.status}
                     </Badge>
                     <ProjectActions 

@@ -20,6 +20,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { RoleBasedDashboard } from '../components/dashboard/RoleBasedDashboard';
+import { Skeleton, SkeletonDashboardCard, SkeletonList } from '../components/ui/skeleton';
 
 // Mock data for IT department
 const stats = [
@@ -92,6 +93,96 @@ const item = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading for demonstration
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        >
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-80" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-28" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </motion.div>
+
+        {/* Stats Cards Skeleton */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonDashboardCard key={index} />
+          ))}
+        </motion.div>
+
+        {/* Content Grid Skeleton */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Recent Projects Skeleton */}
+          <motion.div 
+            className="lg:col-span-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="h-full">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <SkeletonList count={5} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Recent Invoices Skeleton */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="h-full">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-28" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <SkeletonList count={4} />
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -104,19 +195,19 @@ const Dashboard = () => {
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">IT Department Dashboard</h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">Overview of IT projects, invoices, and department metrics</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">IT Department Dashboard</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400 text-lg">Overview of IT projects, invoices, and department metrics</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button 
-            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700"
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md"
             onClick={() => navigate('/projects/new')}
           >
             <PlusCircle className="h-4 w-4" />
             New Project
           </Button>
           <Button 
-            className="flex items-center gap-2" 
+            className="flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-200" 
             variant="outline"
             onClick={() => navigate('/invoices/upload')}
           >
@@ -134,13 +225,13 @@ const Dashboard = () => {
       >
         {stats.map((stat) => (
           <motion.div key={stat.title} variants={item}>
-            <Card className="border-t-4 border-t-primary-500 hover:shadow-md transition-shadow">
+            <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-primary-500">
               <CardContent className="pt-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{stat.value}</h3>
-                    <div className="flex items-center mt-1">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{stat.title}</p>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</h3>
+                    <div className="flex items-center mt-2">
                       {stat.changeType === 'positive' ? (
                         <ArrowUp className="h-4 w-4 text-emerald-500" />
                       ) : (
@@ -155,7 +246,7 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="p-3 rounded-full bg-primary-50 dark:bg-gray-800">
+                  <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
                     {stat.icon}
                   </div>
                 </div>

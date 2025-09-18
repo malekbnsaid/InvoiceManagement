@@ -54,9 +54,11 @@ const InvoiceUploadForm: React.FC = () => {
   if (!canUploadInvoice) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+        <Card className="border-red-200 bg-red-50/50">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
             <p className="text-gray-600 text-center max-w-md">
               You don't have permission to upload invoices. Only users with Secretary role or higher can upload invoices.
@@ -889,10 +891,12 @@ const InvoiceUploadForm: React.FC = () => {
                     </div>
                         </>
                     ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No invoice data to review</p>
-                    <p className="text-sm">Process a document first in the Upload & Process tab</p>
+                  <div className="text-center text-gray-500 py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No invoice data to review</h3>
+                    <p className="text-sm text-gray-600">Process a document first in the Upload & Process tab</p>
                   </div>
                 )}
               </CardContent>

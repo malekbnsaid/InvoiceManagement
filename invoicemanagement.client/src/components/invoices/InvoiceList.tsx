@@ -17,7 +17,13 @@ import {
   Shield,
   Server as ServerIcon,
   Terminal,
-  FileText
+  FileText,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/Button';
@@ -45,8 +51,9 @@ import { invoiceService } from '../../services/invoiceService';
 import { Invoice } from '../../types/interfaces';
 import { useToast } from '../ui/use-toast';
 import { formatCurrency } from '../../utils/formatters';
+import { Skeleton, SkeletonList } from '../ui/skeleton';
 
-// Status badge styles
+// Status badge styles with enhanced visual design
 const getStatusColor = (status: any) => {
   // Convert status to string and handle different types
   const statusStr = String(status || '').toLowerCase();
@@ -56,42 +63,89 @@ const getStatusColor = (status: any) => {
     case 'draft':
     case '0':
     case '0.0':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 border border-gray-200';
     case 'pendingapproval':
     case 'pending':
     case '1':
     case '1.0':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
     case 'approved':
     case '2':
     case '2.0':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 border border-green-200';
     case 'rejected':
     case '3':
     case '3.0':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 border border-red-200';
     case 'processing':
     case '4':
     case '4.0':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 border border-blue-200';
     case 'paid':
     case '5':
     case '5.0':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 border border-green-200';
     case 'cancelled':
     case '6':
     case '6.0':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 border border-red-200';
     case 'onhold':
     case '7':
     case '7.0':
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-orange-100 text-orange-800 border border-orange-200';
     case 'overdue':
     case '8':
     case '8.0':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 border border-red-200';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 border border-gray-200';
+  }
+};
+
+// Status icons for enhanced visual feedback
+const getStatusIcon = (status: any) => {
+  const statusStr = String(status || '').toLowerCase();
+  
+  switch (statusStr) {
+    case 'draft':
+    case '0':
+    case '0.0':
+      return <FileText className="h-3 w-3" />;
+    case 'pendingapproval':
+    case 'pending':
+    case '1':
+    case '1.0':
+      return <Clock className="h-3 w-3" />;
+    case 'approved':
+    case '2':
+    case '2.0':
+      return <CheckCircle2 className="h-3 w-3" />;
+    case 'rejected':
+    case '3':
+    case '3.0':
+      return <XCircle className="h-3 w-3" />;
+    case 'processing':
+    case '4':
+    case '4.0':
+      return <RefreshCw className="h-3 w-3" />;
+    case 'paid':
+    case '5':
+    case '5.0':
+      return <CheckCircle2 className="h-3 w-3" />;
+    case 'cancelled':
+    case '6':
+    case '6.0':
+      return <XCircle className="h-3 w-3" />;
+    case 'onhold':
+    case '7':
+    case '7.0':
+      return <AlertTriangle className="h-3 w-3" />;
+    case 'overdue':
+    case '8':
+    case '8.0':
+      return <AlertCircle className="h-3 w-3" />;
+    default:
+      return <FileText className="h-3 w-3" />;
   }
 };
 
@@ -282,9 +336,42 @@ const InvoiceList = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-6"
+      >
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* Filters Skeleton */}
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="bg-white p-6 rounded-lg border">
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-24" />
+            <SkeletonList count={5} />
+          </div>
+        </div>
+      </motion.div>
     );
   }
 
@@ -292,10 +379,14 @@ const InvoiceList = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={() => window.location.reload()}>
             <RefreshIcon className="h-4 w-4 mr-2" />
-            Retry
+            Try Again
           </Button>
         </div>
       </div>
@@ -326,13 +417,17 @@ const InvoiceList = () => {
         </div>
 
         {/* Empty State */}
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <DocumentIcon className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices found</h3>
-            <p className="text-gray-600 mb-6">Get started by uploading your first invoice</p>
+        <Card className="border-dashed border-2 border-gray-200">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <DocumentIcon className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No invoices found</h3>
+            <p className="text-gray-500 text-center max-w-sm mb-6">
+              Get started by uploading your first invoice or check your filters
+            </p>
             <Link to="/invoices/upload">
-              <Button>
+              <Button className="bg-primary hover:bg-primary/90">
                 <PlusIcon className="h-4 w-4 mr-2" />
                 Upload First Invoice
               </Button>
@@ -353,8 +448,8 @@ const InvoiceList = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-          <p className="text-gray-600">Manage and track all invoices</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Invoices</h1>
+          <p className="text-gray-600 mt-1">Manage and track all invoices</p>
         </div>
         <Link to="/invoices/upload">
           <Button>
@@ -476,23 +571,22 @@ const InvoiceList = () => {
             </TableHeader>
             <TableBody>
               {paginatedInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
+                <TableRow key={invoice.id} className="hover:bg-blue-50/50 transition-colors duration-150">
                   <TableCell>
                     <Checkbox 
                       checked={selectedInvoices.includes(invoice.id.toString())}
                       onChange={() => handleSelectInvoice(invoice.id.toString())}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src="" />
-                        <AvatarFallback>
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-primary-700">
                           {invoice.vendorName?.charAt(0).toUpperCase() || 'V'}
-                        </AvatarFallback>
-                      </Avatar>
+                        </span>
+                      </div>
                       <div>
-                        <div className="font-medium">{invoice.vendorName || 'Unknown Vendor'}</div>
+                        <div className="font-medium text-gray-900">{invoice.vendorName || 'Unknown Vendor'}</div>
                         <div className="text-sm text-gray-500">{invoice.invoiceNumber}</div>
                       </div>
                     </div>
@@ -518,7 +612,8 @@ const InvoiceList = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(invoice.status)}>
+                    <Badge className={`${getStatusColor(invoice.status)} flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium`}>
+                      {getStatusIcon(invoice.status)}
                       {getStatusText(invoice.status)}
                     </Badge>
                   </TableCell>
