@@ -1,6 +1,6 @@
 import { InvoiceStatus } from '../../types/enums';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5274';
 
 export class InvoiceWorkflowApi {
   private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

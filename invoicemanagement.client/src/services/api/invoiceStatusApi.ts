@@ -1,11 +1,11 @@
 import { InvoiceStatus } from '../../types/enums';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5274/api';
 
 export interface ChangeStatusRequest {
-  status: InvoiceStatus;
-  changedBy: string;
-  reason?: string;
+  Status: InvoiceStatus;
+  ChangedBy: string;
+  Reason?: string;
 }
 
 export interface ChangeStatusResponse {

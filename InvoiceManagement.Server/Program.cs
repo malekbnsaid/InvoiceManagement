@@ -36,6 +36,7 @@ builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IERPEmployeeService, ERPEmployeeService>();
 builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
 builder.Services.AddScoped<IVendorService, VendorService>();
+builder.Services.AddScoped<ISimpleInvoiceStatusService, SimpleInvoiceStatusService>();
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -110,7 +111,9 @@ builder.Services.AddCors(options =>
                         "https://localhost:5174",
                         "http://localhost:5174",
                         "https://localhost:8080",
-                        "http://localhost:8080"
+                        "http://localhost:8080",
+                        "https://localhost:7095",
+                        "http://localhost:7095"
                     )
                     .AllowAnyMethod()
                     .AllowAnyHeader()

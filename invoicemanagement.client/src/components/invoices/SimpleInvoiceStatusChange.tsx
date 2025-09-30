@@ -26,17 +26,25 @@ export function SimpleInvoiceStatusChange({
 
   const validTransitions = SimpleInvoiceStatusService.getValidTransitions(currentStatus);
   const currentStatusInfo = SimpleInvoiceStatusService.getStatusInfo(currentStatus);
+  
+  // Debug logging
+  console.log('SimpleInvoiceStatusChange - currentStatus:', currentStatus);
+  console.log('SimpleInvoiceStatusChange - validTransitions:', validTransitions);
 
   const handleStatusChange = async () => {
     if (!selectedStatus || !user) return;
 
     setIsChanging(true);
     try {
+      // Debug logging
+      console.log('Attempting to change status to:', selectedStatus);
+      console.log('User ID:', user.userId);
+      
       // Call API to change status
       await InvoiceStatusApi.changeStatus(invoiceId, {
-        status: selectedStatus as InvoiceStatus,
-        changedBy: user.id || user.email || 'unknown',
-        reason: undefined // Simple workflow doesn't require reasons
+        Status: selectedStatus as InvoiceStatus,
+        ChangedBy: user.userId?.toString() || user.email || 'unknown',
+        Reason: undefined // Simple workflow doesn't require reasons
       });
 
       // Update local state
