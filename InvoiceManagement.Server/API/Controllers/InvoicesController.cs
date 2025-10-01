@@ -43,6 +43,8 @@ namespace InvoiceManagement.Server.API.Controllers
         public string? FileType { get; set; }
         [JsonPropertyName("fileSize")]
         public long? FileSize { get; set; }
+        [JsonPropertyName("projectReference")]
+        public string? ProjectReference { get; set; }
     }
 
     [ApiController]
@@ -156,7 +158,8 @@ namespace InvoiceManagement.Server.API.Controllers
                     request?.OcrResult?.VendorTaxId,
                     LineItemCount = request?.OcrResult?.LineItems?.Count ?? 0,
                     FileName = request?.FileName,
-                    FileSize = request?.FileSize
+                    FileSize = request?.FileSize,
+                    ProjectReference = request?.ProjectReference
                 });
 
             if (request?.OcrResult == null)
@@ -212,7 +215,8 @@ namespace InvoiceManagement.Server.API.Controllers
                     request.FilePath,
                     request.FileName,
                     request.FileType,
-                    request.FileSize
+                    request.FileSize,
+                    request.ProjectReference
                 );
                 
                 _logger.LogInformation("Created invoice {InvoiceNumber} with ID {InvoiceId}", 
@@ -229,8 +233,8 @@ namespace InvoiceManagement.Server.API.Controllers
                     ));
                 }
 
-                _logger.LogInformation("Successfully retrieved saved invoice {InvoiceNumber}", 
-                    savedInvoice.InvoiceNumber);
+                _logger.LogInformation("Successfully retrieved saved invoice {InvoiceNumber} with ProjectReference: '{ProjectReference}'", 
+                    savedInvoice.InvoiceNumber, savedInvoice.ProjectReference);
                 return Ok(savedInvoice);
             }
             catch (Exception ex)

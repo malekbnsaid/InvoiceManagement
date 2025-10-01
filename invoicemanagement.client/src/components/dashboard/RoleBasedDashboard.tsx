@@ -4,6 +4,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../context/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardApi } from '../../services/api/dashboardApi';
 import { 
   FolderKanban, 
   FileText, 
@@ -27,6 +29,13 @@ export const RoleBasedDashboard: React.FC = () => {
     hasRole 
   } = usePermissions();
   const navigate = useNavigate();
+
+  // Fetch projects needing approval
+  const { data: projectsNeedingApproval, isLoading: approvalLoading } = useQuery({
+    queryKey: ['dashboard-projects-approval'],
+    queryFn: () => dashboardApi.getProjectsNeedingApproval(3), // Show only 3 for the card
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const getRoleBasedContent = () => {
     if (!user) return null;

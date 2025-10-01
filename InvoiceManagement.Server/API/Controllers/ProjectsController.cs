@@ -37,8 +37,18 @@ namespace InvoiceManagement.Server.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            var projects = await _projectService.GetAllProjectsAsync();
-            return Ok(projects);
+            try
+            {
+                Console.WriteLine("🔍 ProjectsController: GetProjects called");
+                var projects = await _projectService.GetAllProjectsAsync();
+                Console.WriteLine($"🔍 ProjectsController: Found {projects?.Count() ?? 0} projects");
+                return Ok(projects);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ ProjectsController: Error in GetProjects: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         // GET: api/Projects/5
@@ -451,6 +461,176 @@ namespace InvoiceManagement.Server.API.Controllers
         {
             var spend = await _projectService.GetTotalProjectSpendAsync(id);
             return Ok(spend);
+        }
+
+        // GET: api/Projects/debug
+        [HttpGet("debug")]
+        public async Task<ActionResult> GetDebugInfo()
+        {
+            try
+            {
+                var projects = await _context.Projects
+                    .Select(p => new { p.Id, p.Name, p.ProjectNumber })
+                    .ToListAsync();
+                
+                var invoices = await _context.Invoices
+                    .Where(i => !string.IsNullOrEmpty(i.ProjectReference))
+                    .Select(i => new { i.Id, i.InvoiceNumber, i.ProjectReference })
+                    .ToListAsync();
+                
+                return Ok(new { 
+                    Projects = projects,
+                    Invoices = invoices,
+                    Message = "Debug info for project-invoice matching"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // GET: api/Projects/test-invoices/{projectReference}
+        [HttpGet("test-invoices/{projectReference}")]
+        public async Task<ActionResult> TestProjectInvoices(string projectReference)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 TestProjectInvoices: Looking for invoices with ProjectReference: '{projectReference}'");
+                
+                var invoices = await _context.Invoices
+                    .Where(i => i.ProjectReference == projectReference)
+                    .Select(i => new { i.Id, i.InvoiceNumber, i.ProjectReference, i.VendorName, i.InvoiceDate })
+                    .ToListAsync();
+                
+                Console.WriteLine($"🔍 TestProjectInvoices: Found {invoices.Count} invoices");
+                
+                return Ok(new { 
+                    ProjectReference = projectReference,
+                    InvoiceCount = invoices.Count,
+                    Invoices = invoices,
+                    Message = $"Test query for ProjectReference: {projectReference}"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ TestProjectInvoices: Error: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // GET: api/Projects/5/invoices
+        [HttpGet("{id}/invoices")]
+        public async Task<ActionResult<IEnumerable<Invoice>>> GetProjectInvoices(int id)
+        {
+            try
+            {
+                Console.WriteLine($"🔍 ProjectsController: GetProjectInvoices called for project ID: {id}");
+                
+                // First get the project to get its reference
+                var project = await _context.Projects.FindAsync(id);
+                if (project == null)
+                {
+                    Console.WriteLine($"❌ ProjectsController: Project with ID {id} not found");
+                    return NotFound(new { error = "Project not found" });
+                }
+
+                Console.WriteLine($"🔍 ProjectsController: Found project: {project.Name} - ProjectNumber: '{project.ProjectNumber}'");
+                Console.WriteLine($"🔍 ProjectsController: Project ID: {project.Id}, Name: '{project.Name}'");
+
+                // Debug: Check what invoices exist with this project reference
+                var allInvoicesWithProjectRef = await _context.Invoices
+                    .Where(i => !string.IsNullOrEmpty(i.ProjectReference))
+                    .Select(i => new { i.Id, i.InvoiceNumber, i.ProjectReference })
+                    .ToListAsync();
+                
+                Console.WriteLine($"🔍 ProjectsController: All invoices with ProjectReference:");
+                foreach (var inv in allInvoicesWithProjectRef)
+                {
+                    Console.WriteLine($"  Invoice {inv.InvoiceNumber} (ID: {inv.Id}) - ProjectRef: '{inv.ProjectReference}'");
+                }
+
+                // Try to get invoices using the configured relationship first
+                List<Invoice> invoices;
+                try
+                {
+                    invoices = await _context.Entry(project)
+                        .Collection(p => p.Invoices)
+                        .Query()
+                        .Include(i => i.Vendor)
+                        .Include(i => i.StatusHistories)
+                        .OrderByDescending(i => i.InvoiceDate)
+                        .ToListAsync();
+                    
+                    Console.WriteLine($"🔍 ProjectsController: Using EF relationship - Found {invoices.Count} invoices for project {project.ProjectNumber}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"🔍 ProjectsController: EF relationship failed, using manual query: {ex.Message}");
+                    
+                    // Fallback to manual query
+                    invoices = await _context.Invoices
+                        .Where(i => i.ProjectReference == project.ProjectNumber)
+                        .Include(i => i.Vendor)
+                        .Include(i => i.StatusHistories)
+                        .OrderByDescending(i => i.InvoiceDate)
+                        .ToListAsync();
+                    
+                    Console.WriteLine($"🔍 ProjectsController: Manual query - Found {invoices.Count} invoices for project {project.ProjectNumber}");
+                }
+                
+                // If no invoices found, try alternative matching strategies
+                if (invoices.Count == 0)
+                {
+                    Console.WriteLine($"🔍 ProjectsController: No invoices found with exact match, trying alternative strategies...");
+                    
+                    // Try matching by project name
+                    var invoicesByName = await _context.Invoices
+                        .Where(i => i.ProjectReference != null && i.ProjectReference.Contains(project.Name))
+                        .Include(i => i.Vendor)
+                        .Include(i => i.StatusHistories)
+                        .OrderByDescending(i => i.InvoiceDate)
+                        .ToListAsync();
+                    
+                    Console.WriteLine($"🔍 ProjectsController: Found {invoicesByName.Count} invoices matching project name '{project.Name}'");
+                    
+                    if (invoicesByName.Count > 0)
+                    {
+                        Console.WriteLine("🔍 ProjectsController: Using invoices matched by project name");
+                        return Ok(invoicesByName);
+                    }
+                    
+                    // Try partial matching
+                    var invoicesPartial = await _context.Invoices
+                        .Where(i => i.ProjectReference != null && 
+                                   (project.ProjectNumber.Contains(i.ProjectReference) || 
+                                    i.ProjectReference.Contains(project.ProjectNumber)))
+                        .Include(i => i.Vendor)
+                        .Include(i => i.StatusHistories)
+                        .OrderByDescending(i => i.InvoiceDate)
+                        .ToListAsync();
+                    
+                    Console.WriteLine($"🔍 ProjectsController: Found {invoicesPartial.Count} invoices with partial matching");
+                    
+                    if (invoicesPartial.Count > 0)
+                    {
+                        Console.WriteLine("🔍 ProjectsController: Using invoices matched by partial matching");
+                        return Ok(invoicesPartial);
+                    }
+                }
+                
+                foreach (var invoice in invoices)
+                {
+                    Console.WriteLine($"🔍 ProjectsController: Invoice {invoice.InvoiceNumber} - ProjectRef: {invoice.ProjectReference}");
+                }
+
+                return Ok(invoices);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ ProjectsController: Error in GetProjectInvoices: {ex.Message}");
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         // PUT: api/Projects/5/status

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -12,20 +13,19 @@ import {
   Pencil as PencilIcon,
   FileText as DocumentIcon,
   RotateCw as RefreshIcon,
-  Building,
-  Cpu,
-  Shield,
-  Server as ServerIcon,
-  Terminal,
   FileText,
   Clock,
   CheckCircle2,
   XCircle,
   RefreshCw,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  X,
+  DollarSign,
+  SortAsc,
+  SortDesc,
+  SlidersHorizontal
 } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/input';
@@ -39,7 +39,6 @@ import {
 } from "../ui/table";
 import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { 
   Select, 
   SelectContent, 
@@ -55,48 +54,26 @@ import { Skeleton, SkeletonList } from '../ui/skeleton';
 
 // Status badge styles with enhanced visual design
 const getStatusColor = (status: any) => {
-  // Convert status to string and handle different types
-  const statusStr = String(status || '').toLowerCase();
+  // Convert status to number for InvoiceStatus enum
+  const statusNum = Number(status);
   
-  switch (statusStr) {
-    // String enum values
-    case 'draft':
-    case '0':
-    case '0.0':
-      return 'bg-gray-100 text-gray-800 border border-gray-200';
-    case 'pendingapproval':
-    case 'pending':
-    case '1':
-    case '1.0':
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-    case 'approved':
-    case '2':
-    case '2.0':
-      return 'bg-green-100 text-green-800 border border-green-200';
-    case 'rejected':
-    case '3':
-    case '3.0':
-      return 'bg-red-100 text-red-800 border border-red-200';
-    case 'processing':
-    case '4':
-    case '4.0':
+  switch (statusNum) {
+    case 0: // Submitted
       return 'bg-blue-100 text-blue-800 border border-blue-200';
-    case 'paid':
-    case '5':
-    case '5.0':
+    case 1: // UnderReview
+      return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+    case 2: // Approved
       return 'bg-green-100 text-green-800 border border-green-200';
-    case 'cancelled':
-    case '6':
-    case '6.0':
+    case 3: // InProgress
+      return 'bg-purple-100 text-purple-800 border border-purple-200';
+    case 4: // Completed
+      return 'bg-green-100 text-green-800 border border-green-200';
+    case 5: // Rejected
       return 'bg-red-100 text-red-800 border border-red-200';
-    case 'onhold':
-    case '7':
-    case '7.0':
+    case 6: // Cancelled
+      return 'bg-gray-100 text-gray-800 border border-gray-200';
+    case 7: // OnHold
       return 'bg-orange-100 text-orange-800 border border-orange-200';
-    case 'overdue':
-    case '8':
-    case '8.0':
-      return 'bg-red-100 text-red-800 border border-red-200';
     default:
       return 'bg-gray-100 text-gray-800 border border-gray-200';
   }
@@ -104,46 +81,25 @@ const getStatusColor = (status: any) => {
 
 // Status icons for enhanced visual feedback
 const getStatusIcon = (status: any) => {
-  const statusStr = String(status || '').toLowerCase();
+  const statusNum = Number(status);
   
-  switch (statusStr) {
-    case 'draft':
-    case '0':
-    case '0.0':
+  switch (statusNum) {
+    case 0: // Submitted
       return <FileText className="h-3 w-3" />;
-    case 'pendingapproval':
-    case 'pending':
-    case '1':
-    case '1.0':
+    case 1: // UnderReview
       return <Clock className="h-3 w-3" />;
-    case 'approved':
-    case '2':
-    case '2.0':
+    case 2: // Approved
       return <CheckCircle2 className="h-3 w-3" />;
-    case 'rejected':
-    case '3':
-    case '3.0':
-      return <XCircle className="h-3 w-3" />;
-    case 'processing':
-    case '4':
-    case '4.0':
+    case 3: // InProgress
       return <RefreshCw className="h-3 w-3" />;
-    case 'paid':
-    case '5':
-    case '5.0':
+    case 4: // Completed
       return <CheckCircle2 className="h-3 w-3" />;
-    case 'cancelled':
-    case '6':
-    case '6.0':
+    case 5: // Rejected
       return <XCircle className="h-3 w-3" />;
-    case 'onhold':
-    case '7':
-    case '7.0':
+    case 6: // Cancelled
+      return <XCircle className="h-3 w-3" />;
+    case 7: // OnHold
       return <AlertTriangle className="h-3 w-3" />;
-    case 'overdue':
-    case '8':
-    case '8.0':
-      return <AlertCircle className="h-3 w-3" />;
     default:
       return <FileText className="h-3 w-3" />;
   }
@@ -151,107 +107,174 @@ const getStatusIcon = (status: any) => {
 
 // Helper function to get status display text
 const getStatusText = (status: any) => {
-  const statusStr = String(status || '').toLowerCase();
+  const statusNum = Number(status);
   
-  switch (statusStr) {
-    // String enum values
-    case 'draft':
-    case '0':
-    case '0.0':
-      return 'Draft';
-    case 'pending':
-    case '1':
-    case '1.0':
-      return 'Pending';
-    case 'approved':
-    case '2':
-    case '2.0':
+  switch (statusNum) {
+    case 0: // Submitted
+      return 'Submitted';
+    case 1: // UnderReview
+      return 'Under Review';
+    case 2: // Approved
       return 'Approved';
-    case 'rejected':
-    case '3':
-    case '3.0':
+    case 3: // InProgress
+      return 'In Progress';
+    case 4: // Completed
+      return 'Completed';
+    case 5: // Rejected
       return 'Rejected';
-    case 'paid':
-    case '4':
-    case '4.0':
-      return 'Paid';
-    case 'cancelled':
-    case '5':
-    case '5.0':
+    case 6: // Cancelled
       return 'Cancelled';
+    case 7: // OnHold
+      return 'On Hold';
     default:
       return 'Unknown';
   }
 };
 
-const getSectionIcon = (section: string) => {
-  switch (section.toUpperCase()) {
-    case 'ISO':
-      return <Shield className="h-4 w-4 text-blue-500" />;
-    case 'TSS':
-      return <ServerIcon className="h-4 w-4 text-green-500" />;
-    case 'ISS':
-      return <Cpu className="h-4 w-4 text-purple-500" />;
-    case 'APP':
-      return <Terminal className="h-4 w-4 text-orange-500" />;
-    default:
-      return <Building className="h-4 w-4 text-gray-500" />;
-  }
-};
 
 const InvoiceList = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Search and Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [sortField, setSortField] = useState('date');
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<{from: Date | null, to: Date | null}>({from: null, to: null});
+  const [amountRange, setAmountRange] = useState<{min: number | null, max: number | null}>({min: null, max: null});
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Sorting States
+  const [sortField, setSortField] = useState('upload');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  // Pagination and Selection States
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   
   const { toast } = useToast();
   const itemsPerPage = 5;
 
-  // Fetch invoices from API
-  useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        setLoading(true);
-        const response = await invoiceService.getInvoices();
-        
-        // Handle different response formats
-        let data;
-        if (Array.isArray(response)) {
-          data = response;
-        } else if (response && response.$values && Array.isArray(response.$values)) {
-          data = response.$values;
-        } else if (response && Array.isArray(response)) {
-          data = response;
-        } else {
-          console.warn('Unexpected response format:', response);
-          data = [];
-        }
-        
-        setInvoices(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching invoices:', err);
-        setError('Failed to load invoices');
-        setInvoices([]); // Ensure invoices is always an array
-        toast({
-          title: "Error",
-          description: "Failed to load invoices",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Helper functions for filter options
+  const getUniqueVendors = () => {
+    if (!invoices || !Array.isArray(invoices)) return [];
+    const vendors = [...new Set(invoices.map(invoice => invoice.vendorName).filter(Boolean))];
+    return vendors.sort();
+  };
 
-    fetchInvoices();
-  }, [toast]);
+  const getUniqueProjects = () => {
+    if (!invoices || !Array.isArray(invoices)) return [];
+    const projects = [...new Set(invoices.map(invoice => invoice.projectReference).filter(Boolean))];
+    return projects.sort();
+  };
+
+  // Convert numeric status to readable string
+  const getStatusString = (status: number): string => {
+    const statusMap: { [key: number]: string } = {
+      0: 'Submitted',
+      1: 'Under Review',
+      2: 'Approved',
+      3: 'In Progress',
+      4: 'Completed',
+      5: 'Rejected',
+      6: 'Cancelled',
+      7: 'On Hold'
+    };
+    return statusMap[status] || 'Unknown';
+  };
+
+  const getUniqueStatuses = () => {
+    if (!invoices || !Array.isArray(invoices)) return [];
+    const statuses = [...new Set(invoices.map(invoice => invoice.status).filter(status => status !== undefined && status !== null))];
+    return statuses.sort((a, b) => a - b); // Sort numerically
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedStatus(null);
+    setSelectedVendor(null);
+    setSelectedProject(null);
+    setDateRange({from: null, to: null});
+    setAmountRange({min: null, max: null});
+    setCurrentPage(1);
+  };
+
+  // Get active filter count
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (selectedStatus && selectedStatus !== 'all') count++;
+    if (selectedVendor && selectedVendor !== 'all') count++;
+    if (selectedProject && selectedProject !== 'all') count++;
+    if (dateRange.from || dateRange.to) count++;
+    if (amountRange.min || amountRange.max) count++;
+    return count;
+  };
+
+  // Fetch invoices using React Query for proper caching and auto-refreshing
+  const { data: invoicesData, isLoading: queryLoading, error: queryError, refetch } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      console.log('🔍 InvoiceList: Fetching invoices...');
+      const response = await invoiceService.getInvoices();
+      console.log('🔍 InvoiceList: Response received:', response);
+      
+      // Handle different response formats
+      let data;
+      if (Array.isArray(response)) {
+        data = response;
+      } else if (response && (response as any).$values && Array.isArray((response as any).$values)) {
+        data = (response as any).$values;
+      } else if (response && Array.isArray(response)) {
+        data = response;
+      } else {
+        console.warn('Unexpected response format:', response);
+        data = [];
+      }
+      
+      console.log('🔍 InvoiceList: Final invoices array:', data);
+      console.log('🔍 InvoiceList: Array length:', data.length);
+      return data;
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Update local state when query data changes
+  useEffect(() => {
+    if (invoicesData) {
+      console.log('🔍 InvoiceList: Updating local state with invoices:', invoicesData);
+      setInvoices(invoicesData);
+      setError(null);
+    }
+  }, [invoicesData]);
+
+  // Handle query error
+  useEffect(() => {
+    if (queryError) {
+      console.error('❌ InvoiceList: Query error:', queryError);
+      setError('Failed to load invoices');
+      setInvoices([]);
+      toast({
+        title: "Error",
+        description: "Failed to load invoices",
+        variant: "destructive"
+      });
+    }
+  }, [queryError, toast]);
+
+  // Set loading state
+  useEffect(() => {
+    setLoading(queryLoading);
+  }, [queryLoading]);
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    console.log('🔍 InvoiceList: Manual refresh triggered');
+    refetch();
+  };
 
   // Handle sorting
   const handleSort = (field: string) => {
@@ -263,44 +286,128 @@ const InvoiceList = () => {
     }
   };
 
-  // Filter invoices based on search term, status, and section
+  // Smart search function - searches across multiple fields
+  const smartSearch = (invoice: Invoice, searchTerm: string): boolean => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const searchFields = [
+      invoice.vendorName,
+      invoice.invoiceNumber,
+      invoice.projectReference,
+      invoice.subject,
+      invoice.referenceNumber,
+      invoice.remark,
+      invoice.vendor?.name,
+      invoice.vendor?.email,
+      invoice.vendor?.contactPerson,
+      invoice.project?.name,
+      invoice.project?.projectNumber,
+      invoice.lpo?.lpoNumber,
+      (invoice.lpo as any)?.subject
+    ];
+    
+    return searchFields.some(field => 
+      field?.toLowerCase().includes(searchLower) ?? false
+    );
+  };
+
+  // Advanced filtering logic
   const filteredInvoices = (invoices || []).filter(invoice => {
-    const matchesSearch = searchTerm === '' || 
-      (invoice.vendorName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (invoice.projectReference?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    // Smart search
+    const matchesSearch = smartSearch(invoice, searchTerm);
     
-    const matchesStatus = selectedStatus === null || selectedStatus === 'all' || invoice.status === selectedStatus;
+    // Status filter
+    const matchesStatus = selectedStatus === null || selectedStatus === 'all' || invoice.status.toString() === selectedStatus;
     
-    // Note: Section filtering would need to be implemented based on your data structure
-    const matchesSection = selectedSection === null || selectedSection === 'all' || true; // Placeholder
+    // Vendor filter
+    const matchesVendor = selectedVendor === null || selectedVendor === 'all' || 
+      invoice.vendorName === selectedVendor || invoice.vendorId?.toString() === selectedVendor;
     
-    return matchesSearch && matchesStatus && matchesSection;
+    // Project filter
+    const matchesProject = selectedProject === null || selectedProject === 'all' || 
+      invoice.projectReference === selectedProject || invoice.projectId?.toString() === selectedProject;
+    
+    // Date range filter (invoice date)
+    const matchesDateRange = !dateRange.from || !dateRange.to || (
+      new Date(invoice.invoiceDate) >= dateRange.from && 
+      new Date(invoice.invoiceDate) <= dateRange.to
+    );
+    
+    // Amount range filter
+    const matchesAmountRange = !amountRange.min || !amountRange.max || (
+      invoice.invoiceValue >= amountRange.min && 
+      invoice.invoiceValue <= amountRange.max
+    );
+    
+    return matchesSearch && matchesStatus && matchesVendor && matchesProject && 
+           matchesDateRange && matchesAmountRange;
   });
 
-  // Sort invoices
+  // Enhanced sorting with more options
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
     let aValue: any, bValue: any;
     
     switch (sortField) {
+      case 'upload':
+        // Upload/creation date
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
+        break;
       case 'date':
+        // Invoice date
         aValue = new Date(a.invoiceDate);
         bValue = new Date(b.invoiceDate);
         break;
+      case 'due':
+        // Due date
+        aValue = a.dueDate ? new Date(a.dueDate) : new Date(0);
+        bValue = b.dueDate ? new Date(b.dueDate) : new Date(0);
+        break;
       case 'amount':
+        // Invoice amount
         aValue = a.invoiceValue;
         bValue = b.invoiceValue;
         break;
       case 'vendor':
-        aValue = a.vendorName;
-        bValue = b.vendorName;
+        // Vendor name
+        aValue = a.vendorName || '';
+        bValue = b.vendorName || '';
+        break;
+      case 'project':
+        // Project reference
+        aValue = a.projectReference || '';
+        bValue = b.projectReference || '';
+        break;
+      case 'status':
+        // Status
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      case 'number':
+        // Invoice number
+        aValue = a.invoiceNumber || '';
+        bValue = b.invoiceNumber || '';
+        break;
+      case 'processed':
+        // Processed date
+        aValue = a.processedDate ? new Date(a.processedDate) : new Date(0);
+        bValue = b.processedDate ? new Date(b.processedDate) : new Date(0);
         break;
       default:
-        aValue = a.invoiceDate;
-        bValue = b.invoiceDate;
+        // Default to upload order (creation date) - most recent first
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
         break;
     }
     
+    // Handle string comparison
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      const comparison = aValue.localeCompare(bValue);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }
+    
+    // Handle date/number comparison
     if (sortDirection === 'asc') {
       return aValue > bValue ? 1 : -1;
     } else {
@@ -408,12 +515,22 @@ const InvoiceList = () => {
             <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
             <p className="text-gray-600">Manage and track all invoices</p>
           </div>
-          <Link to="/invoices/upload">
-            <Button>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Upload Invoice
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          </Link>
+            <Link to="/invoices/upload">
+              <Button>
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Upload Invoice
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Empty State */}
@@ -426,12 +543,22 @@ const InvoiceList = () => {
             <p className="text-gray-500 text-center max-w-sm mb-6">
               Get started by uploading your first invoice or check your filters
             </p>
-            <Link to="/invoices/upload">
-              <Button className="bg-primary hover:bg-primary/90">
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Upload First Invoice
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </Link>
+              <Link to="/invoices/upload">
+                <Button className="bg-primary hover:bg-primary/90">
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Upload First Invoice
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -451,76 +578,222 @@ const InvoiceList = () => {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Invoices</h1>
           <p className="text-gray-600 mt-1">Manage and track all invoices</p>
         </div>
-        <Link to="/invoices/upload">
-          <Button>
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Upload Invoice
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
-        </Link>
+          <Link to="/invoices/upload">
+            <Button>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Upload Invoice
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Enhanced Filters & Search */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FilterIcon className="h-5 w-5" />
-            Filters & Search
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5" />
+              Smart Search & Filters
+              {getActiveFilterCount() > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {getActiveFilterCount()} active
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <FilterIcon className="h-4 w-4" />
+                {showFilters ? 'Hide' : 'Show'} Advanced
+              </Button>
+              {getActiveFilterCount() > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search invoices..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
+          {/* Primary Search Bar */}
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Smart search: vendor, invoice number, project, subject, remarks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* Quick Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select value={selectedStatus || 'all'} onValueChange={(value) => setSelectedStatus(value === 'all' ? null : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                {getUniqueStatuses().map(status => (
+                  <SelectItem key={status} value={status.toString()}>
+                    {getStatusString(status)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            
-            <Select value={selectedSection || 'all'} onValueChange={(value) => setSelectedSection(value === 'all' ? null : value)}>
+
+            <Select value={selectedVendor || 'all'} onValueChange={(value) => setSelectedVendor(value === 'all' ? null : value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by section" />
+                <SelectValue placeholder="Filter by vendor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Sections</SelectItem>
-                <SelectItem value="ISO">ISO</SelectItem>
-                <SelectItem value="TSS">TSS</SelectItem>
-                <SelectItem value="ISS">ISS</SelectItem>
-                <SelectItem value="APP">APP</SelectItem>
+                <SelectItem value="all">All Vendors</SelectItem>
+                {getUniqueVendors().map(vendor => (
+                  <SelectItem key={vendor} value={vendor || ''}>{vendor}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            
-            <Button variant="outline" onClick={() => {
-              setSearchTerm('');
-              setSelectedStatus('all');
-              setSelectedSection('all');
-            }}>
-              Clear Filters
-            </Button>
+
+            <Select value={selectedProject || 'all'} onValueChange={(value) => setSelectedProject(value === 'all' ? null : value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {getUniqueProjects().map(project => (
+                  <SelectItem key={project} value={project || ''}>{project}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {/* Advanced Filters */}
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-4 pt-4 border-t"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Date Range Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Invoice Date Range</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Input
+                        type="date"
+                        placeholder="From"
+                        value={dateRange.from ? dateRange.from.toISOString().split('T')[0] : ''}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value ? new Date(e.target.value) : null }))}
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="date"
+                        placeholder="To"
+                        value={dateRange.to ? dateRange.to.toISOString().split('T')[0] : ''}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value ? new Date(e.target.value) : null }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amount Range Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Amount Range</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        type="number"
+                        placeholder="Min amount"
+                        value={amountRange.min || ''}
+                        onChange={(e) => setAmountRange(prev => ({ ...prev, min: e.target.value ? parseFloat(e.target.value) : null }))}
+                        className="pl-10"
+                      />
+                    </div>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        type="number"
+                        placeholder="Max amount"
+                        value={amountRange.max || ''}
+                        onChange={(e) => setAmountRange(prev => ({ ...prev, max: e.target.value ? parseFloat(e.target.value) : null }))}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </CardContent>
       </Card>
 
       {/* Invoices Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoice List</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Invoice List</CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <Select value={sortField} onValueChange={(value) => handleSort(value)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upload">Upload Date</SelectItem>
+                  <SelectItem value="date">Invoice Date</SelectItem>
+                  <SelectItem value="due">Due Date</SelectItem>
+                  <SelectItem value="amount">Amount</SelectItem>
+                  <SelectItem value="vendor">Vendor</SelectItem>
+                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="number">Invoice Number</SelectItem>
+                  <SelectItem value="processed">Processed Date</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                className="flex items-center gap-1"
+              >
+                {sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -545,10 +818,21 @@ const InvoiceList = () => {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer"
+                  onClick={() => handleSort('upload')}
+                >
+                  <div className="flex items-center gap-1">
+                    Upload Date
+                    {sortField === 'upload' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-1">
-                    Date
+                    Invoice Date
                     {sortField === 'date' && (
                       sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                     )}
@@ -565,7 +849,39 @@ const InvoiceList = () => {
                     )}
                   </div>
                 </TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center gap-1">
+                    Status
+                    {sortField === 'status' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('project')}
+                >
+                  <div className="flex items-center gap-1">
+                    Project
+                    {sortField === 'project' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort('due')}
+                >
+                  <div className="flex items-center gap-1">
+                    Due Date
+                    {sortField === 'due' && (
+                      sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -588,6 +904,26 @@ const InvoiceList = () => {
                       <div>
                         <div className="font-medium text-gray-900">{invoice.vendorName || 'Unknown Vendor'}</div>
                         <div className="text-sm text-gray-500">{invoice.invoiceNumber}</div>
+                        {invoice.projectReference && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            <Link 
+                              to={`/projects?search=${invoice.projectReference}`}
+                              className="hover:underline"
+                            >
+                              Project: {invoice.projectReference}
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {new Date(invoice.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(invoice.createdAt).toLocaleTimeString()}
                       </div>
                     </div>
                   </TableCell>
@@ -616,6 +952,39 @@ const InvoiceList = () => {
                       {getStatusIcon(invoice.status)}
                       {getStatusText(invoice.status)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {invoice.projectReference ? (
+                      <div className="text-sm">
+                        <Link 
+                          to={`/projects?search=${invoice.projectReference}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          {invoice.projectReference}
+                        </Link>
+                        {invoice.project?.name && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {invoice.project.name}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No project</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {invoice.dueDate ? (
+                      <div>
+                        <div className="font-medium">
+                          {new Date(invoice.dueDate).toLocaleDateString()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(invoice.dueDate).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No due date</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

@@ -29,12 +29,14 @@ namespace InvoiceManagement.Server.Application.Services
         {
             try
             {
+                Console.WriteLine("🔍 ProjectService: GetAllProjectsAsync called");
                 var projects = await _context.Projects
                     .Include(p => p.ProjectManager)
                     .Include(p => p.Section)
                     .Include(p => p.PaymentPlanLines)
                     .ToListAsync();
                 
+                Console.WriteLine($"🔍 ProjectService: Found {projects?.Count ?? 0} projects in database");
                 return projects ?? Enumerable.Empty<Project>();
             }
             catch (Exception)

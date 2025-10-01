@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { 
   Upload, 
   FileText, 
@@ -18,9 +19,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { invoiceService } from '../../services/invoiceService';
+import { projectApi } from '../../services/api/projectApi';
 import { useToast } from '../ui/use-toast';
 import { SecretaryOrHigher } from '../shared/RoleGuard';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
 
 interface InvoiceFile {
   id: string;
@@ -46,9 +51,59 @@ const InvoiceUploadForm: React.FC = () => {
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [currentTab, setCurrentTab] = useState('upload');
+  const [selectedProjectReference, setSelectedProjectReference] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { canUploadInvoice } = usePermissions();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // Handle project information from navigation state
+  useEffect(() => {
+    const projectState = location.state as { 
+      projectId?: number; 
+      projectName?: string; 
+      projectNumber?: string; 
+    } | null;
+    
+    if (projectState?.projectNumber) {
+      console.log('🔍 InvoiceUploadForm: Project info from navigation:', projectState);
+      setSelectedProjectReference(projectState.projectNumber);
+      toast({
+        title: "Project Selected",
+        description: `Invoice will be linked to ${projectState.projectName} (${projectState.projectNumber})`,
+      });
+    }
+  }, [location.state, toast]);
+
+  // Fetch projects for selection
+  const { data: projects, isLoading: isLoadingProjects, error: projectsError } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      try {
+        console.log('🔍 InvoiceUploadForm: Starting to fetch projects...');
+        const data = await projectApi.getAll();
+        console.log('🔍 InvoiceUploadForm: Projects data received:', data);
+        console.log('🔍 InvoiceUploadForm: Data type:', typeof data);
+        console.log('🔍 InvoiceUploadForm: Is array:', Array.isArray(data));
+        
+        // The projectApi.getAll() now handles the $values extraction
+        if (Array.isArray(data)) {
+          console.log('🔍 InvoiceUploadForm: Projects count:', data.length);
+          console.log('🔍 InvoiceUploadForm: First project:', data[0]);
+          return data;
+        } else {
+          console.log('🔍 InvoiceUploadForm: Data is not an array, returning empty array');
+          return [];
+        }
+      } catch (error) {
+        console.error('❌ InvoiceUploadForm: Error fetching projects:', error);
+        return [];
+      }
+    },
+    retry: 1, // Only retry once
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   // Show access denied message if user doesn't have permission
   if (!canUploadInvoice) {
@@ -443,12 +498,14 @@ const InvoiceUploadForm: React.FC = () => {
         filePath: currentFile.fileName, // For now, just use filename as path
         fileName: currentFile.fileName,
         fileType: currentFile.fileType,
-        fileSize: currentFile.fileSize
+        fileSize: currentFile.fileSize,
+        projectReference: selectedProjectReference && selectedProjectReference !== "none" ? selectedProjectReference : null
       };
 
       console.log('Saving invoice with cleaned data:', requestData);
       console.log('Line items count in request:', requestData.ocrResult.lineItems?.length || 0);
       console.log('Line items in request:', requestData.ocrResult.lineItems);
+      console.log('🔍 InvoiceUploadForm: ProjectReference being sent:', requestData.projectReference);
       
       // Final validation - ensure we have line items
       if (!requestData.ocrResult.lineItems || requestData.ocrResult.lineItems.length === 0) {
@@ -465,6 +522,12 @@ const InvoiceUploadForm: React.FC = () => {
         title: "Invoice Saved",
         description: "Invoice has been saved successfully with document attachment",
       });
+      
+      // Invalidate and refetch queries to show the new invoice
+      console.log('🔍 InvoiceUploadForm: Invalidating queries after successful save');
+      await queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      await queryClient.invalidateQueries({ queryKey: ['project-invoices'] });
       
       // Reset form
       setSelectedFile(null);
@@ -632,6 +695,42 @@ const InvoiceUploadForm: React.FC = () => {
                     <Upload className="h-4 w-4 mr-2" />
                     {isProcessing ? 'Processing...' : 'Select Invoice File'}
                   </Button>
+                </div>
+
+                {/* Project Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="project-select" className="text-sm font-medium text-gray-700">
+                    Link to Project (Optional)
+                    {selectedProjectReference && selectedProjectReference !== "none" && (
+                      <span className="ml-2 text-xs text-green-600 font-normal">
+                        ✓ Pre-selected from project details
+                      </span>
+                    )}
+                  </Label>
+                  <Select value={selectedProjectReference} onValueChange={setSelectedProjectReference}>
+                    <SelectTrigger id="project-select" className="w-full">
+                      <SelectValue placeholder="Select a project to link this invoice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Project (Standalone Invoice)</SelectItem>
+                      {isLoadingProjects ? (
+                        <SelectItem value="loading" disabled>Loading projects...</SelectItem>
+                      ) : projectsError ? (
+                        <SelectItem value="error" disabled>Error loading projects</SelectItem>
+                      ) : Array.isArray(projects) && projects.length > 0 ? (
+                        projects.map((project) => (
+                          <SelectItem key={project.id} value={project.projectNumber}>
+                            {project.name} - {project.projectNumber}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-projects" disabled>No projects available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    Linking to a project will help track budget and organize invoices
+                  </p>
                 </div>
 
                 {/* Selected File Info */}

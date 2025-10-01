@@ -78,6 +78,7 @@ interface ProjectApi {
   updateApprovalStatus: (id: number, data: { isApproved: boolean; poNumber?: string; rejectionReason?: string; approvedBy?: string; approvalDate?: string }) => Promise<void>;
   getProjectsBySection: (sectionId: number) => Promise<Project[]>;
   getProjectNumberPreview: (sectionId: number, startDate?: Date) => Promise<string>;
+  getProjectInvoices: (id: number) => Promise<any[]>;
   getProjectsByManager: (managerId: number) => Promise<Project[]>;
   getProjectBudget: (id: number) => Promise<number>;
   getProjectSpend: (id: number) => Promise<number>;
@@ -86,10 +87,32 @@ interface ProjectApi {
 export const projectApi: ProjectApi = {
   getAll: async () => {
     try {
+      console.log('🔍 ProjectAPI: Fetching projects from /Projects');
       const response = await api.get('/Projects');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.log('🔍 ProjectAPI: Response status:', response.status);
+      console.log('🔍 ProjectAPI: Response data:', response.data);
+      console.log('🔍 ProjectAPI: Data type:', typeof response.data);
+      console.log('🔍 ProjectAPI: Is array:', Array.isArray(response.data));
+      
+      // Handle Entity Framework JSON structure
+      let projects = response.data;
+      if (projects && projects.$values && Array.isArray(projects.$values)) {
+        console.log('🔍 ProjectAPI: Extracting projects from $values array');
+        projects = projects.$values;
+      } else if (!Array.isArray(projects)) {
+        console.log('🔍 ProjectAPI: Converting non-array response to array');
+        projects = [projects];
+      }
+      
+      console.log('🔍 ProjectAPI: Final projects array:', projects);
+      console.log('🔍 ProjectAPI: Final array length:', projects.length);
+      return projects;
+    } catch (error: any) {
+      console.error('❌ ProjectAPI: Error fetching projects:', error);
+      if (error.response) {
+        console.error('❌ ProjectAPI: Response status:', error.response.status);
+        console.error('❌ ProjectAPI: Response data:', error.response.data);
+      }
       throw error;
     }
   },
@@ -300,6 +323,31 @@ export const projectApi: ProjectApi = {
       return response.data.projectNumber;
     } catch (error) {
       console.error('Error getting project number preview:', error);
+      throw error;
+    }
+  },
+
+  getProjectInvoices: async (id: number) => {
+    try {
+      console.log(`🔍 ProjectAPI: Fetching invoices for project ID: ${id}`);
+      const response = await api.get(`/Projects/${id}/invoices`);
+      console.log(`🔍 ProjectAPI: Response status: ${response.status}`);
+      console.log(`🔍 ProjectAPI: Response data:`, response.data);
+      console.log(`🔍 ProjectAPI: Data type:`, typeof response.data);
+      console.log(`🔍 ProjectAPI: Is array:`, Array.isArray(response.data));
+      
+      // Handle Entity Framework JSON structure if needed
+      let invoices = response.data;
+      if (invoices && invoices.$values && Array.isArray(invoices.$values)) {
+        console.log('🔍 ProjectAPI: Extracting invoices from $values array');
+        invoices = invoices.$values;
+      }
+      
+      console.log(`🔍 ProjectAPI: Final invoices array:`, invoices);
+      console.log(`🔍 ProjectAPI: Final array length:`, invoices.length);
+      return invoices;
+    } catch (error) {
+      console.error(`❌ ProjectAPI: Error fetching invoices for project ${id}:`, error);
       throw error;
     }
   },

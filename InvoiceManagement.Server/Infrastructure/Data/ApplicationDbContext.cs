@@ -198,6 +198,14 @@ namespace InvoiceManagement.Server.Infrastructure.Data
                 .HasForeignKey(d => d.LPOId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Project-Invoice relationship based on ProjectReference
+            modelBuilder.Entity<Invoice>()
+                .HasOne<Project>()
+                .WithMany(p => p.Invoices)
+                .HasForeignKey(i => i.ProjectReference)
+                .HasPrincipalKey(p => p.ProjectNumber)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Notifications
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.ERPEmployee)

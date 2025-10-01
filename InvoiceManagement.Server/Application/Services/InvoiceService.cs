@@ -24,12 +24,12 @@ namespace InvoiceManagement.Server.Application.Services
             _context = context;
         }
 
-        public async Task<Invoice> CreateFromOcrResultAsync(OcrResult ocrResult, string createdBy, string? filePath = null, string? fileName = null, string? fileType = null, long? fileSize = null)
+        public async Task<Invoice> CreateFromOcrResultAsync(OcrResult ocrResult, string createdBy, string? filePath = null, string? fileName = null, string? fileType = null, long? fileSize = null, string? projectReference = null)
         {
             try
             {
-                _logger.LogInformation("Starting invoice creation from OCR result. Invoice Number: {InvoiceNumber}, Line Items Count: {LineItemsCount}", 
-                    ocrResult.InvoiceNumber, ocrResult.LineItems?.Count ?? 0);
+                _logger.LogInformation("Starting invoice creation from OCR result. Invoice Number: {InvoiceNumber}, Line Items Count: {LineItemsCount}, ProjectReference: {ProjectReference}", 
+                    ocrResult.InvoiceNumber, ocrResult.LineItems?.Count ?? 0, projectReference);
                 
                 // Log line items details for debugging
                 if (ocrResult.LineItems?.Any() == true)
@@ -90,6 +90,9 @@ namespace InvoiceManagement.Server.Application.Services
                     FileSize = fileSize ?? 0,
                     Remark = null, // Leave empty for actual remarks, not OCR data
 
+                    // Project Information
+                    ProjectReference = projectReference,
+
                     // Audit Information
                     CreatedBy = createdBy,
                     CreatedAt = DateTime.UtcNow
@@ -122,8 +125,10 @@ namespace InvoiceManagement.Server.Application.Services
                         lineItems.Add(lineItem);
                     }
                     
-                    // Set the line items on the invoice
-                    invoice.LineItems = lineItems;
+                // Set the line items on the invoice
+                invoice.LineItems = lineItems;
+                
+                _logger.LogInformation("Invoice created with ProjectReference: '{ProjectReference}'", invoice.ProjectReference);
                     
                     _logger.LogInformation("Added {Count} line items to invoice {InvoiceNumber}", 
                         lineItems.Count, invoice.InvoiceNumber);

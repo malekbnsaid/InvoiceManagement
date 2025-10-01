@@ -195,6 +195,31 @@ export default function ProjectDetailsPage() {
     }
   });
 
+  // Fetch project invoices separately
+  const { data: projectInvoices, isLoading: isLoadingInvoices, error: invoicesError } = useQuery({
+    queryKey: ['project-invoices', id],
+    queryFn: async () => {
+      console.log('🔍 ProjectDetailsPage: Fetching invoices for project ID:', id);
+      const invoices = await projectApi.getProjectInvoices(parseInt(id!));
+      console.log('🔍 ProjectDetailsPage: Fetched invoices:', invoices);
+      console.log('🔍 ProjectDetailsPage: Invoices type:', typeof invoices);
+      console.log('🔍 ProjectDetailsPage: Is array:', Array.isArray(invoices));
+      if (Array.isArray(invoices)) {
+        console.log('🔍 ProjectDetailsPage: Invoice count:', invoices.length);
+        invoices.forEach((invoice, index) => {
+          console.log(`🔍 ProjectDetailsPage: Invoice ${index}:`, {
+            id: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            projectReference: invoice.projectReference,
+            vendorName: invoice.vendorName
+          });
+        });
+      }
+      return invoices;
+    },
+    enabled: !!id
+  });
+
   // Mutation for approving/rejecting project
   const approvalMutation = useMutation({
     mutationFn: async ({ projectId, isApproved, poNumber, rejectionReason }: { 
@@ -639,13 +664,32 @@ export default function ProjectDetailsPage() {
                 </div>
               </div>
               
+            {/* Budget Alerts */}
             {progress >= 100 && (
-                <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
-                  <div>
-                    <p className="font-medium text-red-800">Budget Alert</p>
-                    <p className="text-sm text-red-700">Project has reached or exceeded budget</p>
-                  </div>
+              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-800">Budget Exceeded</p>
+                  <p className="text-sm text-red-700">Project has exceeded budget by {formatCurrency(project.cost - project.budget, CurrencyType.QAR)}</p>
+                </div>
+              </div>
+            )}
+            {progress >= 80 && progress < 100 && (
+              <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <ExclamationTriangleIcon className="h-5 w-5 text-amber-600" />
+                <div>
+                  <p className="font-medium text-amber-800">Budget Warning</p>
+                  <p className="text-sm text-amber-700">Project has used {Math.round(progress)}% of budget. Only {formatCurrency(project.budget - project.cost, CurrencyType.QAR)} remaining</p>
+                </div>
+              </div>
+            )}
+            {progress >= 60 && progress < 80 && (
+              <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="h-5 w-5 text-blue-600">ℹ</div>
+                <div>
+                  <p className="font-medium text-blue-800">Budget Status</p>
+                  <p className="text-sm text-blue-700">Project has used {Math.round(progress)}% of budget. {formatCurrency(project.budget - project.cost, CurrencyType.QAR)} remaining</p>
+                </div>
               </div>
             )}
           </div>
@@ -819,6 +863,115 @@ export default function ProjectDetailsPage() {
           </CardContent>
         </Card>
       </div>
+
+        {/* Project Invoices Section */}
+        <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
+          <CardHeader className="border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <FileText className="h-5 w-5 text-blue-600" />
+                Project Invoices
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/invoices')}
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                View All Invoices
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoadingInvoices ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading invoices...</span>
+              </div>
+            ) : invoicesError ? (
+              <div className="text-center py-8">
+                <div className="text-red-600 mb-2">Error loading invoices</div>
+                <div className="text-sm text-gray-500">{invoicesError.message}</div>
+              </div>
+            ) : projectInvoices && projectInvoices.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projectInvoices.slice(0, 6).map((invoice: any) => (
+                    <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 truncate">{invoice.invoiceNumber}</h4>
+                          <p className="text-sm text-gray-600">{invoice.vendorName || 'Unknown Vendor'}</p>
+                        </div>
+                        <Badge 
+                          variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {invoice.status}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Amount:</span>
+                          <span className="font-medium">
+                            {formatCurrency(invoice.invoiceValue, invoice.currency)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Date:</span>
+                          <span>{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => navigate(`/invoices/${invoice.id}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {projectInvoices.length > 6 && (
+                  <div className="text-center pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500 mb-3">
+                      Showing 6 of {projectInvoices.length} invoices
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate('/invoices')}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                    >
+                      View All {projectInvoices.length} Invoices
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Invoices</h3>
+                <p className="text-gray-500 mb-4">No invoices have been linked to this project yet</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/invoices/upload', { 
+                    state: { 
+                      projectId: project.id, 
+                      projectName: project.name, 
+                      projectNumber: project.projectNumber 
+                    } 
+                  })}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  Upload Invoice
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Corporate Project Manager Section with Minimal Colors */}
         <Card className="bg-white border border-gray-200 rounded-lg shadow-sm">
