@@ -57,11 +57,16 @@ export function ResubmissionHistory({
     const firstChange = cycle[0];
     const lastChange = cycle[cycle.length - 1];
     
+    // Determine if this is a resubmission or initial submission
+    const isResubmission = firstChange.previousStatus === InvoiceStatus.Rejected || firstChange.previousStatus === InvoiceStatus.Cancelled;
+    
     return {
       id: firstChange.id,
       invoiceId,
       originalStatus: firstChange.previousStatus,
-      resubmissionReason: firstChange.comments || 'Resubmitted',
+      resubmissionReason: isResubmission 
+        ? (firstChange.comments || 'Resubmitted')
+        : (firstChange.comments || 'Initial submission'),
       resubmittedBy: firstChange.changedBy,
       resubmittedAt: firstChange.changeDate,
       currentStatus: lastChange.newStatus,
@@ -94,8 +99,15 @@ export function ResubmissionHistory({
     for (let i = 0; i < statusHistory.length; i++) {
       const history = statusHistory[i];
       
-      // If this is a resubmission (from Rejected/Cancelled to Submitted), start a new cycle
-      if (history.previousStatus === InvoiceStatus.Rejected || history.previousStatus === InvoiceStatus.Cancelled) {
+      // Start a new cycle if:
+      // 1. This is a resubmission (from Rejected/Cancelled to Submitted)
+      // 2. This is the first status change (initial submission)
+      // 3. This is a rejection that starts a new cycle
+      const isResubmission = history.previousStatus === InvoiceStatus.Rejected || history.previousStatus === InvoiceStatus.Cancelled;
+      const isInitialSubmission = i === 0;
+      const isRejectionStart = history.newStatus === InvoiceStatus.Rejected && currentCycle.length === 0;
+      
+      if (isResubmission || isInitialSubmission || isRejectionStart) {
         if (currentCycle.length > 0) {
           resubmissionCycles.push(createResubmissionRecord(currentCycle, invoiceId));
         }
@@ -120,7 +132,7 @@ export function ResubmissionHistory({
       case InvoiceStatus.UnderReview:
         return 'bg-yellow-100 text-yellow-800';
       case InvoiceStatus.Approved:
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800';
       case InvoiceStatus.InProgress:
         return 'bg-purple-100 text-purple-800';
       case InvoiceStatus.PMOReview:

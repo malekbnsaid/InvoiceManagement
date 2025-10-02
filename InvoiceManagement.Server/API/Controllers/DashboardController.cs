@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using InvoiceManagement.Server.Infrastructure.Data;
 using InvoiceManagement.Server.Domain.Entities;
+using InvoiceManagement.Server.Application.Services;
 
 namespace InvoiceManagement.Server.API.Controllers
 {
@@ -11,11 +12,13 @@ namespace InvoiceManagement.Server.API.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DashboardController> _logger;
+        private readonly ICurrencyExchangeService _currencyExchangeService;
 
-        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger)
+        public DashboardController(ApplicationDbContext context, ILogger<DashboardController> logger, ICurrencyExchangeService currencyExchangeService)
         {
             _context = context;
             _logger = logger;
+            _currencyExchangeService = currencyExchangeService;
         }
 
         [HttpGet("test")]
@@ -110,9 +113,9 @@ namespace InvoiceManagement.Server.API.Controllers
                 
                 try
                 {
-                    pendingInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 0);
-                    approvedInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 2);
-                    completedInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 4);
+                    pendingInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 0); // Submitted
+                    approvedInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 2); // Approved
+                    completedInvoices = await _context.Invoices.CountAsync(i => (int)i.Status == 5); // Completed (was 4, now 5)
                 }
                 catch (Exception ex)
                 {
@@ -126,9 +129,14 @@ namespace InvoiceManagement.Server.API.Controllers
                 try
                 {
                     totalBudget = await _context.Projects.SumAsync(p => p.Budget ?? 0);
-                    totalSpent = await _context.Invoices
+                    
+                    // Get completed invoices and convert to QAR
+                    var completedInvoicesForTotal = await _context.Invoices
                         .Where(i => (int)i.Status == 5) // Only count Completed invoices
-                        .SumAsync(i => i.InvoiceValue);
+                        .ToListAsync();
+                    
+                    totalSpent = completedInvoicesForTotal
+                        .Sum(invoice => _currencyExchangeService.ConvertToQAR(invoice.InvoiceValue, invoice.Currency));
                 }
                 catch (Exception ex)
                 {
@@ -315,18 +323,44 @@ namespace InvoiceManagement.Server.API.Controllers
                     return Ok(new List<object>());
                 }
 
-                var departments = await _context.Projects
+                // Get all projects with their sections
+                var projectsWithSections = await _context.Projects
                     .Include(p => p.Section)
+                    .ToListAsync();
+
+                // Get all completed invoices with their project references
+                var completedInvoices = await _context.Invoices
+                    .Where(i => i.Status == Domain.Enums.InvoiceStatus.Completed)
+                    .ToListAsync();
+
+                _logger.LogInformation("🔍 Found {CompletedInvoices} completed invoices", completedInvoices.Count);
+
+                // Group projects by section and calculate spent amounts
+                var departments = projectsWithSections
                     .GroupBy(p => p.Section != null ? p.Section.DepartmentNameEnglish : "General")
-                    .Select(g => new
-                    {
-                        Section = g.Key,
-                        ProjectCount = g.Count(),
-                        TotalBudget = g.Sum(p => p.Budget ?? 0),
-                        SpentAmount = 0m // Simplified for now - can be calculated from invoices later
+                    .Select(g => {
+                        var sectionName = g.Key;
+                        var projectNumbers = g.Select(p => p.ProjectNumber).ToList();
+                        
+                        // Calculate spent amount from completed invoices linked to projects in this section
+                        var spentAmount = completedInvoices
+                            .Where(invoice => !string.IsNullOrEmpty(invoice.ProjectReference) && 
+                                            projectNumbers.Contains(invoice.ProjectReference))
+                            .Sum(invoice => _currencyExchangeService.ConvertToQAR(invoice.InvoiceValue, invoice.Currency));
+
+                        _logger.LogInformation("🔍 Section {Section}: {ProjectCount} projects, {SpentAmount} spent", 
+                            sectionName, g.Count(), spentAmount);
+
+                        return new
+                        {
+                            Section = sectionName,
+                            ProjectCount = g.Count(),
+                            TotalBudget = g.Sum(p => p.Budget ?? 0),
+                            SpentAmount = spentAmount
+                        };
                     })
                     .OrderByDescending(d => d.TotalBudget)
-                    .ToListAsync();
+                    .ToList();
 
                 _logger.LogInformation("🔍 Found {Count} sections", departments.Count);
                 _logger.LogInformation("🔍 Department data: {Departments}", System.Text.Json.JsonSerializer.Serialize(departments));
@@ -348,17 +382,20 @@ namespace InvoiceManagement.Server.API.Controllers
                     .GroupBy(i => i.Status)
                     .Select(g => new
                     {
-                        Status = g.Key,
+                        Status = g.Key.ToString(), // Convert enum to string
+                        StatusValue = (int)g.Key,  // Keep numeric value for reference
                         Count = g.Count(),
                         TotalValue = g.Sum(i => i.InvoiceValue)
                     })
+                    .OrderBy(s => s.StatusValue)
                     .ToListAsync();
 
                 var projectStatusBreakdown = await _context.Projects
                     .GroupBy(p => p.IsApproved)
                     .Select(g => new
                     {
-                        Status = g.Key ? 2 : 0, // 2 = Approved, 0 = Pending
+                        Status = g.Key ? "Approved" : "Pending",
+                        StatusValue = g.Key ? 1 : 0,
                         Count = g.Count()
                     })
                     .ToListAsync();
@@ -396,7 +433,7 @@ namespace InvoiceManagement.Server.API.Controllers
                         InvoiceCount = g.Count(),
                         TotalValue = g.Sum(i => i.InvoiceValue),
                         ApprovedCount = g.Count(i => (int)i.Status == 2),
-                        CompletedCount = g.Count(i => (int)i.Status == 4)
+                        CompletedCount = g.Count(i => (int)i.Status == 5) // Fixed: was 4, now 5
                     })
                     .OrderBy(x => x.Year)
                     .ThenBy(x => x.Month)

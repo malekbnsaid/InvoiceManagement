@@ -13,6 +13,8 @@ import {
   ArrowDown,
   PlusCircle,
   Clock,
+  UserCheck,
+  X,
   Building,
   AlertTriangle,
   CheckCircle2,
@@ -34,38 +36,41 @@ const getStatusText = (status: number): string => {
     1: 'Under Review',
     2: 'Approved',
     3: 'In Progress',
-    4: 'Completed',
-    5: 'Rejected',
-    6: 'Cancelled',
-    7: 'On Hold'
+    4: 'PMO Review',
+    5: 'Completed',
+    6: 'Rejected',
+    7: 'Cancelled',
+    8: 'On Hold'
   };
   return statusMap[status] || 'Unknown';
 };
 
 const getStatusColor = (status: number): string => {
   switch (status) {
-    case 0: return 'bg-blue-100 text-blue-800';
-    case 1: return 'bg-yellow-100 text-yellow-800';
-    case 2: return 'bg-green-100 text-green-800';
-    case 3: return 'bg-purple-100 text-purple-800';
-    case 4: return 'bg-green-100 text-green-800';
-    case 5: return 'bg-red-100 text-red-800';
-    case 6: return 'bg-gray-100 text-gray-800';
-    case 7: return 'bg-orange-100 text-orange-800';
+    case 0: return 'bg-blue-100 text-blue-800';      // Submitted
+    case 1: return 'bg-yellow-100 text-yellow-800';  // Under Review
+    case 2: return 'bg-emerald-100 text-emerald-800'; // Approved (changed from green)
+    case 3: return 'bg-purple-100 text-purple-800';  // In Progress
+    case 4: return 'bg-orange-100 text-orange-800';  // PMO Review
+    case 5: return 'bg-green-100 text-green-800';    // Completed
+    case 6: return 'bg-red-100 text-red-800';        // Rejected
+    case 7: return 'bg-gray-100 text-gray-800';      // Cancelled
+    case 8: return 'bg-orange-100 text-orange-800';  // On Hold
     default: return 'bg-gray-100 text-gray-800';
   }
 };
 
 const getStatusIcon = (status: number) => {
   switch (status) {
-    case 0: return <FileText className="h-3 w-3" />;
-    case 1: return <Clock className="h-3 w-3" />;
-    case 2: return <CheckCircle2 className="h-3 w-3" />;
-    case 3: return <TrendingUp className="h-3 w-3" />;
-    case 4: return <CheckCircle2 className="h-3 w-3" />;
-    case 5: return <AlertTriangle className="h-3 w-3" />;
-    case 6: return <AlertTriangle className="h-3 w-3" />;
-    case 7: return <Clock className="h-3 w-3" />;
+    case 0: return <FileText className="h-3 w-3" />;      // Submitted
+    case 1: return <Clock className="h-3 w-3" />;         // Under Review
+    case 2: return <CheckCircle2 className="h-3 w-3" />;  // Approved
+    case 3: return <TrendingUp className="h-3 w-3" />;    // In Progress
+    case 4: return <UserCheck className="h-3 w-3" />;     // PMO Review
+    case 5: return <CheckCircle2 className="h-3 w-3" />;  // Completed
+    case 6: return <AlertTriangle className="h-3 w-3" />; // Rejected
+    case 7: return <X className="h-3 w-3" />;             // Cancelled
+    case 8: return <Clock className="h-3 w-3" />;         // On Hold
     default: return <FileText className="h-3 w-3" />;
   }
 };
@@ -441,12 +446,13 @@ export const RealDataDashboard: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Projects Needing Approval */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
+        {/* Projects Needing Approval - Only show for PMO users */}
+        {user?.role === 'PMO' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
           <Card className="h-full">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
@@ -499,6 +505,7 @@ export const RealDataDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </motion.div>
+        )}
 
         {/* Department Breakdown */}
         <motion.div

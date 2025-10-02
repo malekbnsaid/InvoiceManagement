@@ -18,7 +18,6 @@ Thumbs.db
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.json
-!appsettings.json
 !appsettings.Example.json
 
 # User-specific files

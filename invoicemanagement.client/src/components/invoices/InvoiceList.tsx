@@ -65,7 +65,7 @@ const getStatusColor = (status: any) => {
     case 1: // UnderReview
       return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
     case 2: // Approved
-      return 'bg-green-100 text-green-800 border border-green-200';
+      return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600';
     case 3: // InProgress
       return 'bg-purple-100 text-purple-800 border border-purple-200';
     case 4: // PMOReview
@@ -188,10 +188,11 @@ const InvoiceList = () => {
       1: 'Under Review',
       2: 'Approved',
       3: 'In Progress',
-      4: 'Completed',
-      5: 'Rejected',
-      6: 'Cancelled',
-      7: 'On Hold'
+      4: 'PMO Review',
+      5: 'Completed',
+      6: 'Rejected',
+      7: 'Cancelled',
+      8: 'On Hold'
     };
     return statusMap[status] || 'Unknown';
   };
@@ -976,10 +977,49 @@ const InvoiceList = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`${getStatusColor(invoice.status)} flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium`}>
-                      {getStatusIcon(invoice.status)}
-                      {getStatusText(invoice.status)}
-                    </Badge>
+                    {(() => {
+                      const statusNum = Number(invoice.status);
+                      const statusText = getStatusText(invoice.status);
+                      console.log('🔍 DEBUG: Invoice status:', invoice.status, 'Number:', statusNum, 'Text:', statusText);
+                      
+                      // Force blue for Approved status (to distinguish from green Completed)
+                      if (statusText === 'Approved' || statusNum === 2) {
+                        console.log('🔍 DEBUG: Forcing blue color for Approved status');
+                        return (
+                          <div 
+                            id={`approved-badge-${invoice.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                            style={{ 
+                              backgroundColor: '#3b82f6', 
+                              color: '#ffffff', 
+                              border: '2px solid #2563eb',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              padding: '0.375rem 0.75rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+                            }}
+                          >
+                            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>
+                              {getStatusIcon(invoice.status)}
+                            </span>
+                            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>
+                              {statusText}
+                            </span>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <Badge className={`${getStatusColor(invoice.status)} flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium`}>
+                          {getStatusIcon(invoice.status)}
+                          {statusText}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     {invoice.projectReference ? (

@@ -37,6 +37,7 @@ builder.Services.AddScoped<IERPEmployeeService, ERPEmployeeService>();
 builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
 builder.Services.AddScoped<IVendorService, VendorService>();
 builder.Services.AddScoped<ISimpleInvoiceStatusService, SimpleInvoiceStatusService>();
+builder.Services.AddScoped<ICurrencyExchangeService, CurrencyExchangeService>();
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();

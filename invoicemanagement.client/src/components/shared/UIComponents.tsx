@@ -11,7 +11,7 @@ export const StatusBadge = ({ status, className }: { status: string; className?:
       draft: 'bg-gray-100 text-gray-800',
       pending: 'bg-yellow-100 text-yellow-800',
       pending_approval: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-green-100 text-green-800',
+      approved: 'bg-emerald-100 text-emerald-800',
       active: 'bg-blue-100 text-blue-800',
       on_hold: 'bg-orange-100 text-orange-800',
       completed: 'bg-green-100 text-green-800',

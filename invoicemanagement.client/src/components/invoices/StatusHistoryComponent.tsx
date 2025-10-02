@@ -17,7 +17,7 @@ const getStatusColor = (status: InvoiceStatus): string => {
     case InvoiceStatus.UnderReview:
       return 'bg-yellow-500';
     case InvoiceStatus.Approved:
-      return 'bg-green-500';
+      return 'bg-emerald-500';
     case InvoiceStatus.InProgress:
       return 'bg-purple-500';
     case InvoiceStatus.PMOReview:
