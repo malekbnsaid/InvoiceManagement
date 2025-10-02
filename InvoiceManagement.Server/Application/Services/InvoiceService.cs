@@ -266,12 +266,28 @@ namespace InvoiceManagement.Server.Application.Services
             existingInvoice.InvoiceValue = invoice.InvoiceValue;
             existingInvoice.Currency = invoice.Currency;
             existingInvoice.VendorName = invoice.VendorName;
+            existingInvoice.VendorTaxNumber = invoice.VendorTaxNumber;
             existingInvoice.Subject = invoice.Subject;
             existingInvoice.Status = invoice.Status;
             existingInvoice.ModifiedAt = DateTime.UtcNow;
 
             await _invoiceRepository.UpdateAsync(existingInvoice);
+            await _invoiceRepository.SaveChangesAsync();
             return existingInvoice;
+        }
+
+        public async Task<Invoice> UpdateInvoiceDirectly(Invoice invoice)
+        {
+            _logger.LogInformation("UpdateInvoiceDirectly: Starting update for invoice ID {Id}, Number: {Number}", invoice.Id, invoice.InvoiceNumber);
+            
+            // Ensure the entity is tracked by the context
+            _context.Entry(invoice).State = EntityState.Modified;
+            
+            _logger.LogInformation("UpdateInvoiceDirectly: Entity state set to Modified, calling SaveChangesAsync");
+            var result = await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("UpdateInvoiceDirectly: SaveChangesAsync completed, {Count} entities updated", result);
+            return invoice;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -316,6 +332,118 @@ namespace InvoiceManagement.Server.Application.Services
             {
                 _logger.LogError(ex, "Error cleaning up OCR remarks");
                 return false;
+            }
+        }
+
+        // Comments functionality
+        public async Task<IEnumerable<InvoiceComment>> GetInvoiceCommentsAsync(int invoiceId)
+        {
+            try
+            {
+                return await _context.InvoiceComments
+                    .Where(c => c.InvoiceId == invoiceId)
+                    .OrderBy(c => c.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching comments for invoice {InvoiceId}", invoiceId);
+                throw;
+            }
+        }
+
+        public async Task<InvoiceComment> AddInvoiceCommentAsync(InvoiceComment comment)
+        {
+            try
+            {
+                _context.InvoiceComments.Add(comment);
+                await _context.SaveChangesAsync();
+                return comment;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding comment for invoice {InvoiceId}", comment.InvoiceId);
+                throw;
+            }
+        }
+
+        public async Task<InvoiceComment?> GetInvoiceCommentByIdAsync(int commentId)
+        {
+            try
+            {
+                return await _context.InvoiceComments
+                    .FirstOrDefaultAsync(c => c.Id == commentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching comment {CommentId}", commentId);
+                throw;
+            }
+        }
+
+        public async Task<InvoiceComment> UpdateInvoiceCommentAsync(InvoiceComment comment)
+        {
+            try
+            {
+                _context.InvoiceComments.Update(comment);
+                await _context.SaveChangesAsync();
+                return comment;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating comment {CommentId}", comment.Id);
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteInvoiceCommentAsync(int commentId)
+        {
+            try
+            {
+                var comment = await _context.InvoiceComments.FindAsync(commentId);
+                if (comment == null)
+                    return false;
+
+                _context.InvoiceComments.Remove(comment);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting comment {CommentId}", commentId);
+                throw;
+            }
+        }
+
+        // Status history functionality
+        public async Task<IEnumerable<StatusHistory>> GetStatusHistoryAsync(int invoiceId)
+        {
+            try
+            {
+                return await _context.StatusHistories
+                    .Where(s => s.InvoiceId == invoiceId)
+                    .OrderBy(s => s.ChangeDate)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching status history for invoice {InvoiceId}", invoiceId);
+                throw;
+            }
+        }
+
+        public async Task<StatusHistory> AddStatusHistoryAsync(StatusHistory history)
+        {
+            try
+            {
+                _context.StatusHistories.Add(history);
+                await _context.SaveChangesAsync();
+                return history;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding status history for invoice {InvoiceId}", history.InvoiceId);
+                throw;
             }
         }
     }

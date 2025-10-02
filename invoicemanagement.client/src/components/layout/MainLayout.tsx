@@ -22,7 +22,8 @@ import {
   Sun,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserCheck
 } from 'lucide-react';
 
 interface NavItem {
@@ -327,6 +328,30 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   )}
                 </Link>
               ))}
+              
+              {/* PMO Review - Only show for PMO users */}
+              {user?.role === 'PMO' && (
+                <Link
+                  to="/pmo-review"
+                  className={`group flex ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    location.pathname === '/pmo-review'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700 dark:hover:text-amber-400'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span className={`${location.pathname === '/pmo-review' ? 'text-white' : 'text-amber-500 dark:text-amber-400'} ${desktopSidebarCollapsed ? '' : 'mr-3'}`}>
+                      <UserCheck className="h-5 w-5" />
+                    </span>
+                    {!desktopSidebarCollapsed && <span>PMO Review</span>}
+                  </div>
+                  {!desktopSidebarCollapsed && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 hidden group-hover:block">
+                      Review and approve invoices
+                    </span>
+                  )}
+                </Link>
+              )}
             </div>
           </div>
           

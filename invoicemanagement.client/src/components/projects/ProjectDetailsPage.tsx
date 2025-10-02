@@ -220,6 +220,13 @@ export default function ProjectDetailsPage() {
     enabled: !!id
   });
 
+  // Fetch the calculated project spend from invoices
+  const { data: projectSpend, isLoading: spendLoading } = useQuery({
+    queryKey: ['project-spend', id],
+    queryFn: () => projectApi.getProjectSpend(Number(id)),
+    enabled: !!id,
+  });
+
   // Mutation for approving/rejecting project
   const approvalMutation = useMutation({
     mutationFn: async ({ projectId, isApproved, poNumber, rejectionReason }: { 
@@ -294,8 +301,8 @@ export default function ProjectDetailsPage() {
   // Calculate project progress and status
   const calculateProgress = () => {
     if (!project) return 0;
-    if (project.budget && project.cost) {
-      return Math.min((project.cost / project.budget) * 100, 100);
+    if (project.budget && projectSpend !== undefined) {
+      return Math.min(((projectSpend || 0) / project.budget) * 100, 100);
     }
     return 0;
   };
@@ -638,7 +645,11 @@ export default function ProjectDetailsPage() {
                 <div className="bg-green-50 rounded-lg p-4 border border-green-100">
                   <p className="text-sm font-medium text-green-700 mb-2">Current Cost</p>
                   <p className="text-2xl font-semibold text-gray-900">
-                    {formatCurrency(project.cost, CurrencyType.QAR)}
+                    {spendLoading ? (
+                      <span className="text-gray-400">Loading...</span>
+                    ) : (
+                      formatCurrency(projectSpend || 0, CurrencyType.QAR)
+                    )}
                   </p>
                 </div>
               </div>
@@ -647,20 +658,33 @@ export default function ProjectDetailsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-700">Budget Usage</span>
-                  <span className="text-lg font-semibold text-gray-900">{Math.round((project.cost / project.budget) * 100)}%</span>
+                  <span className="text-lg font-semibold text-gray-900">
+                    {spendLoading ? (
+                      <span className="text-gray-400">Loading...</span>
+                    ) : (
+                      `${Math.round(((projectSpend || 0) / project.budget) * 100)}%`
+                    )}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className={`h-2 rounded-full ${
-                      (project.cost / project.budget) > 0.8 ? 'bg-red-500' : 
-                      (project.cost / project.budget) > 0.6 ? 'bg-amber-500' : 'bg-green-500'
+                      spendLoading ? 'bg-gray-300' :
+                      ((projectSpend || 0) / project.budget) > 0.8 ? 'bg-red-500' : 
+                      ((projectSpend || 0) / project.budget) > 0.6 ? 'bg-amber-500' : 'bg-green-500'
                     }`}
-                    style={{ width: `${Math.min((project.cost / project.budget) * 100, 100)}%` }}
+                    style={{ 
+                      width: spendLoading ? '0%' : `${Math.min(((projectSpend || 0) / project.budget) * 100, 100)}%` 
+                    }}
                   />
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Used: {formatCurrency(project.cost, CurrencyType.QAR)}</span>
-                  <span>Remaining: {formatCurrency(project.budget - project.cost, CurrencyType.QAR)}</span>
+                  <span>
+                    Used: {spendLoading ? 'Loading...' : formatCurrency(projectSpend || 0, CurrencyType.QAR)}
+                  </span>
+                  <span>
+                    Remaining: {spendLoading ? 'Loading...' : formatCurrency(project.budget - (projectSpend || 0), CurrencyType.QAR)}
+                  </span>
                 </div>
               </div>
               

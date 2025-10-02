@@ -127,7 +127,7 @@ namespace InvoiceManagement.Server.API.Controllers
                 {
                     totalBudget = await _context.Projects.SumAsync(p => p.Budget ?? 0);
                     totalSpent = await _context.Invoices
-                        .Where(i => (int)i.Status == 4)
+                        .Where(i => (int)i.Status == 5) // Only count Completed invoices
                         .SumAsync(i => i.InvoiceValue);
                 }
                 catch (Exception ex)

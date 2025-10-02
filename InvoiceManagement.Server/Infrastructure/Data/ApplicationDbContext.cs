@@ -28,6 +28,7 @@ namespace InvoiceManagement.Server.Infrastructure.Data
         public DbSet<AppUser> AppUsers { get; set; } = null!;
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
         public DbSet<PaymentPlanLine> PaymentPlanLines { get; set; } = null!;
+        public DbSet<InvoiceComment> InvoiceComments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

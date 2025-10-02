@@ -2,15 +2,16 @@ import { InvoiceStatus } from '../types/enums';
 
 export class SimpleInvoiceStatusService {
   // General business workflow transitions (starting from Submitted since OCR is already done)
-  private static readonly SIMPLE_TRANSITIONS = {
+  static readonly SIMPLE_TRANSITIONS = {
     [InvoiceStatus.Submitted]: [InvoiceStatus.UnderReview, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
     [InvoiceStatus.UnderReview]: [InvoiceStatus.Approved, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
     [InvoiceStatus.Approved]: [InvoiceStatus.InProgress, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
-    [InvoiceStatus.InProgress]: [InvoiceStatus.Completed, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
+    [InvoiceStatus.InProgress]: [InvoiceStatus.PMOReview, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
+    [InvoiceStatus.PMOReview]: [InvoiceStatus.Completed, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled],
     [InvoiceStatus.Completed]: [], // Final status
     [InvoiceStatus.Rejected]: [InvoiceStatus.Submitted], // Can resubmit from beginning
     [InvoiceStatus.Cancelled]: [InvoiceStatus.Submitted], // Can restart
-    [InvoiceStatus.OnHold]: [InvoiceStatus.Submitted, InvoiceStatus.UnderReview, InvoiceStatus.Approved, InvoiceStatus.InProgress, InvoiceStatus.Cancelled]
+    [InvoiceStatus.OnHold]: [InvoiceStatus.Submitted, InvoiceStatus.UnderReview, InvoiceStatus.Approved, InvoiceStatus.InProgress, InvoiceStatus.PMOReview, InvoiceStatus.Cancelled]
   };
 
   static getValidTransitions(currentStatus: InvoiceStatus): InvoiceStatus[] {
@@ -51,6 +52,12 @@ export class SimpleInvoiceStatusService {
         color: 'bg-purple-100 text-purple-800',
         description: 'Being processed by Procurement',
         icon: '⚙️'
+      },
+      [InvoiceStatus.PMOReview]: {
+        label: 'PMO Review',
+        color: 'bg-amber-100 text-amber-800',
+        description: 'Under PMO review for final approval',
+        icon: '👨‍💼'
       },
       [InvoiceStatus.Completed]: {
         label: 'Completed',

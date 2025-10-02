@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   FileText, 
   Calendar, 
@@ -25,14 +26,43 @@ import { CurrencyType, InvoiceStatus } from '../../types/enums';
 import { formatCurrency } from '../../utils/formatters';
 import { SimpleInvoiceStatusChange } from './SimpleInvoiceStatusChange';
 import { SimpleInvoiceWorkflow } from './SimpleInvoiceWorkflow';
+import { InvoiceResubmissionForm } from './InvoiceResubmissionForm';
+import { InvoiceComments } from './InvoiceComments';
+import { ResubmissionHistory } from './ResubmissionHistory';
+import { StatusHistoryComponent } from './StatusHistoryComponent';
 import { InvoiceWorkflowAutomation } from './InvoiceWorkflowAutomation';
 import { Skeleton } from '../ui/skeleton';
 
 const InvoiceDetails = () => {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to safely convert date to ISO string
+  const formatDateForInput = (date: Date | string | undefined): string => {
+    if (!date) return '';
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return dateObj.toISOString().split('T')[0];
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return '';
+    }
+  };
+
+  // Helper function to safely format dates for display
+  const formatDateForDisplay = (date: Date | string | undefined): string => {
+    if (!date) return 'N/A';
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return dateObj.toLocaleDateString();
+    } catch (error) {
+      console.warn('Error formatting date for display:', error);
+      return String(date);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -60,10 +90,11 @@ const InvoiceDetails = () => {
       case 1: return InvoiceStatus.UnderReview;
       case 2: return InvoiceStatus.Approved;
       case 3: return InvoiceStatus.InProgress;
-      case 4: return InvoiceStatus.Completed;
-      case 5: return InvoiceStatus.Rejected;
-      case 6: return InvoiceStatus.Cancelled;
-      case 7: return InvoiceStatus.OnHold;
+      case 4: return InvoiceStatus.PMOReview;  // ✅ Fixed: PMO Review
+      case 5: return InvoiceStatus.Completed;  // ✅ Fixed: Completed
+      case 6: return InvoiceStatus.Rejected;   // ✅ Fixed: Rejected
+      case 7: return InvoiceStatus.Cancelled;  // ✅ Fixed: Cancelled
+      case 8: return InvoiceStatus.OnHold;     // ✅ Fixed: On Hold
       default: return InvoiceStatus.Submitted;
     }
   };
@@ -77,11 +108,12 @@ const InvoiceDetails = () => {
       // Update local state immediately for better UX
       setInvoice(prev => prev ? { ...prev, status: newStatus } : null);
       
-      // You can also call your API here to persist the change
-      console.log(`Status changed to: ${newStatus}`);
+      // Invalidate React Query cache to refresh data
+      await queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      await queryClient.invalidateQueries({ queryKey: ['invoice', invoice.id] });
+      await queryClient.invalidateQueries({ queryKey: ['invoice-status-history', invoice.id] });
       
-      // Optionally refresh the invoice data
-      // await fetchInvoice();
+      console.log(`Status changed to: ${newStatus}`);
     } catch (error) {
       console.error('Error changing status:', error);
       // Revert the local state change if API call fails
@@ -248,12 +280,34 @@ const InvoiceDetails = () => {
           <SimpleInvoiceWorkflow currentStatus={getStatusFromNumber(invoice.status)} />
         </div>
 
+        {/* Resubmission Section - Only show for rejected/cancelled invoices */}
+        {(getStatusFromNumber(invoice.status) === InvoiceStatus.Rejected || 
+          getStatusFromNumber(invoice.status) === InvoiceStatus.Cancelled) && (
+          <div className="mt-6">
+            <InvoiceResubmissionForm
+              invoiceId={invoice.id}
+              currentStatus={getStatusFromNumber(invoice.status)}
+              onResubmit={handleStatusChange}
+              currentInvoiceData={{
+                invoiceNumber: invoice.invoiceNumber || '',
+                vendorName: invoice.vendorName || '',
+                invoiceDate: formatDateForInput(invoice.invoiceDate),
+                invoiceValue: invoice.invoiceValue || 0,
+                vendorTaxId: '', // Not available in Invoice interface
+                dueDate: formatDateForInput(invoice.dueDate),
+                currency: invoice.currency ? invoice.currency.toString() : 'USD'
+              }}
+            />
+          </div>
+        )}
+
         <Tabs defaultValue="details" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="status">Status</TabsTrigger>
             <TabsTrigger value="line-items">Line Items</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="comments">Comments</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
@@ -320,14 +374,14 @@ const InvoiceDetails = () => {
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Invoice Date</h3>
                     <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center mt-1">
                             <Calendar className="h-5 w-5 text-gray-500 mr-1" />
-                            {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'N/A'}
+                            {invoice.invoiceDate ? formatDateForDisplay(invoice.invoiceDate) : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Due Date</h3>
                     <p className="text-base font-semibold text-gray-900 dark:text-white flex items-center mt-1">
                             <Calendar className="h-5 w-5 text-gray-500 mr-1" />
-                            {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
+                            {invoice.dueDate ? formatDateForDisplay(invoice.dueDate) : 'N/A'}
                     </p>
                   </div>
                   <div>
@@ -854,28 +908,19 @@ const InvoiceDetails = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="comments" className="space-y-6">
+            <InvoiceComments invoiceId={invoice.id} />
+          </TabsContent>
+
           <TabsContent value="history" className="space-y-6">
+            {/* Resubmission History */}
+            <ResubmissionHistory 
+              invoiceId={invoice.id} 
+              currentStatus={getStatusFromNumber(invoice.status)} 
+            />
+            
             {/* Status History Tab */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Status History</CardTitle>
-                <CardDescription>Track invoice status changes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <div>
-                      <p className="font-medium">Invoice Created</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                  {/* Add more status history items as needed */}
-                </div>
-            </CardContent>
-          </Card>
+            <StatusHistoryComponent invoiceId={invoice.id} />
           </TabsContent>
         </Tabs>
       </motion.div>

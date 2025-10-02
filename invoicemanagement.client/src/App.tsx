@@ -11,6 +11,7 @@ import ProjectFormPage from './components/projects/ProjectFormPage';
 import ProjectDetailsPage from './components/projects/ProjectDetailsPage';
 import LPOsList from './components/lpos/LPOsList';
 import ProjectEditPage from './pages/ProjectEditPage';
+import PMOReviewPage from './pages/PMOReviewPage';
 import { AuthPage } from './pages/AuthPage';
 import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { Toaster } from './components/ui/toaster';
@@ -108,6 +109,11 @@ function App() {
                     <PMOrHigherRoute>
                       <ProjectEditPage />
                     </PMOrHigherRoute>
+                  } />
+                  <Route path="/pmo-review" element={
+                    <PMOOrHigherRoute>
+                      <PMOReviewPage />
+                    </PMOOrHigherRoute>
                   } />
                 </Routes>
               </MainLayout>

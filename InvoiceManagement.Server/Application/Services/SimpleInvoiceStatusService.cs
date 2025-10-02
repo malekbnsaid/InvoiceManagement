@@ -43,11 +43,25 @@ namespace InvoiceManagement.Server.Application.Services
 
             var previousStatus = invoice.Status;
             invoice.Status = newStatus;
-            invoice.ModifiedAt = DateTime.UtcNow;
+            invoice.ModifiedAt = DateTime.Now; // Use local time instead of UTC
             invoice.ModifiedBy = userId;
 
             // Update specific fields based on status
             UpdateStatusSpecificFields(invoice, newStatus, userId);
+
+            // Create status history record
+            var statusHistory = new StatusHistory
+            {
+                InvoiceId = invoiceId,
+                PreviousStatus = previousStatus,
+                NewStatus = newStatus,
+                ChangeDate = DateTime.Now, // Use local time instead of UTC
+                ChangedBy = userId,
+                Comments = reason,
+                CreatedAt = DateTime.Now, // Use local time instead of UTC
+                CreatedBy = userId
+            };
+            await _invoiceService.AddStatusHistoryAsync(statusHistory);
 
             // Log audit trail
             await _auditService.LogAuditAsync(
@@ -76,11 +90,12 @@ namespace InvoiceManagement.Server.Application.Services
                 InvoiceStatus.Submitted => new[] { InvoiceStatus.UnderReview, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
                 InvoiceStatus.UnderReview => new[] { InvoiceStatus.Approved, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
                 InvoiceStatus.Approved => new[] { InvoiceStatus.InProgress, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
-                InvoiceStatus.InProgress => new[] { InvoiceStatus.Completed, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
+                InvoiceStatus.InProgress => new[] { InvoiceStatus.PMOReview, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
+                InvoiceStatus.PMOReview => new[] { InvoiceStatus.Completed, InvoiceStatus.Rejected, InvoiceStatus.OnHold, InvoiceStatus.Cancelled },
                 InvoiceStatus.Completed => new InvoiceStatus[0], // No transitions from Completed
                 InvoiceStatus.Rejected => new[] { InvoiceStatus.Submitted }, // Can resubmit from beginning
                 InvoiceStatus.Cancelled => new[] { InvoiceStatus.Submitted }, // Can restart
-                InvoiceStatus.OnHold => new[] { InvoiceStatus.Submitted, InvoiceStatus.UnderReview, InvoiceStatus.Approved, InvoiceStatus.InProgress, InvoiceStatus.Cancelled },
+                InvoiceStatus.OnHold => new[] { InvoiceStatus.Submitted, InvoiceStatus.UnderReview, InvoiceStatus.Approved, InvoiceStatus.InProgress, InvoiceStatus.PMOReview, InvoiceStatus.Cancelled },
                 _ => new InvoiceStatus[0]
             };
         }
@@ -91,18 +106,22 @@ namespace InvoiceManagement.Server.Application.Services
             {
                 case InvoiceStatus.UnderReview:
                     invoice.ProcessedBy = userId;
-                    invoice.ProcessedDate = DateTime.UtcNow;
+                    invoice.ProcessedDate = DateTime.Now; // Use local time
                     break;
                 case InvoiceStatus.Approved:
                     invoice.ProcessedBy = userId;
-                    invoice.ProcessedDate = DateTime.UtcNow;
+                    invoice.ProcessedDate = DateTime.Now; // Use local time
                     break;
                 case InvoiceStatus.InProgress:
                     invoice.ProcessedBy = userId;
-                    invoice.ProcessedDate = DateTime.UtcNow;
+                    invoice.ProcessedDate = DateTime.Now; // Use local time
+                    break;
+                case InvoiceStatus.PMOReview:
+                    invoice.ProcessedBy = userId;
+                    invoice.ProcessedDate = DateTime.Now; // Use local time
                     break;
                 case InvoiceStatus.Completed:
-                    invoice.PaymentDate = DateTime.UtcNow;
+                    invoice.PaymentDate = DateTime.Now; // Use local time
                     invoice.PaidAmount = invoice.InvoiceValue;
                     break;
             }

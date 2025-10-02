@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
+  User,
   AlertTriangle,
   AlertCircle,
   X,
@@ -46,9 +47,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '../ui/select';
-import { invoiceService } from '../../services/invoiceService';
+import { invoiceApi } from '../../services/api/invoiceApi';
 import { Invoice } from '../../types/interfaces';
 import { useToast } from '../ui/use-toast';
+import { InvoiceEditModal } from './InvoiceEditModal';
 import { formatCurrency } from '../../utils/formatters';
 import { Skeleton, SkeletonList } from '../ui/skeleton';
 
@@ -66,13 +68,15 @@ const getStatusColor = (status: any) => {
       return 'bg-green-100 text-green-800 border border-green-200';
     case 3: // InProgress
       return 'bg-purple-100 text-purple-800 border border-purple-200';
-    case 4: // Completed
+    case 4: // PMOReview
+      return 'bg-amber-100 text-amber-800 border border-amber-200';
+    case 5: // Completed
       return 'bg-green-100 text-green-800 border border-green-200';
-    case 5: // Rejected
+    case 6: // Rejected
       return 'bg-red-100 text-red-800 border border-red-200';
-    case 6: // Cancelled
+    case 7: // Cancelled
       return 'bg-gray-100 text-gray-800 border border-gray-200';
-    case 7: // OnHold
+    case 8: // OnHold
       return 'bg-orange-100 text-orange-800 border border-orange-200';
     default:
       return 'bg-gray-100 text-gray-800 border border-gray-200';
@@ -92,13 +96,15 @@ const getStatusIcon = (status: any) => {
       return <CheckCircle2 className="h-3 w-3" />;
     case 3: // InProgress
       return <RefreshCw className="h-3 w-3" />;
-    case 4: // Completed
+    case 4: // PMOReview
+      return <User className="h-3 w-3" />;
+    case 5: // Completed
       return <CheckCircle2 className="h-3 w-3" />;
-    case 5: // Rejected
+    case 6: // Rejected
       return <XCircle className="h-3 w-3" />;
-    case 6: // Cancelled
+    case 7: // Cancelled
       return <XCircle className="h-3 w-3" />;
-    case 7: // OnHold
+    case 8: // OnHold
       return <AlertTriangle className="h-3 w-3" />;
     default:
       return <FileText className="h-3 w-3" />;
@@ -118,13 +124,15 @@ const getStatusText = (status: any) => {
       return 'Approved';
     case 3: // InProgress
       return 'In Progress';
-    case 4: // Completed
+    case 4: // PMOReview
+      return 'PMO Review';
+    case 5: // Completed
       return 'Completed';
-    case 5: // Rejected
+    case 6: // Rejected
       return 'Rejected';
-    case 6: // Cancelled
+    case 7: // Cancelled
       return 'Cancelled';
-    case 7: // OnHold
+    case 8: // OnHold
       return 'On Hold';
     default:
       return 'Unknown';
@@ -136,6 +144,10 @@ const InvoiceList = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Edit modal state
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   // Search and Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -213,12 +225,28 @@ const InvoiceList = () => {
     return count;
   };
 
+  // Edit modal handlers
+  const handleEditInvoice = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingInvoice(null);
+  };
+
+  const handleSaveInvoice = (updatedInvoice: Invoice) => {
+    // The invoice will be automatically refreshed by React Query
+    console.log('Invoice updated:', updatedInvoice);
+  };
+
   // Fetch invoices using React Query for proper caching and auto-refreshing
   const { data: invoicesData, isLoading: queryLoading, error: queryError, refetch } = useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
       console.log('🔍 InvoiceList: Fetching invoices...');
-      const response = await invoiceService.getInvoices();
+      const response = await invoiceApi.getInvoices();
       console.log('🔍 InvoiceList: Response received:', response);
       
       // Handle different response formats
@@ -993,7 +1021,12 @@ const InvoiceList = () => {
                           <EyeIcon className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditInvoice(invoice)}
+                        title="Edit invoice"
+                      >
                         <PencilIcon className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm">
@@ -1034,6 +1067,16 @@ const InvoiceList = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Modal */}
+      {editingInvoice && (
+        <InvoiceEditModal
+          invoice={editingInvoice}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSave={handleSaveInvoice}
+        />
+      )}
     </motion.div>
   );
 };

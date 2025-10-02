@@ -420,7 +420,8 @@ namespace InvoiceManagement.Server.Application.Services
                 .Include(p => p.Invoices)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            return project?.Invoices?.Sum(i => i.InvoiceValue) ?? 0;
+            // Only count invoices that are completed (paid/closed)
+            return project?.Invoices?.Where(i => i.Status == Domain.Enums.InvoiceStatus.Completed).Sum(i => i.InvoiceValue) ?? 0;
         }
 
         public async Task<bool> UpdateProjectCostAsync(int id, decimal newCost, string updatedBy)

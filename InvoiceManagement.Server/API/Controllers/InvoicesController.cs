@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using InvoiceManagement.Server.Application.DTOs;
 using InvoiceManagement.Server.Application.Interfaces;
 using InvoiceManagement.Server.Domain.Entities;
+using InvoiceManagement.Server.Domain.Enums;
 using InvoiceManagement.Server.Infrastructure.Services.OCR;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -45,6 +46,24 @@ namespace InvoiceManagement.Server.API.Controllers
         public long? FileSize { get; set; }
         [JsonPropertyName("projectReference")]
         public string? ProjectReference { get; set; }
+    }
+
+    public class UpdateInvoiceDataRequest
+    {
+        [JsonPropertyName("invoiceNumber")]
+        public string? InvoiceNumber { get; set; }
+        [JsonPropertyName("vendorName")]
+        public string? VendorName { get; set; }
+        [JsonPropertyName("invoiceDate")]
+        public DateTime? InvoiceDate { get; set; }
+        [JsonPropertyName("invoiceValue")]
+        public decimal? InvoiceValue { get; set; }
+        [JsonPropertyName("vendorTaxId")]
+        public string? VendorTaxId { get; set; }
+        [JsonPropertyName("dueDate")]
+        public DateTime? DueDate { get; set; }
+        [JsonPropertyName("currency")]
+        public string? Currency { get; set; }
     }
 
     [ApiController]
@@ -440,6 +459,91 @@ namespace InvoiceManagement.Server.API.Controllers
             {
                 _logger.LogError(ex, "Error debugging OCR");
                 return BadRequest(new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpPatch("{id}/data")]
+        public async Task<ActionResult<Invoice>> UpdateInvoiceData(int id, [FromBody] UpdateInvoiceDataRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Updating invoice data for ID {Id}", id);
+
+                // Get the existing invoice
+                var existingInvoice = await _invoiceService.GetByIdAsync(id);
+                if (existingInvoice == null)
+                {
+                    return NotFound(new ErrorResponse("Invoice not found"));
+                }
+
+                // Update only the provided fields
+                bool hasChanges = false;
+
+                if (!string.IsNullOrEmpty(request.InvoiceNumber) && request.InvoiceNumber != existingInvoice.InvoiceNumber)
+                {
+                    existingInvoice.InvoiceNumber = request.InvoiceNumber;
+                    hasChanges = true;
+                }
+
+                if (!string.IsNullOrEmpty(request.VendorName) && request.VendorName != existingInvoice.VendorName)
+                {
+                    existingInvoice.VendorName = request.VendorName;
+                    hasChanges = true;
+                }
+
+                if (request.InvoiceDate.HasValue && request.InvoiceDate != existingInvoice.InvoiceDate)
+                {
+                    existingInvoice.InvoiceDate = request.InvoiceDate.Value;
+                    hasChanges = true;
+                }
+
+                if (request.InvoiceValue.HasValue && request.InvoiceValue != existingInvoice.InvoiceValue)
+                {
+                    existingInvoice.InvoiceValue = request.InvoiceValue.Value;
+                    hasChanges = true;
+                }
+
+                if (!string.IsNullOrEmpty(request.VendorTaxId) && request.VendorTaxId != existingInvoice.VendorTaxNumber)
+                {
+                    existingInvoice.VendorTaxNumber = request.VendorTaxId;
+                    hasChanges = true;
+                }
+
+                if (request.DueDate.HasValue && request.DueDate != existingInvoice.DueDate)
+                {
+                    existingInvoice.DueDate = request.DueDate.Value;
+                    hasChanges = true;
+                }
+
+                if (!string.IsNullOrEmpty(request.Currency) && request.Currency != existingInvoice.Currency.ToString())
+                {
+                    if (Enum.TryParse<CurrencyType>(request.Currency, out var currencyType))
+                    {
+                        existingInvoice.Currency = currencyType;
+                        hasChanges = true;
+                    }
+                }
+
+                if (!hasChanges)
+                {
+                    _logger.LogInformation("No changes detected for invoice {Id}", id);
+                    return Ok(existingInvoice);
+                }
+
+                // Update the modified timestamp
+                existingInvoice.ModifiedAt = DateTime.UtcNow;
+                existingInvoice.ModifiedBy = "Manual Correction"; // You might want to get this from the current user
+
+                // Save the changes directly
+                var updatedInvoice = await _invoiceService.UpdateInvoiceDirectly(existingInvoice);
+                
+                _logger.LogInformation("Successfully updated invoice data for ID {Id}", id);
+                return Ok(updatedInvoice);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating invoice data for ID {Id}: {Message}", id, ex.Message);
+                return StatusCode(500, new ErrorResponse("An error occurred while updating the invoice data"));
             }
         }
     }

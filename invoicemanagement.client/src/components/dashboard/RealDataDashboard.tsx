@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { PMOReviewPanel } from '../invoices/PMOReviewPanel';
+import { useAuth } from '../../context/AuthContext';
 import { 
   FileText, 
   FolderKanban, 
@@ -9,12 +11,9 @@ import {
   BarChart3,
   ArrowUp,
   ArrowDown,
-  ChevronRight,
   PlusCircle,
   Clock,
   Building,
-  User,
-  CircleDollarSign,
   AlertTriangle,
   CheckCircle2,
   TrendingUp,
@@ -24,8 +23,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../ui
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/badge';
 import { Skeleton, SkeletonDashboardCard, SkeletonList } from '../ui/skeleton';
-import { dashboardApi, DashboardStats, RecentProject, RecentInvoice, DepartmentBreakdown } from '../../services/api/dashboardApi';
+import { dashboardApi } from '../../services/api/dashboardApi';
 import { formatCurrency } from '../../utils/formatters';
+import { CurrencyType } from '../../types/enums';
 
 // Status helper functions
 const getStatusText = (status: number): string => {
@@ -87,6 +87,7 @@ const item = {
 
 export const RealDataDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Fetch dashboard data
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -99,12 +100,12 @@ export const RealDataDashboard: React.FC = () => {
     queryKey: ['dashboard-recent-projects'],
     queryFn: () => dashboardApi.getRecentProjects(5),
     staleTime: 5 * 60 * 1000,
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       console.log('🔍 Dashboard: Recent projects data:', data);
       console.log('🔍 Dashboard: Is array?', Array.isArray(data));
       console.log('🔍 Dashboard: Length:', data?.length);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('🔍 Dashboard: Recent projects error:', error);
     },
   });
@@ -119,12 +120,12 @@ export const RealDataDashboard: React.FC = () => {
     queryKey: ['dashboard-department-breakdown'],
     queryFn: () => dashboardApi.getDepartmentBreakdown(),
     staleTime: 10 * 60 * 1000, // 10 minutes
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       console.log('🔍 Dashboard: Department breakdown data:', data);
       console.log('🔍 Dashboard: Is array?', Array.isArray(data));
       console.log('🔍 Dashboard: Length:', data?.length);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('🔍 Dashboard: Department breakdown error:', error);
     },
   });
@@ -258,7 +259,7 @@ export const RealDataDashboard: React.FC = () => {
     },
     {
       title: 'Total Budget',
-      value: formatCurrency(stats.totalBudget, 0),
+      value: formatCurrency(stats.totalBudget, CurrencyType.QAR),
       change: `${stats.budgetUtilization.toFixed(1)}%`,
       changeType: stats.budgetUtilization < 80 ? 'positive' as const : 'negative' as const,
       icon: <BadgeDollarSign className="h-8 w-8 text-green-500" />,
@@ -266,7 +267,7 @@ export const RealDataDashboard: React.FC = () => {
     {
       title: 'Budget Utilization',
       value: `${stats.budgetUtilization.toFixed(1)}%`,
-      change: `$${formatCurrency(stats.remainingBudget, 0)} left`,
+      change: `$${formatCurrency(stats.remainingBudget, CurrencyType.QAR)} left`,
       changeType: stats.budgetUtilization < 80 ? 'positive' as const : 'negative' as const,
       icon: <BarChart3 className="h-8 w-8 text-blue-500" />,
     },
@@ -346,6 +347,17 @@ export const RealDataDashboard: React.FC = () => {
         ))}
       </motion.div>
 
+      {/* PMO Review Panel - Only show for PMO users */}
+      {user?.role === 'PMO' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <PMOReviewPanel />
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Recent Projects */}
         <motion.div 
@@ -380,7 +392,10 @@ export const RealDataDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {console.log('🔍 Dashboard: Rendering projects, data:', projectsData, 'isArray:', Array.isArray(projectsData), 'length:', projectsData?.length)}
+                {(() => {
+                  console.log('🔍 Dashboard: Rendering projects, data:', projectsData, 'isArray:', Array.isArray(projectsData), 'length:', projectsData?.length);
+                  return null;
+                })()}
                 {Array.isArray(projectsData) && projectsData.length > 0 ? (
                   projectsData.map((project) => (
                       <tr 
@@ -475,7 +490,7 @@ export const RealDataDashboard: React.FC = () => {
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
                     <p className="text-gray-500">No projects pending approval</p>
                     <p className="text-sm text-gray-400">All projects are up to date</p>
                   </div>
@@ -501,7 +516,10 @@ export const RealDataDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {console.log('🔍 Dashboard: Rendering departments, data:', departmentsData, 'isArray:', Array.isArray(departmentsData), 'length:', departmentsData?.length)}
+                {(() => {
+                  console.log('🔍 Dashboard: Rendering departments, data:', departmentsData, 'isArray:', Array.isArray(departmentsData), 'length:', departmentsData?.length);
+                  return null;
+                })()}
                 {Array.isArray(departmentsData) && departmentsData.length > 0 ? (
                   departmentsData.map((dept, index) => {
                     const utilization = dept.totalBudget > 0 ? (dept.spentAmount / dept.totalBudget) * 100 : 0;
@@ -518,7 +536,7 @@ export const RealDataDashboard: React.FC = () => {
                           <div>
                             <div className="font-medium text-gray-800 dark:text-gray-200">{dept.section}</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {dept.projectCount} projects • {formatCurrency(dept.totalBudget, 0)}
+                              {dept.projectCount} projects • {formatCurrency(dept.totalBudget, CurrencyType.QAR)}
                             </div>
                           </div>
                           <div className="text-right">
@@ -526,7 +544,7 @@ export const RealDataDashboard: React.FC = () => {
                               {utilization.toFixed(1)}%
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatCurrency(dept.spentAmount, 0)} spent
+                              {formatCurrency(dept.spentAmount, CurrencyType.QAR)} spent
                             </div>
                           </div>
                         </div>
@@ -657,7 +675,7 @@ export const RealDataDashboard: React.FC = () => {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Budget</span>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {formatCurrency(stats?.totalBudget || 0, 0)}
+                    {formatCurrency(stats?.totalBudget || 0, CurrencyType.QAR)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
@@ -668,7 +686,7 @@ export const RealDataDashboard: React.FC = () => {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spent</span>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {formatCurrency(stats?.totalSpent || 0, 0)}
+                    {formatCurrency(stats?.totalSpent || 0, CurrencyType.QAR)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
@@ -682,7 +700,7 @@ export const RealDataDashboard: React.FC = () => {
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Remaining</span>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {formatCurrency(stats?.remainingBudget || 0, 0)}
+                    {formatCurrency(stats?.remainingBudget || 0, CurrencyType.QAR)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">

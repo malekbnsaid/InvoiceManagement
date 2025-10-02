@@ -9,6 +9,7 @@ import {
   History, 
   CheckCircle, 
   AlertCircle,
+  AlertTriangle,
   Loader2,
   X,
   Plus,
@@ -18,6 +19,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Alert, AlertDescription } from '../ui/alert';
 import { invoiceService } from '../../services/invoiceService';
 import { projectApi } from '../../services/api/projectApi';
 import { useToast } from '../ui/use-toast';
@@ -764,10 +766,39 @@ const InvoiceUploadForm: React.FC = () => {
                 {/* OCR Results */}
                 {ocrResult && (
                   <div className="border rounded-lg p-4 bg-green-50">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <h3 className="font-medium text-green-900">OCR Processing Complete</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <h3 className="font-medium text-green-900">OCR Processing Complete</h3>
+                      </div>
+                      {/* Confidence Score Badge */}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">Confidence:</span>
+                        <Badge 
+                          className={`${
+                            (ocrResult.confidenceScore || 0) >= 0.8 
+                              ? 'bg-green-100 text-green-800 border-green-200' 
+                              : (ocrResult.confidenceScore || 0) >= 0.6 
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                : 'bg-red-100 text-red-800 border-red-200'
+                          }`}
+                        >
+                          {Math.round((ocrResult.confidenceScore || 0) * 100)}%
+                        </Badge>
+                      </div>
                     </div>
+                    
+                    {/* Low Confidence Warning */}
+                    {(ocrResult.confidenceScore || 0) < 0.6 && (
+                      <Alert className="mb-4 border-orange-200 bg-orange-50">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-orange-800">
+                          <strong>Low OCR Confidence:</strong> The extracted data may contain errors. 
+                          Please review all fields carefully before saving.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium">Vendor:</span> {ocrResult.vendorName}

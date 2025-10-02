@@ -14,6 +14,7 @@ export function SimpleInvoiceWorkflow({ currentStatus, className }: SimpleInvoic
     InvoiceStatus.UnderReview,
     InvoiceStatus.Approved,
     InvoiceStatus.InProgress,
+    InvoiceStatus.PMOReview,
     InvoiceStatus.Completed
   ];
 
