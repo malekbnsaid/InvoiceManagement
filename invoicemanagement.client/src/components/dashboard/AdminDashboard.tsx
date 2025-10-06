@@ -111,12 +111,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Monitor overall activity and system health</p>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/src/assets/QOC-LOGO.png" 
+              alt="QOC Logo" 
+              className="h-9 w-9 object-contain opacity-60 transition-transform duration-200 hover:scale-105"
+            />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-gray-600">Monitor overall activity and system health</p>
+            </div>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
             System Healthy
           </Badge>
         </div>
@@ -131,7 +140,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="text-sm font-medium text-gray-600">Total Invoices</p>
                 <p className="text-2xl font-bold text-gray-900">{metrics?.totalInvoices || 0}</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-qatar" />
             </div>
           </CardContent>
         </Card>
@@ -143,7 +152,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="text-sm font-medium text-gray-600">Total Spent</p>
                 <p className="text-2xl font-bold text-gray-900">${(metrics?.totalSpent || 0).toLocaleString()}</p>
               </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <DollarSign className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -167,7 +176,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="text-sm font-medium text-gray-600">Active Users</p>
                 <p className="text-2xl font-bold text-gray-900">{userList?.length || 0}</p>
               </div>
-              <Users className="h-8 w-8 text-purple-600" />
+              <Users className="h-8 w-8 text-gold" />
             </div>
           </CardContent>
         </Card>

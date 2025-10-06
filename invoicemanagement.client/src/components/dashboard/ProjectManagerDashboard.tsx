@@ -107,7 +107,7 @@ const ProjectManagerDashboard: React.FC<ProjectManagerDashboardProps> = ({
           <p className="text-gray-600">Track project budgets, invoices, and pending approvals</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" className="bg-qatar/10 text-qatar border-qatar/20">
             Project Manager
           </Badge>
         </div>
@@ -141,8 +141,8 @@ const ProjectManagerDashboard: React.FC<ProjectManagerDashboardProps> = ({
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className={`h-2 rounded-full ${
-                      project.status === 'warning' ? 'bg-red-500' : 
-                      project.status === 'caution' ? 'bg-yellow-500' : 'bg-green-500'
+                      project.status === 'warning' ? 'bg-error' : 
+                      project.status === 'caution' ? 'bg-warning' : 'bg-success'
                     }`}
                     style={{ width: `${Math.min(project.utilization, 100)}%` }}
                   ></div>
@@ -235,7 +235,7 @@ const ProjectManagerDashboard: React.FC<ProjectManagerDashboardProps> = ({
               })}
               {pendingInvoices.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
                   <p className="text-lg font-medium">No pending invoices</p>
                   <p className="text-sm">All invoices are processed!</p>
                 </div>

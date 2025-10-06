@@ -62,6 +62,11 @@ class AuthService {
     return false;
   }
 
+  // Public method to check if dev bypass is enabled
+  public isDevBypassEnabled(): boolean {
+    return this.isDevBypass();
+  }
+
   // Clear expired tokens on startup
   private clearExpiredTokens(): void {
     console.log('🔐 AuthService: Clearing expired tokens on startup');

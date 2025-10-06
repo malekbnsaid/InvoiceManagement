@@ -202,7 +202,17 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               className="fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-800 shadow-lg transform lg:hidden overflow-y-auto"
             >
               <div className="flex items-center justify-between h-16 px-6 border-b dark:border-gray-700">
-                <h2 className="text-xl font-bold text-primary-600 dark:text-primary-400">IT Invoice Manager</h2>
+                <div className="flex items-center space-x-3">
+                  <img 
+                    src="/src/assets/QOC-LOGO.png" 
+                    alt="QOC Logo" 
+                    className="h-9 w-9 object-contain transition-transform duration-200 hover:scale-105"
+                  />
+                  <div>
+                    <h2 className="text-xl font-bold text-qatar dark:text-qatar/80">InvoiceFlow</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">QOC Internal</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
                   className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
@@ -232,8 +242,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                         to={item.path}
                         className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                           location.pathname === item.path
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                            ? 'bg-qatar text-white shadow-sm'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-qatar/10 dark:hover:bg-qatar/20 hover:text-qatar dark:hover:text-qatar'
                         }`}
                         onClick={() => setSidebarOpen(false)}
                       >
@@ -298,8 +308,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         className={`hidden lg:flex lg:flex-col bg-white dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700 overflow-hidden`}
       >
         <div className="flex items-center h-16 px-4 border-b dark:border-gray-700 justify-between">
-          {!desktopSidebarCollapsed && (
-            <h2 className="text-xl font-bold text-primary-600 dark:text-primary-400">IT Invoice Manager</h2>
+          {!desktopSidebarCollapsed ? (
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/src/assets/QOC-LOGO.png" 
+                alt="QOC Logo" 
+                className="h-9 w-9 object-contain transition-transform duration-200 hover:scale-105"
+              />
+              <div>
+                <h2 className="text-xl font-bold text-qatar dark:text-qatar/80">InvoiceFlow</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">QOC Internal</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center w-full">
+              <img 
+                src="/src/assets/QOC-LOGO.png" 
+                alt="QOC Logo" 
+                className="h-9 w-9 object-contain transition-transform duration-200 hover:scale-105"
+              />
+            </div>
           )}
           <button 
             onClick={() => setDesktopSidebarCollapsed(!desktopSidebarCollapsed)}
@@ -340,8 +368,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   to={item.path}
                   className={`group flex ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     location.pathname === item.path
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-qatar text-white shadow-sm'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-qatar/10 dark:hover:bg-qatar/20 hover:text-qatar dark:hover:text-qatar'
                   }`}
                 >
                   <div className="flex items-center">
@@ -374,12 +402,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                       to={item.path}
                       className={`group flex ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                         location.pathname === item.path
-                          ? 'bg-red-500 text-white shadow-sm'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-400'
+                          ? 'bg-qatar text-white shadow-sm'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-qatar/10 dark:hover:bg-qatar/20 hover:text-qatar dark:hover:text-qatar'
                       }`}
                     >
                       <div className="flex items-center">
-                        <span className={`${location.pathname === item.path ? 'text-white' : 'text-red-500 dark:text-red-400'} ${desktopSidebarCollapsed ? '' : 'mr-3'}`}>
+                        <span className={`${location.pathname === item.path ? 'text-white' : 'text-qatar dark:text-qatar/80'} ${desktopSidebarCollapsed ? '' : 'mr-3'}`}>
                           {item.icon}
                         </span>
                         {!desktopSidebarCollapsed && <span>{item.name}</span>}
@@ -476,7 +504,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               >
                 <Menu className="h-6 w-6" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+              
+              {/* QOC Logo */}
+              <div className="flex items-center space-x-3 mr-4">
+                <img 
+                  src="/src/assets/QOC-LOGO.png" 
+                  alt="QOC Logo" 
+                  className="h-9 w-9 object-contain transition-transform duration-200 hover:scale-105"
+                />
+                <div className="hidden sm:block">
+                  <h1 className="text-xl font-semibold text-gray-800 dark:text-white">
+                    {getCurrentPageName()}
+                  </h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    QOC Internal System
+                  </p>
+                </div>
+              </div>
+              
+              {/* Mobile page title */}
+              <h1 className="text-xl font-semibold text-gray-800 dark:text-white sm:hidden">
                 {getCurrentPageName()}
               </h1>
             </div>
@@ -484,7 +531,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             <div className="flex items-center space-x-4">
               {canCreateProject && (
                 <button 
-                  className="p-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg"
+                  className="p-1 text-qatar dark:text-qatar/80 hover:bg-qatar/10 dark:hover:bg-qatar/20 rounded-lg"
                   onClick={() => navigate('/projects/new')}
                 >
                   <span className="sr-only">New Project</span>
@@ -493,10 +540,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               )}
               <button className="p-1 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white relative">
                 <Bell className="h-6 w-6" />
-                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-error"></span>
               </button>
               <div className="flex items-center">
-                <div className="h-9 w-9 rounded-full bg-primary-100 dark:bg-gray-700 flex items-center justify-center text-primary-700 dark:text-primary-400 font-semibold text-sm">
+                <div className="h-9 w-9 rounded-full bg-qatar/10 dark:bg-qatar/20 flex items-center justify-center text-qatar dark:text-qatar font-semibold text-sm">
                   {user ? user.username.substring(0, 2).toUpperCase() : 'GU'}
                 </div>
                 <div className="ml-2 hidden sm:block">

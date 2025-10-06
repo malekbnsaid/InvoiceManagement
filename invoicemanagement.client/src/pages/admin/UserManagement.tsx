@@ -99,20 +99,20 @@ const UserManagement: React.FC = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'Admin': return 'bg-red-100 text-red-800';
-      case 'Head': return 'bg-purple-100 text-purple-800';
-      case 'PMO': return 'bg-blue-100 text-blue-800';
-      case 'Project Manager': return 'bg-green-100 text-green-800';
-      case 'Secretary': return 'bg-yellow-100 text-yellow-800';
-      case 'ReadOnly': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Admin': return 'bg-qatar/10 text-qatar';
+      case 'Head': return 'bg-gold/10 text-gold';
+      case 'PMO': return 'bg-info/10 text-info';
+      case 'Project Manager': return 'bg-success/10 text-success';
+      case 'Secretary': return 'bg-warning/10 text-warning';
+      case 'ReadOnly': return 'bg-silver/10 text-silver';
+      default: return 'bg-silver/10 text-silver';
     }
   };
 
   const getStatusColor = (status: string) => {
     return status === 'Active' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-red-100 text-red-800';
+      ? 'bg-success/10 text-success' 
+      : 'bg-error/10 text-error';
   };
 
   if (isLoading) {
@@ -130,7 +130,7 @@ const UserManagement: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
           <p className="text-slate-600">Failed to load user data</p>
           <p className="text-sm text-slate-500 mt-2">Error: {error.message}</p>
         </div>
@@ -161,7 +161,7 @@ const UserManagement: React.FC = () => {
           </ul>
           <Button 
             onClick={() => window.location.reload()} 
-            className="mt-4 bg-red-600 hover:bg-red-700"
+            className="mt-4 bg-error hover:bg-error/90"
           >
             Retry Loading
           </Button>
@@ -171,33 +171,37 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Corporate Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Clean Header */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-r from-red-600 to-red-700 rounded-xl shadow-lg">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-                <p className="text-slate-600 mt-1">
-                  Enterprise user administration and access control
-                </p>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-qatar rounded-xl flex items-center justify-center shadow-sm">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
+                    User Management
+                  </h1>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm">
+                    Admin • User Administration & Access Control
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-4">
               <Button 
                 variant="outline" 
                 className="flex items-center border-slate-300 hover:bg-slate-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export Data
+                Export
               </Button>
               <Button 
                 onClick={() => setIsAddUserOpen(true)}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg"
+                className="bg-qatar hover:bg-qatar/90 text-white"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
@@ -205,98 +209,96 @@ const UserManagement: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Corporate Stats Dashboard */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+
+        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Total Users</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">{users.length}</p>
-                  <p className="text-xs text-blue-600 mt-1">Enterprise accounts</p>
-                </div>
-                <div className="p-3 bg-blue-500 rounded-full">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Users</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{users.length}</p>
+                <p className="text-sm text-slate-500 mt-1">Enterprise accounts</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">Active Users</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">
-                    {users.filter(u => u.status === 'Active').length}
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">Currently online</p>
-                </div>
-                <div className="p-3 bg-green-500 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
+              <div className="w-12 h-12 bg-qatar/10 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-qatar" />
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-purple-700 uppercase tracking-wide">New This Month</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-2">
-                    {users.filter(u => {
-                      const created = new Date(u.createdAt);
-                      const now = new Date();
-                      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-                    }).length}
-                  </p>
-                  <p className="text-xs text-purple-600 mt-1">Recent additions</p>
-                </div>
-                <div className="p-3 bg-purple-500 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Users</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
+                  {users.filter(u => u.status === 'Active').length}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">Currently active</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Admin Users</p>
-                  <p className="text-3xl font-bold text-orange-900 mt-2">
-                    {users.filter(u => u.role === 'Admin').length}
-                  </p>
-                  <p className="text-xs text-orange-600 mt-1">System administrators</p>
-                </div>
-                <div className="p-3 bg-orange-500 rounded-full">
-                  <Crown className="h-6 w-6 text-white" />
-                </div>
+              <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-success" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">New This Month</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
+                  {users.filter(u => {
+                    const created = new Date(u.createdAt);
+                    const now = new Date();
+                    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+                  }).length}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">Recent additions</p>
+              </div>
+              <div className="w-12 h-12 bg-gold/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-gold" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Admin Users</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
+                  {users.filter(u => u.role === 'Admin').length}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">Administrators</p>
+              </div>
+              <div className="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
+                <Crown className="h-6 w-6 text-info" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Corporate Search and Filters */}
-        <Card className="mb-6 bg-white shadow-lg border-0">
-          <CardContent className="p-6">
+        {/* Search and Filters */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 mb-6">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Search & Filter</h3>
+          </div>
+          <div className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                   <Input
                     placeholder="Search users by name, email, or department..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 h-12 border-slate-300 focus:border-red-500 focus:ring-red-500"
+                    className="pl-10"
                   />
                 </div>
               </div>
               <div className="flex gap-3">
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-48 h-12 border-slate-300 focus:border-red-500">
+                  <SelectTrigger className="w-48">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
@@ -307,64 +309,67 @@ const UserManagement: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" className="h-12 px-6 border-slate-300 hover:bg-slate-50">
+                <Button variant="outline">
                   <Building className="h-4 w-4 mr-2" />
                   Department
                 </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Corporate Users Table */}
-        <Card className="bg-white shadow-lg border-0">
-          <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
+        {/* Users Table */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center">
-                <UserCheck className="h-6 w-6 mr-3 text-red-600" />
-                Enterprise Users ({filteredUsers.length})
-              </CardTitle>
-              <div className="flex items-center space-x-2 text-sm text-slate-600">
-                <Activity className="h-4 w-4" />
-                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-qatar/10 rounded-lg flex items-center justify-center">
+                  <UserCheck className="h-4 w-4 text-qatar" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Users ({filteredUsers.length})</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Manage user accounts and permissions</p>
+                </div>
+              </div>
+              <div className="text-sm text-slate-500">
+                Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-slate-700">User Profile</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Role & Permissions</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Department</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Status</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Last Activity</TableHead>
-                    <TableHead className="font-semibold text-slate-700">Member Since</TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
-                        <div className="flex flex-col items-center space-y-4">
-                          <Users className="h-12 w-12 text-slate-400" />
-                          <div>
-                            <h3 className="text-lg font-semibold text-slate-900">No users found</h3>
-                            <p className="text-slate-500">Try adjusting your search or filters</p>
-                          </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-700">
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">User Profile</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Role & Permissions</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Department</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Status</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Last Activity</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Member Since</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center space-y-4">
+                        <Users className="h-12 w-12 text-slate-400" />
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">No users found</h3>
+                          <p className="text-slate-500 dark:text-slate-400">Try adjusting your search or filters</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-slate-50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            {user.username?.charAt(0)?.toUpperCase() || 'U'}
-                          </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-qatar rounded-full flex items-center justify-center text-white font-semibold">
+                          {user.username?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
                           <div>
                             <div className="font-semibold text-slate-900">{user.fullName || user.username}</div>
                             <div className="text-sm text-slate-500">{user.email}</div>
@@ -422,14 +427,14 @@ const UserManagement: React.FC = () => {
                               setSelectedUser(user);
                               setIsEditUserOpen(true);
                             }}
-                            className="hover:bg-blue-50 hover:border-blue-300"
+                            className="hover:bg-qatar/10 hover:border-qatar/30"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                            className="text-error hover:text-error/80 hover:bg-error/10 hover:border-error/30"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -445,11 +450,10 @@ const UserManagement: React.FC = () => {
                     </TableRow>
                     ))
                   )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
 
         {/* Add User Dialog */}
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
@@ -500,7 +504,7 @@ const UserManagement: React.FC = () => {
               <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
                 Cancel
               </Button>
-              <Button className="bg-red-600 hover:bg-red-700">
+              <Button className="bg-qatar hover:bg-qatar/90">
                 Create User
               </Button>
             </DialogFooter>
@@ -557,7 +561,7 @@ const UserManagement: React.FC = () => {
               <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>
                 Cancel
               </Button>
-              <Button className="bg-red-600 hover:bg-red-700">
+              <Button className="bg-qatar hover:bg-qatar/90">
                 Save Changes
               </Button>
             </DialogFooter>

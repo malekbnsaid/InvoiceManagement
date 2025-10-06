@@ -167,103 +167,107 @@ const AuditLogs: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Clean Header */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <FileText className="h-8 w-8 mr-3 text-red-600" />
-                Audit Logs
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Monitor system activity and track user actions
-              </p>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-qatar rounded-xl flex items-center justify-center shadow-sm">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
+                    Audit Logs
+                  </h1>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm">
+                    Admin • System Activity & User Actions
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-4">
               <Button variant="outline" className="flex items-center">
                 <Download className="h-4 w-4 mr-2" />
-                Export Logs
+                Export
               </Button>
               <Button variant="outline" className="flex items-center">
                 <Database className="h-4 w-4 mr-2" />
-                Archive Old Logs
+                Archive
               </Button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Corporate Stats Dashboard */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+
+        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Total Events</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">{auditStats?.totalLogs || 0}</p>
-                  <p className="text-xs text-blue-600 mt-1">All time audit logs</p>
-                </div>
-                <div className="p-3 bg-blue-500 rounded-full">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Events</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{auditStats?.totalLogs || 0}</p>
+                <p className="text-sm text-slate-500 mt-1">All time audit logs</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">Today's Events</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">{safeAuditStats.todayLogs}</p>
-                  <p className="text-xs text-green-600 mt-1">Events today</p>
-                </div>
-                <div className="p-3 bg-green-500 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
+              <div className="w-12 h-12 bg-info/10 rounded-lg flex items-center justify-center">
+                <Activity className="h-6 w-6 text-info" />
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-purple-700 uppercase tracking-wide">This Week</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-2">{safeAuditStats.thisWeekLogs}</p>
-                  <p className="text-xs text-purple-600 mt-1">Events this week</p>
-                </div>
-                <div className="p-3 bg-purple-500 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Today's Events</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{safeAuditStats.todayLogs}</p>
+                <p className="text-sm text-slate-500 mt-1">Events today</p>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-orange-700 uppercase tracking-wide">Active Users</p>
-                  <p className="text-3xl font-bold text-orange-900 mt-2">{uniqueUsers.length}</p>
-                  <p className="text-xs text-orange-600 mt-1">Unique users</p>
-                </div>
-                <div className="p-3 bg-orange-500 rounded-full">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
+              <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-success" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">This Week</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{safeAuditStats.thisWeekLogs}</p>
+                <p className="text-sm text-slate-500 mt-1">Events this week</p>
+              </div>
+              <div className="w-12 h-12 bg-gold/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-gold" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Users</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{uniqueUsers.length}</p>
+                <p className="text-sm text-slate-500 mt-1">Unique users</p>
+              </div>
+              <div className="w-12 h-12 bg-qatar/10 rounded-lg flex items-center justify-center">
+                <Users className="h-6 w-6 text-qatar" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
+        {/* Search and Filters */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 mb-6">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Search & Filter</h3>
+          </div>
+          <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                   <Input
                     placeholder="Search logs..."
                     value={searchTerm}
@@ -312,25 +316,35 @@ const AuditLogs: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Audit Logs Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Audit Logs ({filteredLogs.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-qatar/10 rounded-lg flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-qatar" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Audit Logs ({filteredLogs.length})</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">System activity and user actions</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold text-slate-700">Timestamp</TableHead>
-                  <TableHead className="font-semibold text-slate-700">User</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Action</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Entity</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Changes</TableHead>
-                  <TableHead className="font-semibold text-slate-700">Entity ID</TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
+                <TableRow className="bg-slate-50 dark:bg-slate-700">
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Timestamp</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">User</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Action</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Entity</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Changes</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300">Entity ID</TableHead>
+                  <TableHead className="font-medium text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
                 <TableBody>
@@ -439,17 +453,17 @@ const AuditLogs: React.FC = () => {
                       </TableRow>
                     ))
                   )}
-                </TableBody>
+              </TableBody>
             </Table>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Card className="mt-6">
-            <CardContent className="p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 mt-6">
+            <div className="px-6 py-4">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-slate-600 dark:text-slate-400">
                   Showing page {currentPage} of {totalPages}
                 </div>
                 <div className="flex space-x-2">
@@ -457,22 +471,20 @@ const AuditLogs: React.FC = () => {
                     variant="outline"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="flex items-center"
                   >
-                    <span>Previous</span>
+                    Previous
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="flex items-center"
                   >
-                    <span>Next</span>
+                    Next
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </div>

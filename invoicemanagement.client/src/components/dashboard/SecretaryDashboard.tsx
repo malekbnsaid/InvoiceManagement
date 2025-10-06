@@ -141,10 +141,10 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Processed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'OCR Failed': return 'bg-red-100 text-red-800 border-red-200';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Processed': return 'bg-success/10 text-success border border-success/20';
+      case 'OCR Failed': return 'bg-error text-white border-error hover:bg-error/90';
+      case 'Pending': return 'bg-warning/10 text-warning border border-warning/20';
+      default: return 'bg-silver/10 text-silver border border-silver/20';
     }
   };
 
@@ -166,7 +166,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
           <p className="text-gray-600">Manage daily uploads and ensure data completeness</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" className="bg-qatar/10 text-qatar border-qatar/20">
             Secretary
           </Badge>
         </div>
@@ -181,7 +181,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
                 <p className="text-sm font-medium text-gray-600">Uploads Today</p>
                 <p className="text-2xl font-bold text-gray-900">{todayUploads}</p>
               </div>
-              <Upload className="h-8 w-8 text-blue-600" />
+              <Upload className="h-8 w-8 text-qatar" />
             </div>
           </CardContent>
         </Card>
@@ -198,7 +198,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
                   </p>
                 )}
               </div>
-              <Target className="h-8 w-8 text-green-600" />
+              <Target className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -210,7 +210,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
                 <p className="text-sm font-medium text-gray-600">Success Rate</p>
                 <p className="text-2xl font-bold text-gray-900">{weeklyStats.successRate.toFixed(1)}%</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -301,7 +301,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
-                    className="bg-green-500 h-2 rounded-full"
+                    className="bg-success h-2 rounded-full"
                     style={{ width: `${ocrAccuracy}%` }}
                   ></div>
                 </div>
@@ -337,7 +337,7 @@ const SecretaryDashboard: React.FC<SecretaryDashboardProps> = ({
               ))}
               {duplicatesDetected.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
                   <p className="text-lg font-medium">No duplicates found</p>
                   <p className="text-sm">All uploads are unique!</p>
                 </div>

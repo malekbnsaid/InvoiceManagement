@@ -61,25 +61,25 @@ const getStatusColor = (status: any) => {
   
   switch (statusNum) {
     case 0: // Submitted
-      return 'bg-blue-100 text-blue-800 border border-blue-200';
+      return 'bg-info/10 text-info border border-info/20';
     case 1: // UnderReview
-      return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      return 'bg-warning/10 text-warning border border-warning/20';
     case 2: // Approved
-      return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-600';
+      return 'bg-success text-white border-success hover:bg-success/90';
     case 3: // InProgress
-      return 'bg-purple-100 text-purple-800 border border-purple-200';
+      return 'bg-qatar/10 text-qatar border border-qatar/20';
     case 4: // PMOReview
-      return 'bg-amber-100 text-amber-800 border border-amber-200';
+      return 'bg-warning text-white border-warning hover:bg-warning/90';
     case 5: // Completed
-      return 'bg-green-100 text-green-800 border border-green-200';
+      return 'bg-success/10 text-success border border-success/20';
     case 6: // Rejected
-      return 'bg-red-100 text-red-800 border border-red-200';
+      return 'bg-error text-white border-error hover:bg-error/90';
     case 7: // Cancelled
-      return 'bg-gray-100 text-gray-800 border border-gray-200';
+      return 'bg-silver/10 text-silver border border-silver/20';
     case 8: // OnHold
-      return 'bg-orange-100 text-orange-800 border border-orange-200';
+      return 'bg-gold/10 text-gold border border-gold/20';
     default:
-      return 'bg-gray-100 text-gray-800 border border-gray-200';
+      return 'bg-silver/10 text-silver border border-silver/20';
   }
 };
 

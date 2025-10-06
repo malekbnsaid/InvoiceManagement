@@ -9,12 +9,12 @@ interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
 const Badge = forwardRef<HTMLDivElement, BadgeProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const variants = {
-      default: 'bg-primary-100 text-primary-800 dark:bg-primary-700 dark:text-primary-100',
-      secondary: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
+      default: 'bg-qatar/10 text-qatar dark:bg-qatar/20 dark:text-qatar',
+      secondary: 'bg-silver/10 text-silver dark:bg-silver/20 dark:text-silver',
       outline: 'border border-gray-200 text-gray-800 dark:border-gray-700 dark:text-gray-100',
-      success: 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100',
-      warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
-      danger: 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-100',
+      success: 'bg-success/10 text-success dark:bg-success/20 dark:text-success',
+      warning: 'bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning',
+      danger: 'bg-error/10 text-error dark:bg-error/20 dark:text-error',
     };
 
     return (

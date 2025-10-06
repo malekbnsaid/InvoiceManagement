@@ -7,32 +7,75 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Keep your defined palettes
+        // QOC Institutional Color Palette
+        qatar: {
+          DEFAULT: '#8A153E', // Qatar Burgundy
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#8A153E', // Main Qatar color
+          600: '#7c1d3a',
+          700: '#6b1a32',
+          800: '#5a172a',
+          900: '#491422',
+        },
+        gold: {
+          DEFAULT: '#AE8F44', // Gold 1
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',
+          500: '#AE8F44', // Main Gold color
+          600: '#9d7f3d',
+          700: '#8b6f36',
+          800: '#795f2f',
+          900: '#674f28',
+        },
+        silver: {
+          DEFAULT: '#A7A9AC', // Silver 1
+          50: '#f8f9fa',
+          100: '#f1f3f4',
+          200: '#e8eaed',
+          300: '#dadce0',
+          400: '#bdc1c6',
+          500: '#A7A9AC', // Main Silver color
+          600: '#969aa0',
+          700: '#858a90',
+          800: '#747a80',
+          900: '#636a70',
+        },
+        // Status colors from QOC palette
+        success: '#00A651', // Green
+        error: '#EE3346', // Crimson
+        warning: '#FCB131', // Yolk
+        info: '#154772', // Venice Blue
+        // Legacy colors for compatibility
         primary: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#8A153E',
+          600: '#7c1d3a',
+          700: '#6b1a32',
+          800: '#5a172a',
+          900: '#491422',
         },
         secondary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e',
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',
+          500: '#AE8F44',
+          600: '#9d7f3d',
+          700: '#8b6f36',
+          800: '#795f2f',
+          900: '#674f28',
         },
 
         // ✅ Add CSS variable-based theme support
