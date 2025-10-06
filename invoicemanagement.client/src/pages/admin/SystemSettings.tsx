@@ -184,7 +184,7 @@ const SystemSettings: React.FC = () => {
                 <Checkbox
                   id="maintenance"
                   checked={settings.maintenanceMode}
-                  onCheckedChange={(checked) => setSettings({...settings, maintenanceMode: checked})}
+                  onChange={(e) => setSettings({...settings, maintenanceMode: e.target.checked})}
                 />
               </div>
             </CardContent>
@@ -287,7 +287,7 @@ const SystemSettings: React.FC = () => {
                 <Checkbox
                   id="emailNotifications"
                   checked={settings.emailNotifications}
-                  onCheckedChange={(checked) => setSettings({...settings, emailNotifications: checked})}
+                  onChange={(e) => setSettings({...settings, emailNotifications: e.target.checked})}
                 />
               </div>
             </CardContent>
@@ -340,7 +340,7 @@ const SystemSettings: React.FC = () => {
                 <Checkbox
                   id="twoFactor"
                   checked={settings.twoFactorAuth}
-                  onCheckedChange={(checked) => setSettings({...settings, twoFactorAuth: checked})}
+                  onChange={(e) => setSettings({...settings, twoFactorAuth: e.target.checked})}
                 />
               </div>
             </CardContent>
@@ -387,7 +387,7 @@ const SystemSettings: React.FC = () => {
                 <Checkbox
                   id="autoProcessing"
                   checked={settings.autoProcessing}
-                  onCheckedChange={(checked) => setSettings({...settings, autoProcessing: checked})}
+                  onChange={(e) => setSettings({...settings, autoProcessing: e.target.checked})}
                 />
               </div>
             </CardContent>
@@ -443,7 +443,7 @@ const SystemSettings: React.FC = () => {
                   <Checkbox
                     id="emailAlerts"
                     checked={settings.emailAlerts}
-                    onCheckedChange={(checked) => setSettings({...settings, emailAlerts: checked})}
+                    onChange={(e) => setSettings({...settings, emailAlerts: e.target.checked})}
                   />
                 </div>
                 
@@ -455,7 +455,7 @@ const SystemSettings: React.FC = () => {
                   <Checkbox
                     id="systemAlerts"
                     checked={settings.systemAlerts}
-                    onCheckedChange={(checked) => setSettings({...settings, systemAlerts: checked})}
+                    onChange={(e) => setSettings({...settings, systemAlerts: e.target.checked})}
                   />
                 </div>
                 
@@ -467,7 +467,7 @@ const SystemSettings: React.FC = () => {
                   <Checkbox
                     id="weeklyReports"
                     checked={settings.weeklyReports}
-                    onCheckedChange={(checked) => setSettings({...settings, weeklyReports: checked})}
+                    onChange={(e) => setSettings({...settings, weeklyReports: e.target.checked})}
                   />
                 </div>
               </div>

@@ -173,7 +173,19 @@ class AuthService {
   async signup(credentials: SignupRequest): Promise<SignupResponse> {
     try {
       console.log('🔐 AuthService: Attempting signup to:', '/auth/signup');
-      const response = await api.post<SignupResponse>('/auth/signup', credentials);
+      
+      // Transform frontend data to match backend expectations
+      const signupData = {
+        Username: credentials.username,
+        Email: credentials.email,
+        Password: credentials.password,
+        EmployeeNumber: credentials.employeeNumber,
+        Role: credentials.role
+      };
+      
+      console.log('🔐 AuthService: Sending signup data:', signupData);
+      
+      const response = await api.post<SignupResponse>('/auth/signup', signupData);
       return response.data;
     } catch (error) {
       console.error('Signup failed:', error);

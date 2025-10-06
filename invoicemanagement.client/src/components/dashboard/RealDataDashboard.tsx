@@ -279,7 +279,7 @@ export const RealDataDashboard: React.FC = () => {
   ] : [];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-4">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
@@ -318,12 +318,12 @@ export const RealDataDashboard: React.FC = () => {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         {statsData.map((stat) => (
           <motion.div key={stat.title} variants={item}>
             <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-qatar">
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{stat.title}</p>
@@ -359,15 +359,16 @@ export const RealDataDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="mt-2"
         >
           <PMOReviewPanel />
         </motion.div>
       )}
 
       {/* Main Content - Two Column Layout */}
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* Left Column - Projects and Invoices */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-4">
           {/* Recent Projects */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}

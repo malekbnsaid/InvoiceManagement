@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: invoice-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd123
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - invoice-network
+    restart: unless-stopped
+
+  # Database Admin UI
+  adminer:
+    image: adminer:latest
+    container_name: invoice-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - invoice-network
+    restart: unless-stopped
+    depends_on:
+      - sqlserver
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: InvoiceManagement.Server/Dockerfile
+    container_name: invoice-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=InvoiceManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=true;MultipleActiveResultSets=true
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./Documents:/app/Documents
+    networks:
+      - invoice-network
+    depends_on:
+      - sqlserver
+    restart: unless-stopped
+
+  # Frontend Development (with hot reload)
+  frontend-dev:
+    build:
+      context: ./invoicemanagement.client
+      dockerfile: Dockerfile
+      target: dev
+    container_name: invoice-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./invoicemanagement.client:/app
+      - /app/node_modules
+    networks:
+      - invoice-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - dev
+
+  # Frontend Production (with nginx)
+  frontend:
+    build:
+      context: ./invoicemanagement.client
+      dockerfile: Dockerfile
+      target: production
+    container_name: invoice-frontend
+    ports:
+      - "5173:80"
+    networks:
+      - invoice-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - prod
+
+volumes:
+  sqlserver_data:
+    driver: local
+
+networks:
+  invoice-network:
+    driver: bridge
+
+

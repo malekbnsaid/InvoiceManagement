@@ -50,7 +50,7 @@ import {
   Crown,
   UserCheck
 } from 'lucide-react';
-import { employeeApi } from '@/services/api/employeeApi';
+import { appUserApi, AppUser, CreateAppUser, UpdateAppUser, Role } from '@/services/api/appUserApi';
 import { useAuth } from '@/context/AuthContext';
 
 const UserManagement: React.FC = () => {
@@ -62,38 +62,38 @@ const UserManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch real employee data
-  const { data: employeesData, isLoading, error } = useQuery({
-    queryKey: ['employees'],
-    queryFn: employeeApi.getAll,
+  // Fetch real user data
+  const { data: usersData, isLoading, error } = useQuery({
+    queryKey: ['appUsers'],
+    queryFn: appUserApi.getAll,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Ensure employees is always an array
-  const employees = Array.isArray(employeesData) ? employeesData : [];
+  // Fetch roles data
+  const { data: rolesData } = useQuery({
+    queryKey: ['userRoles'],
+    queryFn: appUserApi.getRoles,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  // Transform employee data to user format with additional safety checks
-  const users = employees.map((emp: any) => ({
-    id: emp.id,
-    username: emp.username || emp.email?.split('@')[0] || 'Unknown',
-    email: emp.email,
-    role: emp.role || emp.position || 'User',
-    status: emp.isActive !== false ? 'Active' : 'Inactive',
-    lastLogin: emp.lastLoginAt || emp.createdAt,
-    createdAt: emp.createdAt,
-    department: emp.department || 'General',
-    fullName: emp.fullName || emp.name,
-    phone: emp.phone,
-    position: emp.position
-  }));
+  // Fetch user statistics
+  const { data: userStats } = useQuery({
+    queryKey: ['userStats'],
+    queryFn: appUserApi.getStats,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  const roles = ['Admin', 'Head', 'PMO', 'Project Manager', 'Secretary', 'ReadOnly'];
+  // Ensure users is always an array
+  const users = Array.isArray(usersData) ? usersData : [];
+  const roles = Array.isArray(rolesData) ? rolesData : [];
+
   const departments = ['IT', 'PMO', 'Projects', 'Administration', 'Finance', 'HR'];
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesSearch = user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.employeeName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.roleName === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -102,7 +102,7 @@ const UserManagement: React.FC = () => {
       case 'Admin': return 'bg-qatar/10 text-qatar';
       case 'Head': return 'bg-gold/10 text-gold';
       case 'PMO': return 'bg-info/10 text-info';
-      case 'Project Manager': return 'bg-success/10 text-success';
+      case 'PM': return 'bg-success/10 text-success';
       case 'Secretary': return 'bg-warning/10 text-warning';
       case 'ReadOnly': return 'bg-silver/10 text-silver';
       default: return 'bg-silver/10 text-silver';
@@ -140,9 +140,10 @@ const UserManagement: React.FC = () => {
 
   // Debug information
   console.log('🔍 UserManagement Debug:');
-  console.log('📊 Employees Data:', employeesData);
-  console.log('📋 Employees Array:', employees);
-  console.log('👥 Users:', users);
+  console.log('📊 Users Data:', usersData);
+  console.log('📋 Users Array:', users);
+  console.log('🎭 Roles Data:', rolesData);
+  console.log('📈 User Stats:', userStats);
 
   // If no users are loaded, show a helpful message
   if (users.length === 0 && !isLoading) {
@@ -219,7 +220,9 @@ const UserManagement: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Users</p>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{users.length}</p>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
+                  {userStats?.totalUsers || users.length}
+                </p>
                 <p className="text-sm text-slate-500 mt-1">Enterprise accounts</p>
               </div>
               <div className="w-12 h-12 bg-qatar/10 rounded-lg flex items-center justify-center">
@@ -233,7 +236,7 @@ const UserManagement: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Users</p>
                 <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-                  {users.filter(u => u.status === 'Active').length}
+                  {userStats?.activeUsers || users.filter(u => u.isActive).length}
                 </p>
                 <p className="text-sm text-slate-500 mt-1">Currently active</p>
               </div>
@@ -267,7 +270,7 @@ const UserManagement: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Admin Users</p>
                 <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-                  {users.filter(u => u.role === 'Admin').length}
+                  {userStats?.roleBreakdown?.Admin || users.filter(u => u.roleName === 'Admin').length}
                 </p>
                 <p className="text-sm text-slate-500 mt-1">Administrators</p>
               </div>
@@ -305,7 +308,7 @@ const UserManagement: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="all">All Roles</SelectItem>
                     {roles.map(role => (
-                      <SelectItem key={role} value={role}>{role}</SelectItem>
+                      <SelectItem key={role.name} value={role.name}>{role.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -371,46 +374,44 @@ const UserManagement: React.FC = () => {
                             {user.username?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900 dark:text-white">{user.fullName || user.username}</div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{user.employeeName || user.username}</div>
                             <div className="text-sm text-slate-500 dark:text-slate-400">{user.email}</div>
-                            {user.phone && (
-                              <div className="text-xs text-slate-400 dark:text-slate-500">{user.phone}</div>
+                            {user.employeeNumber && (
+                              <div className="text-xs text-slate-400 dark:text-slate-500">#{user.employeeNumber}</div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col space-y-1">
-                          <Badge className={`w-fit ${getRoleColor(user.role)}`}>
-                            {user.role}
+                          <Badge className={`w-fit ${getRoleColor(user.roleName)}`}>
+                            {user.roleName}
                           </Badge>
-                          {user.position && (
-                            <span className="text-xs text-slate-500">{user.position}</span>
-                          )}
+                          <span className="text-xs text-slate-500">{user.roleName}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Building className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm text-slate-700">{user.department}</span>
+                          <span className="text-sm text-slate-700">{user.department || 'General'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Badge className={getStatusColor(user.status)}>
-                            {user.status === 'Active' ? (
+                          <Badge className={getStatusColor(user.isActive ? 'Active' : 'Inactive')}>
+                            {user.isActive ? (
                               <CheckCircle className="h-3 w-3 mr-1" />
                             ) : (
                               <AlertCircle className="h-3 w-3 mr-1" />
                             )}
-                            {user.status}
+                            {user.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2 text-sm text-slate-600">
                           <Clock className="h-4 w-4" />
-                          <span>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</span>
+                          <span>{user.lastLoginDate ? new Date(user.lastLoginDate).toLocaleDateString() : 'Never'}</span>
                         </div>
                       </TableCell>
                       <TableCell>

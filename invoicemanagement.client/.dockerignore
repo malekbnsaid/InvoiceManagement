@@ -27,15 +27,6 @@ Thumbs.db
 *.log
 logs/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-
 # Dependency directories
 node_modules/
 npm-debug.log*
@@ -59,11 +50,12 @@ Dockerfile*
 docker-compose*
 .dockerignore
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
 # Temporary files
 tmp/
 temp/
+
+# Cache
+.cache/
+.parcel-cache/
+
+

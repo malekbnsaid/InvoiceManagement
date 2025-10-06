@@ -48,8 +48,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
     },
     password: {
       required: true,
-      minLength: 8,
-      message: 'Password must be at least 8 characters'
+      minLength: 6,
+      message: 'Password must be at least 6 characters'
     },
     confirmPassword: {
       required: true,
@@ -87,15 +87,22 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
     { value: 'ReadOnly', label: 'Read Only' }
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, testData?: any) => {
     e.preventDefault();
+    console.log('🔐 SignupForm: handleSubmit called');
+    
+    const dataToUse = testData || formData;
+    console.log('🔐 SignupForm: Using data:', dataToUse);
     
     // Validate form before submission
-    if (!validateForm(formData as unknown as { [key: string]: string })) {
+    if (!validateForm(dataToUse as unknown as { [key: string]: string })) {
+      console.log('🔐 SignupForm: Form validation failed');
+      console.log('🔐 SignupForm: Validation errors:', errors);
       return;
     }
+    console.log('🔐 SignupForm: Form validation passed');
     
-    if (formData.password !== formData.confirmPassword) {
+    if (dataToUse.password !== dataToUse.confirmPassword) {
       setError({
         title: "Validation Error",
         message: "Passwords do not match"
@@ -103,7 +110,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (dataToUse.password.length < 6) {
       setError({
         title: "Validation Error",
         message: "Password must be at least 6 characters long"
@@ -115,12 +122,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess, onSwitc
 
     try {
       const response = await authService.signup({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        employeeNumber: formData.employeeNumber,
-        role: formData.role
+        username: dataToUse.username,
+        email: dataToUse.email,
+        password: dataToUse.password,
+        confirmPassword: dataToUse.confirmPassword,
+        employeeNumber: dataToUse.employeeNumber,
+        role: dataToUse.role
       });
 
       if (response.success) {
