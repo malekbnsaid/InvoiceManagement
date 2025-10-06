@@ -23,7 +23,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  TrendingUp
 } from 'lucide-react';
 
 interface NavItem {
@@ -70,6 +71,34 @@ const navItems: NavItem[] = [
     path: '/settings',
     icon: <Settings className="h-5 w-5" />,
     description: 'System configuration'
+  },
+];
+
+// Admin-specific navigation items
+const adminNavItems: NavItem[] = [
+  {
+    name: 'User Management',
+    path: '/admin/users',
+    icon: <Users className="h-5 w-5" />,
+    description: 'Manage users and roles'
+  },
+  {
+    name: 'System Settings',
+    path: '/admin/settings',
+    icon: <Settings className="h-5 w-5" />,
+    description: 'System configuration'
+  },
+  {
+    name: 'Audit Logs',
+    path: '/admin/audit',
+    icon: <FileText className="h-5 w-5" />,
+    description: 'System activity logs'
+  },
+  {
+    name: 'Role Management',
+    path: '/admin/roles',
+    icon: <UserCheck className="h-5 w-5" />,
+    description: 'Manage user roles and permissions'
   },
 ];
 
@@ -328,6 +357,42 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   )}
                 </Link>
               ))}
+              
+              {/* Admin Section - Only show for Admin users */}
+              {user?.role === 'Admin' && (
+                <>
+                  {!desktopSidebarCollapsed && (
+                    <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-2">
+                        Admin Tools
+                      </h3>
+                    </div>
+                  )}
+                  {adminNavItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={`group flex ${desktopSidebarCollapsed ? 'justify-center' : 'justify-between'} items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        location.pathname === item.path
+                          ? 'bg-red-500 text-white shadow-sm'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-400'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <span className={`${location.pathname === item.path ? 'text-white' : 'text-red-500 dark:text-red-400'} ${desktopSidebarCollapsed ? '' : 'mr-3'}`}>
+                          {item.icon}
+                        </span>
+                        {!desktopSidebarCollapsed && <span>{item.name}</span>}
+                      </div>
+                      {!desktopSidebarCollapsed && item.description && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 hidden group-hover:block">
+                          {item.description}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </>
+              )}
               
               {/* PMO Review - Only show for PMO users */}
               {user?.role === 'PMO' && (

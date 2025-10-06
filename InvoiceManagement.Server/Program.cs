@@ -38,6 +38,9 @@ builder.Services.AddScoped<IProjectNumberService, ProjectNumberService>();
 builder.Services.AddScoped<IVendorService, VendorService>();
 builder.Services.AddScoped<ISimpleInvoiceStatusService, SimpleInvoiceStatusService>();
 builder.Services.AddScoped<ICurrencyExchangeService, CurrencyExchangeService>();
+// Temporarily disabled Power BI services to fix build issues
+// builder.Services.AddScoped<IPowerBIService, PowerBIService>();
+// builder.Services.AddScoped<PowerBIDataExportService>();
 
 // Register authentication services
 builder.Services.AddScoped<IJwtService, JwtService>();

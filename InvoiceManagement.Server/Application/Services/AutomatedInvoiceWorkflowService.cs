@@ -110,12 +110,12 @@ namespace InvoiceManagement.Server.Application.Services
         /// <summary>
         /// Procurement processed - automatically move to InProgress
         /// </summary>
-        private async Task HandleProcurementProcessed(Invoice invoice, string userId)
+        private Task HandleProcurementProcessed(Invoice invoice, string userId)
         {
             if (invoice.Status != InvoiceStatus.Approved)
             {
                 _logger.LogWarning($"Invoice {invoice.Id} is not in Approved status for Procurement processing");
-                return;
+                return Task.CompletedTask;
             }
 
             // Update status
@@ -124,17 +124,18 @@ namespace InvoiceManagement.Server.Application.Services
             invoice.ProcessedDate = DateTime.UtcNow;
 
             _logger.LogInformation($"Invoice {invoice.Id} moved to InProgress");
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// External system updated - automatically move to Completed
         /// </summary>
-        private async Task HandleExternalSystemUpdated(Invoice invoice, string userId)
+        private Task HandleExternalSystemUpdated(Invoice invoice, string userId)
         {
             if (invoice.Status != InvoiceStatus.InProgress)
             {
                 _logger.LogWarning($"Invoice {invoice.Id} is not in InProgress status for external system update");
-                return;
+                return Task.CompletedTask;
             }
 
             // Update status
@@ -145,6 +146,7 @@ namespace InvoiceManagement.Server.Application.Services
             invoice.PaidAmount = invoice.InvoiceValue;
 
             _logger.LogInformation($"Invoice {invoice.Id} moved to Completed");
+            return Task.CompletedTask;
         }
 
         /// <summary>

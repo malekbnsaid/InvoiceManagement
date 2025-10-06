@@ -15,9 +15,12 @@
     <PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
     <PackageReference Include="Azure.AI.FormRecognizer" Version="4.1.0" />
     <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
-    <PackageReference Include="Azure.Identity" Version="1.15.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="Microsoft.Graph" Version="5.91.0" />
+    <!-- Temporarily disabled Power BI and Azure packages to fix build issues -->
+    <!-- <PackageReference Include="Azure.Identity" Version="1.15.0" /> -->
+    <!-- <PackageReference Include="Microsoft.Graph" Version="5.91.0" /> -->
+    <!-- <PackageReference Include="Microsoft.PowerBI.Api" Version="3.20.0" /> -->
+    <!-- <PackageReference Include="Microsoft.Identity.Client" Version="4.73.1" /> -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
       <Version>8.*-*</Version>

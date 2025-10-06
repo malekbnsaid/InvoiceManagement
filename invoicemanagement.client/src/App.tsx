@@ -12,11 +12,16 @@ import ProjectDetailsPage from './components/projects/ProjectDetailsPage';
 import LPOsList from './components/lpos/LPOsList';
 import ProjectEditPage from './pages/ProjectEditPage';
 import PMOReviewPage from './pages/PMOReviewPage';
+import RoleBasedDashboard from './pages/RoleBasedDashboard';
 import { AuthPage } from './pages/AuthPage';
 import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
+import UserManagement from './pages/admin/UserManagement';
+import SystemSettings from './pages/admin/SystemSettings';
+import AuditLogs from './pages/admin/AuditLogs';
+import RoleManagement from './pages/admin/RoleManagement';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './context/AuthContext';
-import { ProtectedRoute, PMOrHigherRoute, PMOOrHigherRoute, SecretaryOrHigherRoute, HeadOrAdminRoute } from './components/auth/ProtectedRoute';
+import { ProtectedRoute, PMOrHigherRoute, PMOOrHigherRoute, SecretaryOrHigherRoute, HeadOrAdminRoute, AdminRoute } from './components/auth/ProtectedRoute';
 import React from 'react';
 
 // Debug environment variables
@@ -89,15 +94,11 @@ function App() {
                       <SectionsAndUnits />
                     </HeadOrAdminRoute>
                   } />
-                  <Route path="reports" element={
-                    <ProtectedRoute>
-                      <div className="h-full flex items-center justify-center">
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                          Reports Page (Coming Soon)
-                        </h1>
-                      </div>
-                    </ProtectedRoute>
-                  } />
+    <Route path="reports" element={
+      <ProtectedRoute>
+        <RoleBasedDashboard />
+      </ProtectedRoute>
+    } />
                   <Route path="settings" element={
                     <ProtectedRoute>
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -114,6 +115,28 @@ function App() {
                     <PMOOrHigherRoute>
                       <PMOReviewPage />
                     </PMOOrHigherRoute>
+                  } />
+                  
+                  {/* Admin Routes */}
+                  <Route path="/admin/users" element={
+                    <AdminRoute>
+                      <UserManagement />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/settings" element={
+                    <AdminRoute>
+                      <SystemSettings />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/audit" element={
+                    <AdminRoute>
+                      <AuditLogs />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/roles" element={
+                    <AdminRoute>
+                      <RoleManagement />
+                    </AdminRoute>
                   } />
                 </Routes>
               </MainLayout>

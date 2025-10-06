@@ -254,7 +254,7 @@ namespace InvoiceManagement.Server.API.Controllers
                         ProjectReference = i.ProjectReference ?? "N/A",
                         VendorName = i.VendorName ?? "Unknown Vendor",
                         CreatedAt = i.CreatedAt,
-                        Vendor = (object)null
+                        Vendor = (object?)null
                     })
                     .ToListAsync();
 
