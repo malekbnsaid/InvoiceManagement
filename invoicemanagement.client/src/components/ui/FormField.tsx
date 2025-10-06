@@ -56,7 +56,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
     const showSuccess = success && !hasError;
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-1">
         <label 
           htmlFor={fieldId}
           className={cn(
@@ -70,7 +70,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
         <div className="relative">
           {icon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <div className={cn('h-5 w-5', styles.icon)}>
+              <div className={cn('h-4 w-4', styles.icon)}>
                 {icon}
               </div>
             </div>
@@ -80,10 +80,10 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
             ref={ref}
             id={fieldId}
             className={cn(
-              'w-full px-4 py-3 rounded-xl shadow-sm transition-all duration-200',
+              'w-full px-4 py-2.5 rounded-lg shadow-sm transition-all duration-200',
               'focus:outline-none focus:ring-2 focus:ring-offset-0',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              icon ? 'pl-10' : 'pl-4',
+              icon ? 'pl-9' : 'pl-4',
               hasError ? 'pr-10' : 'pr-4',
               styles.input,
               className
@@ -94,10 +94,10 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           {/* Status Icons */}
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             {hasError && (
-              <AlertCircle className="h-5 w-5 text-error animate-pulse" />
+              <AlertCircle className="h-4 w-4 text-error animate-pulse" />
             )}
             {showSuccess && (
-              <CheckCircle className="h-5 w-5 text-success" />
+              <CheckCircle className="h-4 w-4 text-success" />
             )}
           </div>
         </div>

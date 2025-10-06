@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -354,15 +354,15 @@ const AuditLogs: React.FC = () => {
                         <div className="flex flex-col items-center space-y-4">
                           <FileText className="h-12 w-12 text-slate-400" />
                           <div>
-                            <h3 className="text-lg font-semibold text-slate-900">No audit logs found</h3>
-                            <p className="text-slate-500">Try adjusting your search or filters</p>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">No audit logs found</h3>
+                            <p className="text-slate-500 dark:text-slate-400">Try adjusting your search or filters</p>
                           </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredLogs.map((log: AuditLog) => (
-                      <TableRow key={log.id} className="hover:bg-slate-50 transition-colors">
+                      <TableRow key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                         <TableCell className="text-sm text-slate-600">
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-2" />

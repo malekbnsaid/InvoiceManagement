@@ -109,7 +109,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
   const clearSuccess = () => setSuccess(null);
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden py-8 px-4">
       {/* Error Display */}
       {error && (
         <ErrorDisplay
@@ -150,45 +150,45 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
         </div>
       </div>
 
-      {/* QOC Logo */}
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-white/95 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-qatar/20 transition-transform duration-200 hover:scale-105">
+      {/* QOC Logo - More visible and better positioned */}
+      <div className="relative z-10 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-white/95 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-qatar/20 transition-transform duration-200 hover:scale-105">
             <img 
               src="/src/assets/QOC-LOGO.png" 
               alt="QOC Logo" 
-              className="h-12 w-12 object-contain"
+              className="h-8 w-8 object-contain"
             />
           </div>
           <div className="text-left">
-            <span className="text-2xl font-bold text-qatar">InvoiceFlow</span>
+            <span className="text-xl font-bold text-qatar">InvoiceFlow</span>
             <p className="text-xs text-qatar/70 font-medium">QOC Internal Management System</p>
           </div>
         </div>
       </div>
 
-      {/* QOC Sign-in Form Card */}
-      <div className="relative z-20 w-full max-w-md px-6">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-qatar/10 p-8 relative overflow-hidden">
+      {/* QOC Sign-in Form Card - More compact */}
+      <div className="relative z-20 w-full max-w-md">
+        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-qatar/10 p-6 relative overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-qatar/5 to-gold/5 rounded-full -translate-y-16 translate-x-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-gold/5 to-silver/5 rounded-full translate-y-12 -translate-x-12"></div>
           
-          <div className="text-center mb-8 relative z-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-qatar to-qatar/80 rounded-2xl mb-4 shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-center mb-6 relative z-10">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-qatar to-qatar/80 rounded-xl mb-3 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-qatar mb-2">
+            <h2 className="text-2xl font-bold text-qatar mb-1">
               Welcome Back
             </h2>
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-600">
               Sign in to access your QOC invoice management dashboard
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+          <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
             <FormField
               label="Username"
               name="username"
@@ -199,7 +199,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
               placeholder="Enter your username"
               error={getFieldError('username')}
               icon={
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               }
@@ -216,7 +216,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
               placeholder="Enter your password"
               error={getFieldError('password')}
               icon={
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               }
@@ -249,7 +249,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchTo
             <Button
               type="submit"
               disabled={isLoading || hasErrors}
-              className="w-full flex justify-center py-4 px-6 border border-transparent rounded-xl shadow-lg text-sm font-semibold text-white bg-gradient-to-r from-qatar to-qatar/90 hover:from-qatar/90 hover:to-qatar/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-xl"
+              className="w-full flex justify-center py-3 px-6 border border-transparent rounded-lg shadow-lg text-sm font-semibold text-white bg-gradient-to-r from-qatar to-qatar/90 hover:from-qatar/90 hover:to-qatar/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-qatar disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-xl"
             >
               {isLoading ? (
                 <div className="flex items-center space-x-2">

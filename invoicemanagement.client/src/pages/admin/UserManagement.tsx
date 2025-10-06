@@ -364,17 +364,17 @@ const UserManagement: React.FC = () => {
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-qatar rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.username?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
+                    <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-qatar rounded-full flex items-center justify-center text-white font-semibold">
+                            {user.username?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
                           <div>
-                            <div className="font-semibold text-slate-900">{user.fullName || user.username}</div>
-                            <div className="text-sm text-slate-500">{user.email}</div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{user.fullName || user.username}</div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">{user.email}</div>
                             {user.phone && (
-                              <div className="text-xs text-slate-400">{user.phone}</div>
+                              <div className="text-xs text-slate-400 dark:text-slate-500">{user.phone}</div>
                             )}
                           </div>
                         </div>
