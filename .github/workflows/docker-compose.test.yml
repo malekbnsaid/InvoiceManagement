@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # SQL Server for testing
+  sqlserver-test:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd123
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd123' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API for testing
+  backend-test:
+    build:
+      context: .
+      dockerfile: InvoiceManagement.Server/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Testing
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Server=sqlserver-test;Database=InvoiceManagementDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=true;MultipleActiveResultSets=true
+    ports:
+      - "5000:5000"
+    depends_on:
+      sqlserver-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend for testing
+  frontend-test:
+    build:
+      context: ./invoicemanagement.client
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend-test
