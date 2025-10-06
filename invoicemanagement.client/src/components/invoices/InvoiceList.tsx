@@ -256,8 +256,6 @@ const InvoiceList = () => {
         data = response;
       } else if (response && (response as any).$values && Array.isArray((response as any).$values)) {
         data = (response as any).$values;
-      } else if (response && Array.isArray(response)) {
-        data = response;
       } else {
         console.warn('Unexpected response format:', response);
         data = [];

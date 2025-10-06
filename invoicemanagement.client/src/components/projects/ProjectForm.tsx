@@ -317,11 +317,12 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData, 
     console.log(`Validating step ${step}:`, values);
     
     switch (step) {
-      case 1:
+      case 1: {
         const step1Valid = !!values.name && !!values.section && !!values.projectManagerId;
         console.log('Step 1 validation:', step1Valid, { name: values.name, section: values.section, projectManagerId: values.projectManagerId });
         return step1Valid;
-      case 2:
+      }
+      case 2: {
         // Check if required fields are filled (budget is required, dates are required for step 2)
         const step2Valid = !!values.expectedStart && !!values.expectedEnd && !!values.budget && values.budget.trim() !== '';
         console.log('Step 2 validation:', step2Valid, { expectedStart: values.expectedStart, expectedEnd: values.expectedEnd, budget: values.budget });
@@ -329,12 +330,14 @@ export default function ProjectForm({ onSubmit, isLoading = false, initialData, 
         // Only do basic field validation for step navigation
         // Business rule validation will be shown as warnings, not blocking errors
         return step2Valid;
-      case 3:
+      }
+      case 3: {
         // Basic validation: just check if payment plan lines exist
         const paymentLines = values.paymentPlanLines || [];
         const step3Valid = paymentLines.length > 0;
         console.log('Step 3 validation:', step3Valid, { paymentPlanLines: paymentLines });
         return step3Valid;
+      }
       default:
         return false;
     }
@@ -1528,7 +1531,7 @@ form.watch('expectedEnd') || undefined
                           }
                           
                           // Calculate payment count for display (yearly payments)
-                          let paymentCount = 1; // Always 1 for yearly payments
+                          const paymentCount = 1; // Always 1 for yearly payments
                           
                           return (
                             <div key={index} className="text-xs text-blue-700 mb-1">
