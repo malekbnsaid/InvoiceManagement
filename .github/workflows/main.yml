@@ -112,28 +112,11 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: invoicemanagement.client/package-lock.json
-
     - name: Restore backend dependencies
       run: dotnet restore InvoiceManagement.Server/InvoiceManagement.Server.csproj
 
-    - name: Install frontend dependencies
-      run: |
-        cd invoicemanagement.client
-        npm ci
-
     - name: Build backend
       run: dotnet build InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-restore
-
-    - name: Build frontend
-      run: |
-        cd invoicemanagement.client
-        npm run build
 
     - name: Publish backend
       run: dotnet publish InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-build --output ./publish
@@ -150,8 +133,12 @@ jobs:
     - name: Package frontend artifact
       run: |
         mkdir -p artifacts/frontend
-        cp -r ./invoicemanagement.client/dist/* artifacts/frontend/
-        echo "Frontend artifact packaged successfully"
+        cp -r ./invoicemanagement.client/src/* artifacts/frontend/
+        cp ./invoicemanagement.client/package.json artifacts/frontend/
+        cp ./invoicemanagement.client/package-lock.json artifacts/frontend/
+        cp ./invoicemanagement.client/vite.config.ts artifacts/frontend/
+        cp ./invoicemanagement.client/tsconfig.json artifacts/frontend/
+        echo "Frontend source artifact packaged successfully"
 
     - name: Create version info
       run: |
@@ -181,11 +168,42 @@ jobs:
         path: artifacts/build-info.txt
         retention-days: 30
 
-  # 5. Pipeline Success Notification
+  # 5. Docker Hub Push
+  docker-push:
+    name: Push to Docker Hub
+    runs-on: ubuntu-latest
+    needs: [docker-test]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push backend image
+      run: |
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/invoice-backend:${{ github.sha }} ./InvoiceManagement.Server
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/invoice-backend:latest ./InvoiceManagement.Server
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/invoice-backend:${{ github.sha }}
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/invoice-backend:latest
+
+    - name: Build and push frontend image
+      run: |
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/invoice-frontend:${{ github.sha }} ./invoicemanagement.client
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/invoice-frontend:latest ./invoicemanagement.client
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/invoice-frontend:${{ github.sha }}
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/invoice-frontend:latest
+
+  # 6. Pipeline Success Notification
   notify-success:
     name: Pipeline Success
     runs-on: ubuntu-latest
-    needs: [backend-build-test, frontend-test, docker-test, package-artifacts]
+    needs: [backend-build-test, frontend-test, docker-test, package-artifacts, docker-push]
     if: always()
 
     steps:
@@ -198,6 +216,7 @@ jobs:
         echo "📝 Frontend: Tested and packaged"
         echo "📝 Docker: Configuration validated"
         echo "📦 Artifacts: Packaged and uploaded"
+        echo "🐳 Docker: Images pushed to Docker Hub"
 
     - name: Notify Failure
       if: ${{ needs.backend-build-test.result == 'failure' || needs.frontend-test.result == 'failure' || needs.docker-test.result == 'failure' || needs.package-artifacts.result == 'failure' }}
