@@ -1,13 +1,20 @@
 export enum InvoiceStatus {
-  Submitted = 0,          // OCR completed - ready for PM review
-  UnderReview = 1,        // Being evaluated by PM
-  Approved = 2,           // Approved for processing
-  InProgress = 3,         // Being processed by Procurement
-  PMOReview = 4,          // Under PMO review for final approval
-  Completed = 5,          // Finished (paid/closed)
-  Rejected = 6,           // Needs revision
-  Cancelled = 7,          // Cancelled
-  OnHold = 8              // Temporarily paused
+  Draft = 0,              // Initial draft state
+  Submitted = 1,          // OCR completed - ready for PM review
+  UnderReview = 2,        // Being evaluated by PM
+  PendingApproval = 3,    // Pending approval
+  Processing = 4,         // Being processed by Procurement
+  PMOReview = 5,          // Under PMO review for final approval
+  Paid = 6,              // Paid/Completed
+  Approved = 7,           // Approved for processing
+  InProgress = 8,         // Being processed by Procurement
+  Completed = 9,          // Finished (paid/closed)
+  Rejected = 10,          // Needs revision
+  Cancelled = 11,         // Cancelled
+  OnHold = 12,            // Temporarily paused
+  Overdue = 13,           // Overdue
+  SentToFinance = 14,     // Sent to finance department
+  Returned = 15           // Returned for correction
 }
 
 export enum LPOStatus {
