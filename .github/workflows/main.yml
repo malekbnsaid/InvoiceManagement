@@ -49,9 +49,9 @@ jobs:
     - name: Publish backend
       run: dotnet publish InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-build --output ./publish
 
-  # 2. Frontend Lint Check (No build, just linting)
-  frontend-lint:
-    name: Frontend Lint Check
+  # 2. Frontend Test
+  frontend-test:
+    name: Frontend Test
     runs-on: ubuntu-latest
 
     steps:
@@ -70,17 +70,17 @@ jobs:
         cd invoicemanagement.client
         npm ci
 
-    - name: Run frontend linting
+    - name: Run frontend tests
       run: |
         cd invoicemanagement.client
-        npm run lint
+        npm test -- --watchAll=false
       continue-on-error: true
 
   # 3. Docker Build Test
   docker-test:
     name: Docker Build Test
     runs-on: ubuntu-latest
-    needs: [backend-build-test, frontend-lint]
+    needs: [backend-build-test, frontend-test]
 
     steps:
     - name: Checkout code
@@ -96,25 +96,111 @@ jobs:
         docker compose build
         echo "✅ Docker Compose build successful"
 
-  # 4. Pipeline Success Notification
+  # 4. Artifact Packaging
+  package-artifacts:
+    name: Package Artifacts
+    runs-on: ubuntu-latest
+    needs: [backend-build-test, frontend-test, docker-test]
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: invoicemanagement.client/package-lock.json
+
+    - name: Restore backend dependencies
+      run: dotnet restore InvoiceManagement.Server/InvoiceManagement.Server.csproj
+
+    - name: Install frontend dependencies
+      run: |
+        cd invoicemanagement.client
+        npm ci
+
+    - name: Build backend
+      run: dotnet build InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-restore
+
+    - name: Build frontend
+      run: |
+        cd invoicemanagement.client
+        npm run build
+
+    - name: Publish backend
+      run: dotnet publish InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-build --output ./publish
+
+    - name: Create artifacts directory
+      run: mkdir -p artifacts
+
+    - name: Package backend artifact
+      run: |
+        mkdir -p artifacts/backend
+        cp -r ./publish/* artifacts/backend/
+        echo "Backend artifact packaged successfully"
+
+    - name: Package frontend artifact
+      run: |
+        mkdir -p artifacts/frontend
+        cp -r ./invoicemanagement.client/dist/* artifacts/frontend/
+        echo "Frontend artifact packaged successfully"
+
+    - name: Create version info
+      run: |
+        echo "Build Date: $(date)" > artifacts/build-info.txt
+        echo "Commit SHA: ${{ github.sha }}" >> artifacts/build-info.txt
+        echo "Commit Message: ${{ github.event.head_commit.message }}" >> artifacts/build-info.txt
+        echo "Branch: ${{ github.ref_name }}" >> artifacts/build-info.txt
+
+    - name: Upload backend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-${{ github.sha }}
+        path: artifacts/backend/
+        retention-days: 30
+
+    - name: Upload frontend artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-${{ github.sha }}
+        path: artifacts/frontend/
+        retention-days: 30
+
+    - name: Upload build info
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-info-${{ github.sha }}
+        path: artifacts/build-info.txt
+        retention-days: 30
+
+  # 5. Pipeline Success Notification
   notify-success:
     name: Pipeline Success
     runs-on: ubuntu-latest
-    needs: [backend-build-test, frontend-lint, docker-test]
+    needs: [backend-build-test, frontend-test, docker-test, package-artifacts]
     if: always()
 
     steps:
     - name: Notify Success
-      if: ${{ needs.backend-build-test.result == 'success' && needs.frontend-lint.result == 'success' && needs.docker-test.result == 'success' }}
+      if: ${{ needs.backend-build-test.result == 'success' && needs.frontend-test.result == 'success' && needs.docker-test.result == 'success' && needs.package-artifacts.result == 'success' }}
       run: |
         echo "✅ All checks passed successfully!"
         echo "🎉 Pipeline completed successfully"
-        echo "📝 Backend: Built and tested"
-        echo "📝 Frontend: Linted (run locally with 'npm run dev')"
+        echo "📝 Backend: Built, tested, and packaged"
+        echo "📝 Frontend: Tested and packaged"
         echo "📝 Docker: Configuration validated"
+        echo "📦 Artifacts: Packaged and uploaded"
 
     - name: Notify Failure
-      if: ${{ needs.backend-build-test.result == 'failure' || needs.frontend-lint.result == 'failure' || needs.docker-test.result == 'failure' }}
+      if: ${{ needs.backend-build-test.result == 'failure' || needs.frontend-test.result == 'failure' || needs.docker-test.result == 'failure' || needs.package-artifacts.result == 'failure' }}
       run: |
         echo "❌ Some checks failed. Please review the logs."
         echo "🔍 Check the failed jobs for details"
