@@ -36,11 +36,14 @@ jobs:
     - name: Restore backend dependencies
       run: dotnet restore InvoiceManagement.Server/InvoiceManagement.Server.csproj
 
+    - name: Restore test dependencies
+      run: dotnet restore InvoiceManagement.Server.Tests/InvoiceManagement.Server.Tests.csproj
+
     - name: Build backend
       run: dotnet build InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-restore
 
     - name: Run backend tests
-      run: dotnet test InvoiceManagement.Server/InvoiceManagement.Server.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=normal"
+      run: dotnet test InvoiceManagement.Server.Tests/InvoiceManagement.Server.Tests.csproj --configuration Release --no-build --verbosity normal --logger "console;verbosity=normal"
       continue-on-error: true
 
     - name: Publish backend
